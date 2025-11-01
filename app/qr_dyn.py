@@ -82,7 +82,7 @@ def clean_url(url):
         # keep only the main domain and path
         parsed = urlparse(url)
         
-        # اگر path دارد و encode شده، تمیز می‌کنیم
+        # if path exists and is encoded, clean it
         if parsed.path and '%' in parsed.path:
             # فقط domain + / را برمی‌گردانیم
             clean = f"{parsed.scheme}://{parsed.netloc}"
