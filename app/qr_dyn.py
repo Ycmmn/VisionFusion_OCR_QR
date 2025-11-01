@@ -267,7 +267,7 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
         rotated = cv2.rotate(img, rotate_code)
         try_decode(rotated, f"Rotated {angle}°")
     
-    # 11. استفاده از pyzbar
+    # 11. pyzbar
     if HAS_PYZBAR:
         for method_img, method_name in [
             (gray, "Pyzbar-Gray"),
