@@ -1,0 +1,34 @@
+# core ai & google libraries
+google-genai==0.7.0
+google-api-python-client
+google-auth
+google-auth-oauthlib
+google-auth-httplib2
+
+# data handling
+pandas==2.2.3
+numpy==1.26.4
+openpyxl
+python-dateutil==2.9.0.post0
+
+# web & requests
+requests==2.32.3
+urllib3
+beautifulsoup4
+lxml
+
+# pdf & image processing
+pillow==10.4.0
+pdf2image
+opencv-python
+pyzbar
+pyzxing
+
+# utilities
+pathlib
+tqdm==4.66.5
+regex==2024.9.11
+
+# streamlit & supabase
+streamlit==1.39.0
+supabase==2.4.0
