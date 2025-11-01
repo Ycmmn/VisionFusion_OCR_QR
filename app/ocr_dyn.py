@@ -112,3 +112,6 @@ def ensure_nulls(obj: Dict[str, Any]) -> Dict[str, Any]:
 # =========================================================
 # Single-Key Send Function
 # =========================================================
+def call_gemini_single_key(data: Image.Image, source_path: Path) -> Dict[str, Any]:
+    schema = build_newsdk_schema()
+    cfg = _genai_types.GenerateContentConfig(
