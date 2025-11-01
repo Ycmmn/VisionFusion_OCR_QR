@@ -606,3 +606,8 @@ def main():
     
     if DEBUG_MODE:
         print(f"🐛 Debug images saved in: {DEBUG_DIR}")
+
+
+# ----------------------------------------------------------
+if __name__ == "__main__":
+    main()
