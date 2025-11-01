@@ -147,7 +147,7 @@ def is_low_contrast(img, sharp_thresh=85, contrast_thresh=25):
 
 
 def enhance_image_aggressive(img):
-    """پیش‌پردازش قوی برای بهبود خوانایی QR"""
+    """advanced preprocessing to enhance QR readability"""
     # 1. Denoise
     denoised = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 21)
     
