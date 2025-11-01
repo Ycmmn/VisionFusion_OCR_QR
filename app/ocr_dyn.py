@@ -102,3 +102,8 @@ def ensure_nulls(obj: Dict[str, Any]) -> Dict[str, Any]:
             obj[f] = None
     if "persons" not in obj or not obj["persons"]:
         obj["persons"] = None
+    if "notes" not in obj or obj["notes"] == "":
+        obj["notes"] = None
+    if "ocr_text" not in obj or obj["ocr_text"] is None:
+        obj["ocr_text"] = ""
+    return obj
