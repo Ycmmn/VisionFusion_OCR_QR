@@ -88,3 +88,8 @@ if not ocr_data:
 
     if not qr_data:
         print(f"⚠️ QR file is empty or not found → continuing with OCR data only.")
+
+    print(f"📄 Loaded OCR: {len(ocr_data)} items")
+    print(f"🔗 Loaded QR : {len(qr_data)} items")
+
+    merged_results = merge_ocr_qr(ocr_data, qr_data)
