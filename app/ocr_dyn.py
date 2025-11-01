@@ -50,3 +50,8 @@ You are an information extraction engine. Extract OCR text and structured fields
 Return ONLY valid JSON matching the schema. Keep original Persian text exactly as-is.
 If a field has no value, return null.
 """
+
+# =========================================================
+# Define JSON Output Structure
+# =========================================================
+def build_newsdk_schema():
