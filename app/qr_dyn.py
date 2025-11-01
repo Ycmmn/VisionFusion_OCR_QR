@@ -531,3 +531,6 @@ def clean_qr_json(input_file, output_file):
     
     save_json(output_file, final_results)
     print(f"\n✅ Cleaned results saved → {output_file}")
+
+
+# ----------------------------------------------------------
