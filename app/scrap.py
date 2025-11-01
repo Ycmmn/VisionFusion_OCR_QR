@@ -55,3 +55,7 @@ MAX_RETRIES_GEMINI = 3
 CHECK_DOMAIN_EXISTENCE = True
 
 # list of Iranian domains that may have SSL issues
+IRANIAN_TLDS = ['.ir', '.ac.ir', '.co.ir', '.org.ir', '.gov.ir', '.id.ir', '.net.ir']
+
+client = genai.Client(api_key=GOOGLE_API_KEY)
+lock = threading.Lock()
