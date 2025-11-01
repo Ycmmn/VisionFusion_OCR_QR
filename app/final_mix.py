@@ -337,11 +337,14 @@ def clean_and_optimize_dataframe(df):
         df = df.drop(columns=['addresses'])
         print(f"   ✂️ addresses → Address fields")
     
-    # 
-    znotes
+    # notes
     if 'notes' in df.columns and 'Description' in df.columns:
         df['Description'] = df['Description'].fillna(df['notes'])
         df = df.drop(columns=['notes'])
     
     print(f"   ✅ Final: {len(df.columns)} columns")
     return df
+
+# =========================================================
+# 📊 ترتیب‌بندی نهایی
+# =========================================================
