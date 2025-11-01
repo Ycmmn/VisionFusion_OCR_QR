@@ -23,3 +23,7 @@ os.environ["ZBAR_LOG_LEVEL"] = "0"
 SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
 
 #inputs: If uploads is empty, use SESSION_DIR path
+IMAGES_FOLDER = SESSION_DIR / "uploads"
+if not IMAGES_FOLDER.exists() or not any(IMAGES_FOLDER.glob("*")):
+    IMAGES_FOLDER = SESSION_DIR
+print(f"📂 Using IMAGES_FOLDER → {IMAGES_FOLDER}")
