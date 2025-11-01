@@ -186,3 +186,9 @@ def main():
 
     image_files = [f for f in files if f.suffix.lower() in [".jpg", ".jpeg", ".png"]]
     pdf_files = [f for f in files if f.suffix.lower() == ".pdf"]
+
+    print(f"📊 Found: {len(image_files)} images, {len(pdf_files)} PDFs\n")
+
+    for idx, p in enumerate(image_files, start=1):
+        print(f"🖼 Processing image [{idx}/{len(image_files)}]: {p.name}")
+        try:
