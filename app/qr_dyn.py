@@ -257,7 +257,7 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
             resized = cv2.resize(img, (w, h), interpolation=cv2.INTER_CUBIC)
             try_decode(resized, f"Scale {scale}x")
     
-    # 10. Rotation (چرخش)
+    # 10. Rotation 
     rotation_map = {
         90: cv2.ROTATE_90_CLOCKWISE,
         180: cv2.ROTATE_180,
