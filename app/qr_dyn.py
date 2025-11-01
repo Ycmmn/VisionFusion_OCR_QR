@@ -286,7 +286,7 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
                 if DEBUG_MODE:
                     print(f"      ✗ {method_name} failed: {e}")
     
-    # 12. استفاده از zxing
+    # 12. zxing
     if HAS_ZXING:
         try:
             temp_path = DEBUG_DIR / f"_temp_zxing_{img_name}.jpg"
