@@ -51,7 +51,7 @@ def merge_pdf_pages(item, qr_result):
 
 
 def merge_ocr_qr(ocr_data, qr_data):
-    """ادغام کامل داده‌های OCR و QR"""
+    """merge complete ocr and qr data"""
     qr_lookup = {item["file_name"]: item.get("result", []) for item in qr_data}
     merged = []
 
