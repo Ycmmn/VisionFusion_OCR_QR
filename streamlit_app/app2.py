@@ -726,3 +726,9 @@ def run_script(script_name, session_dir, log_area, status_text, script_display_n
 # =========================================================
 # Header
 # =========================================================
+st.markdown("""
+<div class="main-header">
+    <h1>🎯 Smart Exhibition Pipeline</h1>
+    <p>تشخیص هوشمند • پردازش خودکار • خروجی یکپارچه • Batch Processing • Quality Control • Google Sheets</p>
+</div>
+""", unsafe_allow_html=True)
