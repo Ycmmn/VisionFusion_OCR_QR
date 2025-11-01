@@ -131,3 +131,8 @@ def call_gemini_single_key(data: Image.Image, source_path: Path) -> Dict[str, An
         _genai_types.Part(text=JSON_INSTRUCTIONS),
         _genai_types.Part(inline_data=_genai_types.Blob(mime_type="image/jpeg", data=image_bytes))
     ]
+
+    try:
+        resp = CLIENT.models.generate_content(model=MODEL_NAME, contents=parts, config=cfg)
+        txt = getattr(resp, "text", None)
+        if not txt and getattr(resp, "candidates", None):
