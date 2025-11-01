@@ -94,3 +94,7 @@ def list_files(path: Union[str, Path]) -> List[Path]:
 
 def to_pil(image_path: Path) -> Image.Image:
     return Image.open(image_path).convert("RGB")
+
+def ensure_nulls(obj: Dict[str, Any]) -> Dict[str, Any]:
+    fields = ["addresses","phones","faxes","emails","urls","telegram","instagram","linkedin","company_names","services"]
+    for f in fields:
