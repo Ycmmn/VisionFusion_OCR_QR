@@ -29,3 +29,8 @@ os.environ["PATH"] += os.pathsep + POPPLER_PATH
 # =========================================================
 # General Settings
 # =========================================================
+MODEL_NAME = "gemini-2.5-flash"
+TEMPERATURE = 0.0
+PDF_IMG_DPI = 150
+BATCH_SIZE_PDF = 1
+BATCH_SIZE_IMAGES = 3
