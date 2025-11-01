@@ -206,3 +206,23 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
 
     if DEBUG_MODE:
         print(f"   🔍 Trying multiple detection methods...")
+# 1. تصویر اصلی
+    try_decode(img, "Original")
+    
+    # 2. Grayscale
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    try_decode(cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR), "Grayscale")
+    
+    # 3. Adaptive Threshold
+    thresh_adapt = cv2.adaptiveThreshold(
+        gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
+        cv2.THRESH_BINARY, 51, 10
+    )
+    try_decode(cv2.cvtColor(thresh_adapt, cv2.COLOR_GRAY2BGR), "Adaptive Threshold")
+    
+    # 4. Otsu Threshold
+    _, thresh_otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    try_decode(cv2.cvtColor(thresh_otsu, cv2.COLOR_GRAY2BGR), "Otsu Threshold")
+    
+    # 5. معکوس تصویر
+    try_decode(cv2.bitwise_not(img), "Inverted")
