@@ -249,7 +249,7 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
     morph = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
     try_decode(cv2.cvtColor(morph, cv2.COLOR_GRAY2BGR), "Morphological")
     
-    # 9. Multi-scale (مقیاس‌های مختلف)
+    # 9. Multi-scale 
     for scale in [0.5, 0.75, 1.5, 2.0]:
         w = int(img.shape[1] * scale)
         h = int(img.shape[0] * scale)
