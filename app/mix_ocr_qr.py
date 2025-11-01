@@ -67,7 +67,7 @@ def merge_ocr_qr(ocr_data, qr_data):
         elif file_name.lower().endswith(".pdf"):
             item = merge_pdf_pages(item, qr_result)
 
-        # 🧩 سایر فرمت‌ها
+        # other formats
         else:
             item["result"] = item.get("result", {})
             item["result"]["qr_links"] = None
