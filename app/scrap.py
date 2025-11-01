@@ -26,7 +26,7 @@ except ImportError:
         print("❌ Gemini SDK not installed properly:", e)
         import sys
         sys.exit(1)
-        
+
 # =========================================================
-# 🧩 مسیرهای داینامیک سشن
+# dynamic session paths
 # =========================================================
