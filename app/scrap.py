@@ -38,3 +38,18 @@ QR_RAW_JSON = Path(os.getenv("QR_RAW_JSON", SESSION_DIR / "final_superqr_v6_raw.
 QR_CLEAN_JSON = Path(os.getenv("QR_CLEAN_JSON", SESSION_DIR / "final_superqr_v6_clean.json"))
 MIX_OCR_QR_JSON = Path(os.getenv("MIX_OCR_QR_JSON", SESSION_DIR / "mix_ocr_qr.json"))
 WEB_ANALYSIS_XLSX = Path(os.getenv("WEB_ANALYSIS_XLSX", SESSION_DIR / "web_analysis.xlsx"))
+
+
+
+# 🔧 Configuration
+GOOGLE_API_KEY = "AIzaSyAhuC9Grg_FlxwDwYUW-_CpNaFzjwUg24w"
+MODEL_NAME = "gemini-2.5-flash"
+
+THREAD_COUNT = 5
+MAX_DEPTH = 2
+MAX_PAGES_PER_SITE = 25
+REQUEST_TIMEOUT = (8, 20)
+SLEEP_BETWEEN = (0.8, 2.0)
+MAX_RETRIES_HTTP = 3  # ✅ افزایش retry
+MAX_RETRIES_GEMINI = 3
+CHECK_DOMAIN_EXISTENCE = True
