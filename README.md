@@ -1,3 +1,6 @@
+🌟 If you like this project, give it a ⭐ on GitHub — it helps more developers discover VisionFusion!
+
+
 # 🧠 Dynamic OCR + QR Intelligence Suite
 
 ### 🚀 Smart Document Extraction, QR Decoding, Web Enrichment & Excel Integration
