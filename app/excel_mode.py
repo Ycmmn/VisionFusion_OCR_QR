@@ -66,3 +66,14 @@ OUTPUT_JSON = Path(os.getenv("OUTPUT_JSON", SESSION_DIR / "scraped_data.json"))
 #  settings
 # =========================================================
 # api key - only one key
+GOOGLE_API_KEY = "AIzaSyBzVNw34fbQRcxCSZDouR35hoZNxqsW6pc"
+
+MODEL_NAME = "gemini-2.0-flash-exp"
+THREAD_COUNT = 5
+MAX_DEPTH = 2
+MAX_PAGES_PER_SITE = 25
+REQUEST_TIMEOUT = (8, 20)
+SLEEP_BETWEEN = (0.8, 2.0)
+MAX_RETRIES_HTTP = 3
+MAX_RETRIES_GEMINI = 3
+IRANIAN_TLDS = ['.ir', '.ac.ir', '.co.ir', '.org.ir', '.gov.ir', '.id.ir', '.net.ir']
