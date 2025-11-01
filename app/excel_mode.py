@@ -360,7 +360,7 @@ def clean_duplicate_columns(df):
     pattern = re.compile(r'\[\d+\]$')  # pattern [2], [3], ...
     
     for col in df.columns:
-        # استخراج نام اصلی
+        # extract main name
         base = pattern.sub('', str(col))
         if base not in base_cols:
             base_cols[base] = []
