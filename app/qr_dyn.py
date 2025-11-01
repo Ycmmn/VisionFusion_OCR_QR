@@ -356,3 +356,6 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
     out = list(dict.fromkeys(out))
     
     return out if out else None
+
+
+# ----------------------------------------------------------
