@@ -168,7 +168,7 @@ def pdf_to_images_and_process(pdf_path: Path) -> List[Dict[str, Any]]:
 
 
 # =========================================================
-# Main Program Execution
+# Main Program 
 # =========================================================
 def main():
     print(f"🔑 Using single API key.\n")
