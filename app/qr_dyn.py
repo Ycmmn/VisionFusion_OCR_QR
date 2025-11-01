@@ -450,7 +450,7 @@ def process_image_file(image_path: Path) -> Dict[str, Any]:
 
 # ----------------------------------------------------------
 def save_json(path, data):
-    """ذخیره JSON با encoding مناسب"""
+    """save json with proper encoding"""
     Path(path).write_text(
         json.dumps(data, indent=4, ensure_ascii=False), 
         encoding="utf-8"
