@@ -35,3 +35,15 @@ def merge_single_image(item, qr_result):
     else:
         item["result"] = {"qr_links": qr_links if qr_links else None}
     return item
+
+
+def merge_pdf_pages(item, qr_result):
+    """ادغام داده‌های PDF چندصفحه‌ای"""
+    if not isinstance(item.get("result"), list):
+        return item
+
+    for page_obj in item["result"]:
+        page_num = page_obj.get("page")
+        qr_match = next((p.get("qr_link") for p in qr_result if p.get("page") == page_num), None)
+        page_obj["qr_link"] = qr_match
+    return item
