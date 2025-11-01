@@ -37,3 +37,4 @@ os.makedirs(DEBUG_DIR, exist_ok=True)
 
 
 ## dpi for pdf
+PDF_IMG_DPI = int(os.getenv("PDF_IMG_DPI", "200"))
