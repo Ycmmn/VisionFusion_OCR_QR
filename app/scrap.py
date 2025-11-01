@@ -469,7 +469,7 @@ def main():
                 ordered_cols.append(fa_field)
                 break
     
-    # اضافه کردن ستون‌هایی که ترجمه دارند ولی در FIELDS نیستند (مثل CompanyNameEN)
+    # add columns that have translations but are not in FIELDS (e.g., CompanyNameEN)
     for en_field, fa_field in TRANSLATABLE_FIELDS:
         if en_field not in FIELDS and en_field not in ordered_cols:
             ordered_cols.append(en_field)
