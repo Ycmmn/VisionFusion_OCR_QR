@@ -419,7 +419,7 @@ def get_qc_metadata(user_name, user_role):
     }
 
 def add_qc_metadata_to_excel(excel_path, qc_metadata):
-    """اضافه کردن متادیتای کنترل کیفیت به Excel"""
+    """add quality control metadata to excel"""
     try:
         df = pd.read_excel(excel_path)
         for key in ["QC_Supervisor", "QC_Role", "QC_Date", "QC_Time", "QC_Timestamp"]:
