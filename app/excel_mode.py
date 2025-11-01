@@ -351,3 +351,117 @@ def translate_fields(data):
 # =========================================================
 #  Smart Merge 
 # =========================================================
+def clean_duplicate_columns(df):
+    """حذف و ادغام ستون‌های تکراری"""
+    print("\n🧹 Cleaning duplicate columns...")
+    
+    # گروه‌بندی ستون‌ها بر اساس نام اصلی
+    base_cols = {}
+    pattern = re.compile(r'\[\d+\]$')  # الگوی [2], [3], ...
+    
+    for col in df.columns:
+        # استخراج نام اصلی
+        base = pattern.sub('', str(col))
+        if base not in base_cols:
+            base_cols[base] = []
+        base_cols[base].append(col)
+    
+    cleaned_df = df.copy()
+    
+    # برای هر گروه ستون
+    for base, cols in base_cols.items():
+        if len(cols) <= 1:
+            continue
+        
+        print(f"   🔄 Merging {len(cols)} versions of '{base}'")
+        
+        # ادغام تمام نسخه‌ها
+        for idx in df.index:
+            values = []
+            for col in cols:
+                try:
+                    val = df.at[idx, col]
+                    if val and not pd.isna(val) and str(val).strip() != "":
+                        val_str = str(val).strip()
+                        if val_str not in values:
+                            values.append(val_str)
+                except:
+                    continue
+            
+            # ادغام با جداکننده
+            if values:
+                if base in ['Phone1', 'Phone2', 'Email', 'OtherEmails', 'WhatsApp', 'Telegram']:
+                    merged = ", ".join(values)
+                elif base in ['ProductName', 'ProductCategory', 'Brands', 'Applications']:
+                    merged = ", ".join(values)
+                else:
+                    if len(values) == 1:
+                        merged = values[0]
+                    else:
+                        merged = f"{values[0]} | {' | '.join(values[1:])}"
+                
+                try:
+                    cleaned_df.at[idx, base] = merged
+                except:
+                    pass
+        
+        # حذف ستون‌های تکراری
+        for col in cols[1:]:
+            if col in cleaned_df.columns:
+                try:
+                    cleaned_df.drop(columns=[col], inplace=True)
+                except:
+                    pass
+    
+    print(f"   ✅ Reduced from {len(df.columns)} to {len(cleaned_df.columns)} columns")
+    return cleaned_df
+
+def smart_merge(original_df, scraped_data):
+    """ادغام هوشمند داده‌ها"""
+    print("\n🔗 Smart merging data...")
+    
+    scraped_df = pd.DataFrame(scraped_data)
+    
+    if scraped_df.empty:
+        print("   ⚠️ No scraped data to merge")
+        return original_df
+    
+    result_df = original_df.copy()
+    
+    for idx, row in result_df.iterrows():
+        original_url = normalize_root(row.get('Website') or row.get('url') or row.get('URL'))
+        
+        if not original_url:
+            continue
+        
+        scraped_row = scraped_df[scraped_df['url'] == original_url]
+        
+        if scraped_row.empty:
+            continue
+        
+        scraped_row = scraped_row.iloc[0].to_dict()
+        
+        for col, new_val in scraped_row.items():
+            if col in ['url', 'status', 'error']:
+                continue
+            
+            if not new_val or pd.isna(new_val) or str(new_val).strip() == "":
+                continue
+            
+            if col not in result_df.columns:
+                result_df[col] = ""
+            
+            old_val = row.get(col)
+            
+            if not old_val or pd.isna(old_val) or str(old_val).strip() == "":
+                result_df.at[idx, col] = new_val
+                print(f"   ✏️ [{idx+1}] {col} = {str(new_val)[:50]}")
+            elif not are_values_same(old_val, new_val):
+                if col in ['Phone1', 'Phone2', 'Email', 'OtherEmails', 'ProductName', 'Brands']:
+                    result_df.at[idx, col] = f"{old_val}, {new_val}"
+                else:
+                    result_df.at[idx, col] = f"{old_val} | {new_val}"
+                print(f"   📝 [{idx+1}] {col} += {str(new_val)[:50]}")
+    
+    print(f"   ✅ Merged: {len(result_df)} rows × {len(result_df.columns)} columns")
+    return result_df
