@@ -66,3 +66,5 @@ try:
     HAS_ZXING = True
     print("✅ pyzxing loaded")
 except ImportError:
+    HAS_ZXING = False
+    print("⚠️ pyzxing not available")
