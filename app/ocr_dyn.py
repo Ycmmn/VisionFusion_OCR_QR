@@ -148,7 +148,6 @@ def call_gemini_single_key(data: Image.Image, source_path: Path) -> Dict[str, An
 # =========================================================
 # Process PDF into Images and Send
 # =========================================================
-# =========================================================
 def pdf_to_images_and_process(pdf_path: Path) -> List[Dict[str, Any]]:
     from pdf2image import convert_from_path
     print(f"📑 Converting PDF: {pdf_path.name}")
@@ -163,3 +162,6 @@ def pdf_to_images_and_process(pdf_path: Path) -> List[Dict[str, Any]]:
         except Exception as e:
             results.append({"page": i, "error": str(e)})
         time.sleep(1)
+
+    print(f"✅ {len(results)} page(s) processed from {pdf_path.name}")
+    return results
