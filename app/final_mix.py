@@ -159,3 +159,31 @@ def load_json_records(json_path):
 # =========================================================
 #  load Excel
 # =========================================================
+def load_excel_records(excel_path):
+    print("\n📥 Loading Excel...")
+    if not excel_path.exists():
+        print(f"   ⚠️ Not found: {excel_path}")
+        return []
+    
+    try:
+        df = pd.read_excel(excel_path)
+        print(f"   ✓ Size: {df.shape[0]} rows × {df.shape[1]} columns")
+        
+        df = df.loc[:, ~df.columns.duplicated()]
+        df = df.dropna(how='all')
+        df = df.drop_duplicates()
+        df = df.dropna(axis=1, how='all')
+        df.columns = [str(col).strip() for col in df.columns]
+        
+        records = df.to_dict('records')
+        cleaned = []
+        for rec in records:
+            clean = {k: v for k, v in rec.items() if not (pd.isna(v) or str(v).strip() == "")}
+            if clean:
+                cleaned.append(clean)
+        
+        print(f"   ✅ Loaded {len(cleaned)} clean records")
+        return cleaned
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return []
