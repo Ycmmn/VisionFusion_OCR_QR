@@ -178,3 +178,6 @@ def main():
         sys.exit(1)
 
     files = list_files(SOURCE_FOLDER)
+    if not files:
+        print("❌ هیچ فایلی برای پردازش وجود ندارد.")
+        sys.exit(0)
