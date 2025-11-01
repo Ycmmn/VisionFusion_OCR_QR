@@ -57,3 +57,7 @@ try:
     HAS_PYZBAR = True
     print("✅ pyzbar loaded")
 except ImportError:
+    HAS_PYZBAR = False
+    print("⚠️ pyzbar not available")
+
+try:
