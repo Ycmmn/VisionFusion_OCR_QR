@@ -405,5 +405,5 @@ def decrease_quota(amount=1):
 
 
 # =========================================================
-# ✨ Quality Control Tracking Functions
+# Quality Control Tracking Functions
 # =========================================================
