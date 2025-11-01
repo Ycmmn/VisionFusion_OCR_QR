@@ -159,4 +159,6 @@ def enhance_image_aggressive(img):
     # 4. Merge back
     enhanced = cv2.merge([l, a, b])
     enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
-    
+    # 5. Unsharp masking برای وضوح بیشتر
+    gaussian = cv2.GaussianBlur(enhanced, (0, 0), 3.0)
+    enhanced = cv2.addWeighted(enhanced, 2.0, gaussian, -1.0, 0)
