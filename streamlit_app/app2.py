@@ -609,7 +609,7 @@ def create_batches(files_list, batch_size):
     return batches
 
 def process_files_in_batches(uploads_dir, pipeline_type):
-    """پردازش فایل‌ها به صورت Batch"""
+    """process files in batches"""
     if pipeline_type == 'excel':
         excel_files = list(uploads_dir.glob("*.xlsx")) + list(uploads_dir.glob("*.xls"))
         return [(f,) for f in excel_files], 1
