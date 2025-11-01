@@ -17,7 +17,8 @@ try:
     import google.genai as genai
     from google.genai import types
     print("✅ Gemini SDK loaded successfully (google-genai).")
-except ImportError:try:
+except ImportError:
+    try:
         import google.genai as genai
         from google.genai import types
         print("⚠️ Using legacy google-generativeai SDK.")
