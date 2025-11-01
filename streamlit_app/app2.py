@@ -737,7 +737,9 @@ st.markdown("""
 #  Sidebar
 # =========================================================
 
-# ========== لینک سریع به Google Sheets ==========
+# ==================================
+#quick link to google sheets
+#=======================================
 if 'sheet_url' in st.session_state:
     st.sidebar.markdown(f"""
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
