@@ -55,3 +55,7 @@ If a field has no value, return null.
 # Define JSON Output Structure
 # =========================================================
 def build_newsdk_schema():
+    P = _genai_types
+    return P.Schema(
+        type=P.Type.OBJECT,
+        properties={
