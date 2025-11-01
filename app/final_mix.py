@@ -266,3 +266,81 @@ def smart_merge_records(json_records, excel_records):
 # =========================================================
 #  clean DataFrame
 # =========================================================
+def clean_and_optimize_dataframe(df):
+    print("\n🧹 Optimizing DataFrame...")
+    
+    # حذف خالی‌ها
+    empty = df.columns[df.isna().all()].tolist()
+    if empty:
+        df = df.drop(columns=empty)
+        print(f"   🗑️ Removed {len(empty)} empty columns")
+    
+    # ادغام تکراری‌ها
+    merges = [
+        ('urls', 'Website'),
+        ('phones', 'Phone1'),
+        ('phones[2]', 'Phone2'),
+        ('emails', 'Email'),
+    ]
+    for old, new in merges:
+        if old in df.columns:
+            if new in df.columns:
+                df[new] = df[new].fillna(df[old])
+            else:
+                df[new] = df[old]
+            df = df.drop(columns=[old])
+            print(f"   ✂️ {old} → {new}")
+    
+    # حذف multi-value خالی
+    multi = [c for c in df.columns if '[' in c and ']' in c]
+    for col in multi:
+        if df[col].isna().sum() / len(df) > 0.9:
+            df = df.drop(columns=[col])
+    
+    # ادغام company_names
+    if 'company_names' in df.columns:
+        if 'CompanyNameEN' not in df.columns:
+            df['CompanyNameEN'] = ""
+        if 'CompanyNameFA' not in df.columns:
+            df['CompanyNameFA'] = ""
+        
+        for idx, row in df.iterrows():
+            cn = row.get('company_names')
+            if pd.notna(cn) and cn:
+                if is_persian(cn):
+                    if not row.get('CompanyNameFA'):
+                        df.at[idx, 'CompanyNameFA'] = cn
+                else:
+                    if not row.get('CompanyNameEN'):
+                        df.at[idx, 'CompanyNameEN'] = cn
+        
+        df = df.drop(columns=['company_names'])
+        print(f"   ✂️ company_names → CompanyName fields")
+    
+    # ادغام addresses
+    if 'addresses' in df.columns:
+        if 'AddressEN' not in df.columns:
+            df['AddressEN'] = ""
+        if 'AddressFA' not in df.columns:
+            df['AddressFA'] = ""
+        
+        for idx, row in df.iterrows():
+            addr = row.get('addresses')
+            if pd.notna(addr) and addr:
+                if is_persian(addr):
+                    if not row.get('AddressFA'):
+                        df.at[idx, 'AddressFA'] = addr
+                else:
+                    if not row.get('AddressEN'):
+                        df.at[idx, 'AddressEN'] = addr
+        
+        df = df.drop(columns=['addresses'])
+        print(f"   ✂️ addresses → Address fields")
+    
+    # ادغام notes
+    if 'notes' in df.columns and 'Description' in df.columns:
+        df['Description'] = df['Description'].fillna(df['notes'])
+        df = df.drop(columns=['notes'])
+    
+    print(f"   ✅ Final: {len(df.columns)} columns")
+    return df
