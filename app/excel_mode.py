@@ -173,7 +173,7 @@ def are_values_same(v1, v2):
 # web scraping with smart ssl
 # =========================================================
 def fetch(url):
-    """دریافت محتوای صفحه با مدیریت هوشمند SSL"""
+    """fetch page content with smart ssl handling"""
     verify_ssl = not is_iranian_domain(url)
     ssl_status = "🔒 SSL ON" if verify_ssl else "🔓 SSL OFF (Iranian)"
     
