@@ -335,7 +335,7 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
         if urls:
             for url in urls:
                 url = url.strip()
-                # حذف کاراکترهای اضافی از انتها
+                # remove extra characters from the end
                 url = re.sub(r'[,;.!?\)\]]+$', '', url)
                 
                 if not url.lower().startswith("http"):
