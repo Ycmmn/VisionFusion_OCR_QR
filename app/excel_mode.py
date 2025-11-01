@@ -357,7 +357,7 @@ def clean_duplicate_columns(df):
     
     # group columns based on main name
     base_cols = {}
-    pattern = re.compile(r'\[\d+\]$')  # الگوی [2], [3], ...
+    pattern = re.compile(r'\[\d+\]$')  # pattern [2], [3], ...
     
     for col in df.columns:
         # استخراج نام اصلی
