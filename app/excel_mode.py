@@ -417,7 +417,7 @@ def clean_duplicate_columns(df):
     return cleaned_df
 
 def smart_merge(original_df, scraped_data):
-    """ادغام هوشمند داده‌ها"""
+    """smart data merging"""
     print("\n🔗 Smart merging data...")
     
     scraped_df = pd.DataFrame(scraped_data)
