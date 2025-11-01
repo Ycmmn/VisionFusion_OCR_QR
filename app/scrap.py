@@ -152,3 +152,8 @@ def domain_exists(url: str) -> bool:
     except Exception as e:
         print(f"❌ Domain check failed for {url}: {e}")
         return False
+
+
+# =============================================================
+# 🔹 Extract URLs (from OCR + QR + Excel)
+# =============================================================
