@@ -273,3 +273,77 @@ def crawl_site(root):
 # =========================================================
 # Gemini Extraction & Translation
 # =========================================================
+PROMPT_EXTRACT = """
+You are a bilingual (Persian-English) company information extractor.
+Extract the following JSON fields from the provided website text.
+Return ONLY strict JSON object. If a field has no value, return empty string "".
+
+Fields:
+{fields}
+
+Website text (mixed FA/EN):
+---
+{text}
+---
+"""
+
+PROMPT_TRANSLATE_EN2FA = """
+Translate the following English fields into formal Persian.
+Return ONLY valid JSON with the same keys and Persian values.
+
+Fields JSON:
+{json_chunk}
+"""
+
+def gemini_json(prompt, schema):
+    """درخواست به Gemini با خروجی JSON"""
+    schema_obj = types.Schema(type=types.Type.OBJECT, properties=schema, required=[])
+    
+    for i in range(MAX_RETRIES_GEMINI):
+        try:
+            resp = client.models.generate_content(
+                model=MODEL_NAME,
+                contents=[types.Part(text=prompt)],
+                config=types.GenerateContentConfig(
+                    temperature=0.1,
+                    response_mime_type="application/json",
+                    response_schema=schema_obj
+                )
+            )
+            return json.loads(resp.text)
+        except Exception as e:
+            print(f"      ⚠️ Gemini error (attempt {i+1}): {str(e)[:100]}")
+            if i == MAX_RETRIES_GEMINI - 1:
+                return {}
+            time.sleep(2 * (i + 1))
+    return {}
+
+def extract_with_gemini(text):
+    """استخراج اطلاعات با Gemini"""
+    fields = "\n".join([f"- {f}" for f in FIELDS])
+    prompt = PROMPT_EXTRACT.format(fields=fields, text=text[:8000])
+    schema = {f: types.Schema(type=types.Type.STRING, nullable=True) for f in FIELDS}
+    data = gemini_json(prompt, schema)
+    return {f: (data.get(f) or "") for f in FIELDS}
+
+def translate_fields(data):
+    """ترجمه فیلدهای انگلیسی به فارسی"""
+    to_translate = {en: data.get(en) for en, _ in TRANSLATABLE_FIELDS if data.get(en)}
+    
+    # اضافه کردن ستون‌های خالی FA
+    for en, fa_col in TRANSLATABLE_FIELDS:
+        if fa_col not in data:
+            data[fa_col] = ""
+    
+    if not to_translate:
+        return data
+    
+    prompt = PROMPT_TRANSLATE_EN2FA.format(json_chunk=json.dumps(to_translate, ensure_ascii=False))
+    schema = {k: types.Schema(type=types.Type.STRING, nullable=True) for k in to_translate.keys()}
+    tr = gemini_json(prompt, schema)
+    
+    for en, fa_col in TRANSLATABLE_FIELDS:
+        if en in tr:
+            data[fa_col] = tr[en] or ""
+    
+    return data
