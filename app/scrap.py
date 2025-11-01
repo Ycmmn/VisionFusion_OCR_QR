@@ -72,3 +72,12 @@ TEMP_EXCEL = Path(os.getenv("TEMP_EXCEL", SESSION_DIR / "web_analysis.tmp.xlsx")
 
 # ---------------------------------------------
 # Fields & Prompts
+FIELDS = [
+    "CompanyNameEN", "CompanyNameFA", "Logo", "Industry", "Certifications",
+    "ContactName", "PositionEN", "PositionFA", "Department",
+    "Phone1", "Phone2", "Fax", "WhatsApp", "Telegram", "Instagram", "LinkedIn",
+    "Website", "Email", "OtherEmails",
+    "AddressEN", "AddressFA", "Country", "City",
+    "ProductName", "ProductCategory", "ProductDescription", "Applications",
+    "Brands", "Description", "History", "Employees", "ClientsPartners", "Markets"
+]
