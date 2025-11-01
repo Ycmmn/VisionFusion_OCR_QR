@@ -408,7 +408,7 @@ def decrease_quota(amount=1):
 # Quality Control Tracking Functions
 # =========================================================
 def get_qc_metadata(user_name, user_role):
-    """ساخت متادیتای کنترل کیفیت"""
+    """create quality control metadata"""
     now = datetime.datetime.now()
     return {
         "QC_Supervisor": user_name,
