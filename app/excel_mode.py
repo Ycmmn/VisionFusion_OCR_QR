@@ -102,3 +102,21 @@ TRANSLATABLE_FIELDS = [
     ("Employees", "EmployeesFA"),
     ("ClientsPartners", "ClientsPartnersFA"),
 ]
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Connection": "keep-alive",
+}
+
+lock = threading.Lock()
+client = genai.Client(api_key=GOOGLE_API_KEY)
+
+print(f"\n{'='*70}")
+print("🚀 Excel Web Scraper - Professional Edition")
+print(f"{'='*70}")
+print(f"🔑 API Key: {GOOGLE_API_KEY[:20]}...")
+print(f"📥 Input: {INPUT_EXCEL}")
+print(f"📤 Output: {OUTPUT_EXCEL}")
+print(f"{'='*70}\n")
