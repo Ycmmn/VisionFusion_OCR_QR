@@ -642,3 +642,7 @@ def process_files_in_batches(uploads_dir, pipeline_type):
         return all_batches, int(avg_batch_size)
     
     return [], 1
+
+# =========================================================
+# 🔄 اجرای اسکریپت با Fast Mode + Log File
+# =========================================================
