@@ -454,3 +454,111 @@ def save_qc_log(session_dir, qc_metadata, exhibition_name, pipeline_type, total_
 # =========================================================
 # shared smart functions
 # =========================================================
+def detect_source_type(file_name):
+    if not file_name or pd.isna(file_name):
+        return "Unknown"
+    file_name = str(file_name).lower()
+    if file_name.endswith(('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.gif')):
+        return "Image"
+    elif file_name.endswith('.pdf'):
+        return "PDF"
+    elif file_name.endswith(('.xlsx', '.xls', '.csv')):
+        return "Excel"
+    else:
+        return "Unknown"
+
+def smart_position_from_department(department):
+    if not department or pd.isna(department) or str(department).strip() == '':
+        return None
+    department = str(department).strip().lower()
+    department_position_map = {
+        'فروش': 'مدیر فروش', 'sales': 'مدیر فروش',
+        'بازاریابی': 'مدیر بازاریابی', 'marketing': 'مدیر بازاریابی',
+        'صادرات': 'مدیر صادرات', 'export': 'مدیر صادرات',
+        'واردات': 'مدیر واردات', 'import': 'مدیر واردات',
+        'بازرگانی': 'مدیر بازرگانی', 'commerce': 'مدیر بازرگانی',
+        'مدیریت': 'مدیرعامل', 'management': 'مدیرعامل',
+        'اجرایی': 'مدیر اجرایی', 'executive': 'مدیر اجرایی',
+        'عامل': 'مدیرعامل', 'ceo': 'مدیرعامل',
+        'تولید': 'مدیر تولید', 'production': 'مدیر تولید',
+        'کارخانه': 'مدیر کارخانه', 'factory': 'مدیر کارخانه',
+        'عملیات': 'مدیر عملیات', 'operations': 'مدیر عملیات',
+        'فنی': 'مدیر فنی', 'technical': 'مدیر فنی',
+        'مالی': 'مدیر مالی', 'finance': 'مدیر مالی',
+        'حسابداری': 'مدیر حسابداری', 'accounting': 'مدیر حسابداری',
+        'منابع انسانی': 'مدیر منابع انسانی', 'hr': 'مدیر منابع انسانی',
+        'فناوری': 'مدیر فناوری اطلاعات', 'it': 'مدیر IT',
+        'تحقیق': 'مدیر تحقیق و توسعه', 'r&d': 'مدیر R&D',
+        'کیفیت': 'مدیر کنترل کیفیت', 'qc': 'مدیر کنترل کیفیت',
+        'خدمات': 'مدیر خدمات', 'support': 'مدیر پشتیبانی',
+        'لجستیک': 'مدیر لجستیک', 'logistics': 'مدیر لجستیک',
+        'انبار': 'مدیر انبار', 'warehouse': 'مدیر انبار',
+        'خرید': 'مدیر خرید', 'purchasing': 'مدیر خرید',
+        'روابط عمومی': 'مدیر روابط عمومی', 'pr': 'مدیر روابط عمومی',
+    }
+    for key, position in department_position_map.items():
+        if key in department:
+            return position
+    if any(word in department for word in ['مدیر', 'manager', 'رئیس', 'chief']):
+        return f"مدیر {department.title()}"
+    elif any(word in department for word in ['معاون', 'deputy']):
+        return f"معاون {department.title()}"
+    elif any(word in department for word in ['کارشناس', 'expert']):
+        return f"کارشناس {department.title()}"
+    return f"مسئول {department.title()}"
+
+def add_exhibition_and_source(excel_path, exhibition_name):
+    """نسخه‌ی جامع + اعلان UI"""
+    try:
+        print(f"\n📝 Adding Exhibition & Source metadata...")
+        df = pd.read_excel(excel_path)
+        print(f"   ✓ Loaded: {len(df)} rows × {len(df.columns)} columns")
+
+        df.insert(0, 'Exhibition', exhibition_name)
+        if 'file_name' in df.columns:
+            df.insert(1, 'Source', df['file_name'].apply(detect_source_type))
+        elif 'url' in df.columns or 'Website' in df.columns:
+            df.insert(1, 'Source', 'Excel')
+        else:
+            df.insert(1, 'Source', 'Unknown')
+
+        if 'Department' in df.columns and 'PositionFA' in df.columns:
+            print(f"\n🤖 Smart Position Detection...")
+            filled_count = 0
+            for idx in df.index:
+                if pd.isna(df.loc[idx, 'PositionFA']) or str(df.loc[idx, 'PositionFA']).strip() == '':
+                    department = df.loc[idx, 'Department']
+                    smart_position = smart_position_from_department(department)
+                    if smart_position:
+                        df.loc[idx, 'PositionFA'] = smart_position
+                        filled_count += 1
+                        print(f"   ✓ Row {idx + 1}: {department} → {smart_position}")
+            if filled_count > 0:
+                st.info(f"🤖 پر شد {filled_count} سمت از روی دپارتمان")
+
+        columns_to_remove = ['CompanyNameFA_translated']
+        removed = 0
+        for col in columns_to_remove:
+            if col in df.columns:
+                df.drop(col, axis=1, inplace=True)
+                removed += 1
+                print(f"   🗑️ Removed column: {col}")
+        if removed:
+            print(f"   ✅ Removed {removed} unnecessary columns")
+
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                try:
+                    df[col] = df[col].astype(str)
+                    df[col] = df[col].replace('nan', None).replace('', None)
+                except Exception as e:
+                    print(f"   ⚠️ Warning: Could not convert column {col}: {e}")
+
+        df.to_excel(excel_path, index=False, engine='openpyxl')
+        print(f"   ✅ Updated: {excel_path}")
+        print(f"   📊 Final: {len(df)} rows × {len(df.columns)} columns")
+        return True
+    except Exception as e:
+        print(f"   ❌ Error adding metadata: {e}")
+        st.error(f"خطا در اضافه کردن متادیتا: {e}")
+        return False
