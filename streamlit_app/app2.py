@@ -153,7 +153,7 @@ def get_google_services():
         return None, None
 
 def _col_index_to_letter(col_index):
-    """تبدیل index به حرف Excel (0->A, 25->Z, 26->AA)"""
+    """convert index to excel column letter (0->A, 25->Z, 26->AA)"""
     result = ""
     while col_index >= 0:
         result = chr(col_index % 26 + 65) + result
