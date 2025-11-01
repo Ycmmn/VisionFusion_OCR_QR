@@ -78,3 +78,8 @@ def merge_ocr_qr(ocr_data, qr_data):
 
 # =========================================================
 # main execution
+def main():
+    print("\n🚀 Starting OCR + QR merge process...\n")
+
+    ocr_data = read_json(OCR_FILE)
+    qr_data = read_json(QR_FILE)
