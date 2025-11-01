@@ -355,7 +355,7 @@ def clean_duplicate_columns(df):
     """remove and merge duplicate columns"""
     print("\n🧹 Cleaning duplicate columns...")
     
-    # گروه‌بندی ستون‌ها بر اساس نام اصلی
+    # group columns based on main name
     base_cols = {}
     pattern = re.compile(r'\[\d+\]$')  # الگوی [2], [3], ...
     
