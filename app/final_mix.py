@@ -96,3 +96,8 @@ def extract_key_identifier(record):
         return ("unique", f"{file_id}_page{page}")
     
     return ("unique", str(id(record)))
+
+
+# =========================================================
+# 📥 بارگذاری JSON
+# =========================================================
