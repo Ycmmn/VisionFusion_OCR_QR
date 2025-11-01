@@ -9,5 +9,5 @@ import os, json, re, pandas as pd
 from collections import defaultdict
 import time
 # =========================================================
-# 🧩 مسیرهای داینامیک
+#  dynamic paths
 # =========================================================
