@@ -156,3 +156,7 @@ def enhance_image_aggressive(img):
     # 3. CLAHE قوی برای افزایش کنتراست
     clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(8, 8))
     l = clahe.apply(l)
+    # 4. Merge back
+    enhanced = cv2.merge([l, a, b])
+    enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
+    
