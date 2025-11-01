@@ -125,3 +125,46 @@ print(f"{'='*70}\n")
 # =========================================================
 #  helper functions
 # =========================================================
+def normalize_url(url):
+    """نرمال‌سازی URL"""
+    if not url or pd.isna(url) or str(url).lower() in ['nan', 'none', '']:
+        return None
+    url = str(url).strip()
+    if url.startswith(('http://', 'https://')):
+        return url
+    if url.startswith('www.'):
+        return f'https://{url}'
+    if '.' in url:
+        return f'https://{url}'
+    return None
+
+def normalize_root(url):
+    """استخراج root domain"""
+    u = normalize_url(url)
+    if not u:
+        return None
+    p = urlparse(u)
+    return f"{p.scheme}://{p.netloc}".lower()
+
+def is_iranian_domain(url):
+    """تشخیص دامنه ایرانی"""
+    try:
+        netloc = urlparse(normalize_root(url)).netloc.lower()
+        return any(netloc.endswith(tld) for tld in IRANIAN_TLDS)
+    except:
+        return False
+
+def domain_exists(url):
+    """بررسی وجود دامنه"""
+    try:
+        host = urlparse(normalize_root(url)).netloc
+        socket.gethostbyname(host)
+        return True
+    except:
+        return False
+
+def are_values_same(v1, v2):
+    """بررسی یکسان بودن دو مقدار"""
+    if not v1 or not v2:
+        return False
+    return str(v1).strip().lower() == str(v2).strip().lower()
