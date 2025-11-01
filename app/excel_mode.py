@@ -405,7 +405,7 @@ def clean_duplicate_columns(df):
                 except:
                     pass
         
-        # حذف ستون‌های تکراری
+        # remove duplicate columns
         for col in cols[1:]:
             if col in cleaned_df.columns:
                 try:
