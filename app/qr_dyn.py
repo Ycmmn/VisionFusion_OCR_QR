@@ -108,7 +108,7 @@ def extract_url_from_vcard(data):
     if not data or not isinstance(data, str):
         return None
     
-    # بررسی اینکه آیا vCard است
+    # check if it is a vcard
     if not (data.upper().startswith("BEGIN:VCARD") or "VCARD" in data.upper()):
         return None
     
