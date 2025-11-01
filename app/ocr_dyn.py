@@ -153,3 +153,10 @@ def pdf_to_images_and_process(pdf_path: Path) -> List[Dict[str, Any]]:
     print(f"📑 Converting PDF: {pdf_path.name}")
     images = convert_from_path(pdf_path, dpi=PDF_IMG_DPI)
     results = []
+
+    for i, img in enumerate(images, start=1):
+        print(f"📄 Page {i}/{len(images)} of {pdf_path.name}")
+        try:
+            data = call_gemini_single_key(img, pdf_path)
+            results.append({"page": i, "result": data})
+        except Exception as e:
