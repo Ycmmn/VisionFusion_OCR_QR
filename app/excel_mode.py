@@ -139,7 +139,7 @@ def normalize_url(url):
     return None
 
 def normalize_root(url):
-    """استخراج root domain"""
+    """extract root domain"""
     u = normalize_url(url)
     if not u:
         return None
