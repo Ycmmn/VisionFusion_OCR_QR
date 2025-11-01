@@ -373,7 +373,7 @@ def process_image_for_qr(image_path: Path) -> Union[List[str], None]:
         print(f"   📐 Size: {img.shape[1]}x{img.shape[0]}")
         cv2.imwrite(str(DEBUG_DIR / f"{image_path.stem}_01_original.jpg"), img)
     
-    # بررسی کنتراست
+    # check contrast
     low = is_low_contrast(img)
     
     # Enhancement
