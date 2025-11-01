@@ -124,3 +124,9 @@ for key_name, key_value in API_KEYS.items():
     os.environ[f"GOOGLE_API_KEY_{key_name.upper()}"] = key_value
     os.environ["GOOGLE_API_KEY"] = key_value
     os.environ["GEMINI_API_KEY"] = key_value
+
+
+# =========================================================
+# ☁️ GOOGLE SHEETS INTEGRATION
+# =========================================================
+from google.oauth2 import service_account
