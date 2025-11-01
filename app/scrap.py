@@ -94,3 +94,33 @@ TRANSLATABLE_FIELDS = [
     ("Employees", "EmployeesFA"),
     ("ClientsPartners", "ClientsPartnersFA"),
 ]
+
+PROMPT_EXTRACT = """
+You are a bilingual (Persian-English) company information extractor.
+Extract the following JSON fields from the provided website text.
+Return ONLY strict JSON object. If a field has no value, return null.
+
+Fields:
+{fields}
+
+Website text (mixed FA/EN):
+---
+{text}
+---
+"""
+
+PROMPT_TRANSLATE_EN2FA = """
+Translate the following English fields into formal Persian.
+Return ONLY valid JSON with the same keys and Persian values. Do NOT add extra text.
+
+Fields JSON:
+{json_chunk}
+"""
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Accept-Encoding": "gzip, deflate",
+    "Connection": "keep-alive",
+}
