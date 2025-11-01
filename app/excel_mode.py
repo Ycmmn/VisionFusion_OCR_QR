@@ -228,7 +228,7 @@ def clean_text(html):
     return re.sub(r"\s+", " ", text).strip()
 
 def crawl_site(root):
-    """کرال کامل سایت"""
+    """full site crawl"""
     print(f"   🕷️ Crawling: {root}")
     seen = set()
     q = [(root, 0)]
