@@ -47,3 +47,10 @@ def merge_pdf_pages(item, qr_result):
         qr_match = next((p.get("qr_link") for p in qr_result if p.get("page") == page_num), None)
         page_obj["qr_link"] = qr_match
     return item
+
+
+
+def merge_ocr_qr(ocr_data, qr_data):
+    """ادغام کامل داده‌های OCR و QR"""
+    qr_lookup = {item["file_name"]: item.get("result", []) for item in qr_data}
+    merged = []
