@@ -449,3 +449,8 @@ def save_qc_log(session_dir, qc_metadata, exhibition_name, pipeline_type, total_
     except Exception as e:
         print(f"   ❌ Error saving QC log: {e}")
         return False
+
+
+# =========================================================
+# 🧠 توابع هوشمند مشترک
+# =========================================================
