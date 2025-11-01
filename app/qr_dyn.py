@@ -9,3 +9,7 @@ import socket
 import concurrent.futures
 import time
 from pathlib import Path
+from pathlib import Path
+from pdf2image import convert_from_path
+from PIL import Image
+from typing import Union, List, Dict, Any
