@@ -439,7 +439,7 @@ def process_pdf_for_qr(pdf_path: Path) -> Dict[str, Any]:
 
 # ----------------------------------------------------------
 def process_image_file(image_path: Path) -> Dict[str, Any]:
-    """پردازش فایل تصویری"""
+    """process image file"""
     qr_links = process_image_for_qr(image_path)
     return {
         "file_id": image_path.stem,
