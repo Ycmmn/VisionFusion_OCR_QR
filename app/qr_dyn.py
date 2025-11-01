@@ -480,7 +480,7 @@ def is_domain_alive(url, timeout=5):
 
 
 def clean_qr_json(input_file, output_file):
-    """پاکسازی و اعتبارسنجی URLها"""
+    """clean and validate urls"""
     print("\n🧹 Cleaning and validating extracted QR URLs...")
     
     if not Path(input_file).exists():
