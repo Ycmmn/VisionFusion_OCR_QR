@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
 """
 🚀 Excel Web Scraper - Professional Edition
-وب‌اسکرپ حرفه‌ای از اکسل + تحلیل هوشمند Gemini + ترجمه
+Professional Excel web scraper + Gemini smart analysis + translation
 """
