@@ -252,11 +252,12 @@ For commercial or enterprise licensing, please contact:
 
 Experience the Streamlit Web App in action 👇
 
-**📘 English Interface**
-![Yabix OCR+QR Demo – English](./docs/app1.gif)
+**How to Run the App**
+![Yabix OCR+QR Demo](docs/app1.gif)
 
-**📗 Persian Interface**
-![Yabix OCR+QR Demo – Persian](./docs/app2.gif)
+**Launch Web App**
+![Yabix OCR+QR Demo](docs/app2.gif)
+
 
 <!-- Or use a GIF -->
 
