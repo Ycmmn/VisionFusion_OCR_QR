@@ -269,7 +269,7 @@ def smart_merge_records(json_records, excel_records):
 def clean_and_optimize_dataframe(df):
     print("\n🧹 Optimizing DataFrame...")
     
-    # حذف خالی‌ها
+    # remove empty values
     empty = df.columns[df.isna().all()].tolist()
     if empty:
         df = df.drop(columns=empty)
