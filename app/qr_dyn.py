@@ -71,7 +71,7 @@ except ImportError:
 
 # ----------------------------------------------------------
 def clean_url(url):
-    """تمیز کردن URL و حذف قسمت‌های اضافی"""
+    """clean url and remove extra parts"""
     if not url or not isinstance(url, str):
         return None
     
