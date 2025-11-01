@@ -98,3 +98,7 @@ def to_pil(image_path: Path) -> Image.Image:
 def ensure_nulls(obj: Dict[str, Any]) -> Dict[str, Any]:
     fields = ["addresses","phones","faxes","emails","urls","telegram","instagram","linkedin","company_names","services"]
     for f in fields:
+        if f not in obj or not obj[f]:
+            obj[f] = None
+    if "persons" not in obj or not obj["persons"]:
+        obj["persons"] = None
