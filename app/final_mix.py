@@ -405,3 +405,27 @@ def save_excel(df, path):
 #  execute
 # =========================================================
 def main():
+    start = time.time()
+    
+    json_recs = load_json_records(INPUT_JSON)
+    excel_recs = load_excel_records(INPUT_EXCEL)
+    
+    if not json_recs and not excel_recs:
+        print("\n❌ No data!")
+        return 1
+    
+    merged = smart_merge_records(json_recs, excel_recs)
+    final_df = create_final_dataframe(merged)
+    
+    if save_excel(final_df, OUTPUT_EXCEL):
+        print(f"\n📊 Input: {len(json_recs)} JSON + {len(excel_recs)} Excel")
+        print(f"📤 Output: {len(final_df)} records")
+        print(f"⏱️ Time: {time.time()-start:.2f}s")
+        print("\n" + "="*70)
+        print("🎉 SUCCESS!")
+        print("="*70)
+        return 0
+    return 1
+
+if __name__ == "__main__":
+    exit(main())
