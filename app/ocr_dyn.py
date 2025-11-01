@@ -70,3 +70,10 @@ def build_newsdk_schema():
             "company_names": P.Schema(type=P.Type.ARRAY, items=P.Schema(type=P.Type.STRING), nullable=True),
             "services":      P.Schema(type=P.Type.ARRAY, items=P.Schema(type=P.Type.STRING), nullable=True),
             "persons":    P.Schema(type=P.Type.ARRAY, items=P.Schema(
+                type=P.Type.OBJECT,
+                properties={
+                    "name": P.Schema(type=P.Type.STRING),
+                    "position": P.Schema(type=P.Type.STRING, nullable=True)
+                },
+                required=["name"]
+            ), nullable=True),
