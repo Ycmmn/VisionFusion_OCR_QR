@@ -91,3 +91,6 @@ def build_newsdk_schema():
 def list_files(path: Union[str, Path]) -> List[Path]:
     exts = {".jpg", ".jpeg", ".png", ".pdf"}
     return sorted([f for f in Path(path).rglob("*") if f.suffix.lower() in exts])
+
+def to_pil(image_path: Path) -> Image.Image:
+    return Image.open(image_path).convert("RGB")
