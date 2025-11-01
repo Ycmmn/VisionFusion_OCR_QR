@@ -250,13 +250,16 @@ For commercial or enterprise licensing, please contact:
 
 ## 🎥 Live Preview
 
-Experience the Streamlit Web App in action 👇
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Ycmmn/VisionFusion_OCR_QR/main/docs/app1.gif" 
+       alt="Yabix OCR+QR - How to Run the App" width="48%" />
+  <img src="https://raw.githubusercontent.com/Ycmmn/VisionFusion_OCR_QR/main/docs/app2.gif" 
+       alt="Yabix OCR+QR - Launch Web App" width="48%" />
+</p>
 
-**How to Run the App**
-![Yabix OCR+QR Demo](docs/app1.gif)
-
-**Launch Web App**
-![Yabix OCR+QR Demo](docs/app2.gif)
+<p align="center">
+  <b>Left:</b> How to Run the App &nbsp; | &nbsp; <b>Right:</b> Launch Web App
+</p>
 
 
 <!-- Or use a GIF -->
