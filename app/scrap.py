@@ -324,3 +324,8 @@ def crawl_site(root: str, max_depth=MAX_DEPTH, max_pages=MAX_PAGES_PER_SITE) -> 
     
     print(f"  ✅ Total extracted: {len(combined)} chars from {len(texts)} pages")
     return (combined, "")
+
+
+# =============================================================
+# Gemini + Translation
+# =============================================================
