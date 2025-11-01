@@ -223,7 +223,7 @@ def fetch(url: str) -> tuple[str, str]:
                 url, 
                 headers=HEADERS, 
                 timeout=REQUEST_TIMEOUT, 
-                verify=verify_ssl,  # ✅ داینامیک
+                verify=verify_ssl,  # dynamic
                 allow_redirects=True
             )
             if r.status_code == 200:
