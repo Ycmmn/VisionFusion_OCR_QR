@@ -199,3 +199,10 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
                         print(f"      ✓ Found with {method_name} (2nd attempt)")
                     payloads.append(val.strip())
                     return True
+                    except Exception as e:
+            if DEBUG_MODE:
+                print(f"      ✗ {method_name} failed: {e}")
+        return False
+
+    if DEBUG_MODE:
+        print(f"   🔍 Trying multiple detection methods...")
