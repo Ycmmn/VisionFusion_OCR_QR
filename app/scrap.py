@@ -69,3 +69,6 @@ CLEAN_URLS = Path(os.getenv("CLEAN_URLS", SESSION_DIR / "urls_clean.json"))
 OUTPUT_JSON = Path(os.getenv("OUTPUT_JSON", OUT_JSON))
 OUTPUT_EXCEL = Path(os.getenv("OUTPUT_EXCEL", WEB_ANALYSIS_XLSX))
 TEMP_EXCEL = Path(os.getenv("TEMP_EXCEL", SESSION_DIR / "web_analysis.tmp.xlsx"))
+
+# ---------------------------------------------
+# Fields & Prompts
