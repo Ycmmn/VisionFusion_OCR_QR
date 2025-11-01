@@ -129,3 +129,26 @@ HEADERS = {
 # =============================================================
 # Utility Functions
 # =============================================================
+def normalize_root(url: str) -> str:
+    u = url.strip()
+    if not re.match(r"^https?://", u, re.I):
+        u = "https://" + u
+    p = urlparse(u)
+    return f"{p.scheme}://{p.netloc}".lower()
+
+def is_iranian_domain(url: str) -> bool:
+    """Check if URL is Iranian domain"""
+    try:
+        netloc = urlparse(normalize_root(url)).netloc.lower()
+        return any(netloc.endswith(tld) for tld in IRANIAN_TLDS)
+    except:
+        return False
+
+def domain_exists(url: str) -> bool:
+    try:
+        host = urlparse(normalize_root(url)).netloc
+        socket.gethostbyname(host)
+        return True
+    except Exception as e:
+        print(f"❌ Domain check failed for {url}: {e}")
+        return False
