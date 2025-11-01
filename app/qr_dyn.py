@@ -134,3 +134,13 @@ def extract_url_from_vcard(data):
                     return clean_url(url)
     
     return None
+
+
+def is_low_contrast(img, sharp_thresh=85, contrast_thresh=25):
+    """بررسی کنتراست پایین تصویر"""
+    g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    sharpness = cv2.Laplacian(g, cv2.CV_64F).var()
+    contrast = g.std()
+    if DEBUG_MODE:
+        print(f"   📊 Sharpness: {sharpness:.1f}, Contrast: {contrast:.1f}")
+    return sharpness < sharp_thresh or contrast < contrast_thresh
