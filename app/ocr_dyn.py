@@ -25,3 +25,7 @@ OUT_JSON = Path(os.getenv("OUT_JSON", SESSION_DIR / "gemini_output.json"))
 #path to Poppler for converting PDF to images
 POPPLER_PATH = os.getenv("POPPLER_PATH", r"C:\poppler\Library\bin")
 os.environ["PATH"] += os.pathsep + POPPLER_PATH
+
+# =========================================================
+# General Settings
+# =========================================================
