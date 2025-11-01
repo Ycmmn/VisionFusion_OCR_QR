@@ -218,3 +218,46 @@ def merge_two_records(r1, r2):
 # =========================================================
 # smart merge
 # =========================================================
+def smart_merge_records(json_records, excel_records):
+    print("\n🔗 Merging intelligently...")
+    groups = defaultdict(list)
+    
+    for rec in json_records:
+        rec['_source'] = 'JSON'
+        kt, kv = extract_key_identifier(rec)
+        groups[f"{kt}:{kv}"].append(rec)
+    
+    for rec in excel_records:
+        rec['_source'] = 'Excel'
+        kt, kv = extract_key_identifier(rec)
+        groups[f"{kt}:{kv}"].append(rec)
+    
+    json_only = sum(1 for g in groups.values() if len(g)==1 and g[0]['_source']=='JSON')
+    excel_only = sum(1 for g in groups.values() if len(g)==1 and g[0]['_source']=='Excel')
+    merged = sum(1 for g in groups.values() if len(g)>1)
+    
+    print(f"   ✓ Groups: {len(groups)}")
+    print(f"   📊 JSON only: {json_only}, Excel only: {excel_only}, Merged: {merged}")
+    
+    merged_records = []
+    for gk, grecs in groups.items():
+        if len(grecs) == 1:
+            rec = grecs[0].copy()
+            rec.pop('_source', None)
+            merged_records.append(rec)
+        else:
+            sources = [r.get('_source','') for r in grecs]
+            print(f"   🔗 Merging {len(grecs)} records...")
+            
+            merged = grecs[0].copy()
+            merged.pop('_source', None)
+            
+            for r in grecs[1:]:
+                rc = r.copy()
+                rc.pop('_source', None)
+                merged = merge_two_records(merged, rc)
+            
+            merged_records.append(merged)
+    
+    print(f"   ✅ Created {len(merged_records)} final records")
+    return merged_records
