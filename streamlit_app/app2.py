@@ -33,3 +33,9 @@ from supabase import create_client, Client
 # =========================================================
 # page settings
 # =========================================================
+st.set_page_config(
+    page_title="Smart Exhibition Pipeline",
+    page_icon="🎯",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
