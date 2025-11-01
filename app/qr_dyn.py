@@ -16,3 +16,7 @@ from urllib.parse import urlparse, unquote
 import warnings, ctypes, os
 warnings.filterwarnings("ignore")
 os.environ["ZBAR_LOG_LEVEL"] = "0"
+
+# =========================================================
+# 🧩 مسیرهای داینامیک سشن (Dynamic Paths)
+# =========================================================
