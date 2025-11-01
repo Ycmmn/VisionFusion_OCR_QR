@@ -327,7 +327,7 @@ def extract_with_gemini(text):
     return {f: (data.get(f) or "") for f in FIELDS}
 
 def translate_fields(data):
-    """ترجمه فیلدهای انگلیسی به فارسی"""
+    """translate English fields to Farsi"""
     to_translate = {en: data.get(en) for en, _ in TRANSLATABLE_FIELDS if data.get(en)}
     
     # اضافه کردن ستون‌های خالی FA
