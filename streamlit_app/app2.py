@@ -203,7 +203,7 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         return None, None, False
 
 def append_excel_data_to_sheets(excel_path, folder_id=None):
-    """خواندن داده‌های Excel و append به Google Sheets (تعداد ردیف متغیر)"""
+    """read excel data and append to google sheets (variable number of rows)"""
     try:
         drive_service, sheets_service = get_google_services()
         if not drive_service or not sheets_service:
