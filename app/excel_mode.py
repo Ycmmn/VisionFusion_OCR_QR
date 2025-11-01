@@ -170,6 +170,5 @@ def are_values_same(v1, v2):
     return str(v1).strip().lower() == str(v2).strip().lower()
 
 # =========================================================
-# 🌐 Web Scraping با SSL هوشمند
+# web scraping with smart ssl
 # =========================================================
-def fetch(url):
