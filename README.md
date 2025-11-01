@@ -94,7 +94,7 @@ It automatically extracts structured data from scanned documents, decodes embedd
 * Crawls websites (multi-threaded) up to configurable depth
 * Cleans HTML, extracts business info using Gemini
 * Translates English fields to Persian (EN→FA)
-* Smart SSL handling for `.ir` domains
+* Smart SSL handling for domains
 * Generates bilingual Excel report
 
 📦 **Outputs:**
