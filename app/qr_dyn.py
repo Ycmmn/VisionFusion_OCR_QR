@@ -104,7 +104,7 @@ def clean_url(url):
         return url
 
 def extract_url_from_vcard(data):
-    """استخراج URL از vCard"""
+    """extract url from vcard"""
     if not data or not isinstance(data, str):
         return None
     
