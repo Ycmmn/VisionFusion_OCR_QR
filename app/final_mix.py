@@ -101,3 +101,57 @@ def extract_key_identifier(record):
 # =========================================================
 #  load JSON
 # =========================================================
+def load_json_records(json_path):
+    print("\n📥 Loading JSON...")
+    if not json_path.exists():
+        print(f"   ⚠️ Not found: {json_path}")
+        return []
+    
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            raw_data = json.load(f)
+        
+        records = []
+        if isinstance(raw_data, list):
+            for file_item in raw_data:
+                if not isinstance(file_item, dict):
+                    continue
+                
+                file_id = file_item.get("file_id", "")
+                file_name = file_item.get("file_name", "")
+                result_array = file_item.get("result")
+                
+                if isinstance(result_array, list):
+                    for page_data in result_array:
+                        if not isinstance(page_data, dict):
+                            continue
+                        
+                        page_num = page_data.get("page", 0)
+                        page_result = page_data.get("result", {})
+                        
+                        if not isinstance(page_result, dict):
+                            continue
+                        
+                        record = {"file_id": file_id, "file_name": file_name, "page": page_num}
+                        
+                        for key, value in page_result.items():
+                            if value is None:
+                                continue
+                            if isinstance(value, list):
+                                if not value:
+                                    continue
+                                record[key] = value[0]
+                                for idx, v in enumerate(value[1:], 2):
+                                    record[f"{key}[{idx}]"] = v
+                            else:
+                                if str(value).strip():
+                                    record[key] = value
+                        
+                        if len(record) > 3:
+                            records.append(record)
+        
+        print(f"   ✅ Loaded {len(records)} page records")
+        return records
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return []
