@@ -68,3 +68,6 @@ try:
 except ImportError:
     HAS_ZXING = False
     print("⚠️ pyzxing not available")
+
+# ----------------------------------------------------------
+def clean_url(url):
