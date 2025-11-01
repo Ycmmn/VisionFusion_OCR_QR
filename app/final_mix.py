@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 🚀 Complete JSON + Excel Merger - Final Version
-ادغام هوشمند JSON و Excel با پاکسازی و بهینه‌سازی کامل
+Smart merging of JSON and Excel with full cleaning and optimization
 """
 
 from pathlib import Path
