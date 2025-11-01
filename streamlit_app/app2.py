@@ -367,5 +367,38 @@ def get_or_create_folder(folder_name="Exhibition_Data"):
 
 
 # =========================================================
-# 📅 Quota Management
+# Quota Management
 # =========================================================
+DAILY_LIMIT = 240
+QUOTA_FILE = Path("quota.json")
+
+def save_quota(q):
+    QUOTA_FILE.write_text(json.dumps(q, indent=2, ensure_ascii=False), encoding="utf-8")
+
+def load_quota():
+    today = datetime.date.today().isoformat()
+    if QUOTA_FILE.exists():
+        try:
+            data = json.loads(QUOTA_FILE.read_text(encoding="utf-8"))
+            file_date = data.get("date")
+            if file_date != today:
+                q = {"date": today, "used": 0, "remaining": DAILY_LIMIT}
+                save_quota(q)
+                return q
+            used = data.get("used", 0)
+            remaining = max(0, DAILY_LIMIT - used)
+            q = {"date": today, "used": used, "remaining": remaining}
+            save_quota(q)
+            return q
+        except Exception:
+            pass
+    q = {"date": today, "used": 0, "remaining": DAILY_LIMIT}
+    save_quota(q)
+    return q
+
+def decrease_quota(amount=1):
+    quota = load_quota()
+    quota["used"] += amount
+    quota["remaining"] = max(0, DAILY_LIMIT - quota["used"])
+    save_quota(quota)
+    return quota
