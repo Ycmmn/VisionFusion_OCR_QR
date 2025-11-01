@@ -210,7 +210,7 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
     if DEBUG_MODE:
         print(f"   🔍 Trying multiple detection methods...")
 
-    # 1. تصویر اصلی
+    # 1. original image
     try_decode(img, "Original")
     
     # 2. Grayscale
