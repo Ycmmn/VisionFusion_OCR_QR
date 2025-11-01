@@ -352,7 +352,7 @@ def translate_fields(data):
 #  Smart Merge 
 # =========================================================
 def clean_duplicate_columns(df):
-    """حذف و ادغام ستون‌های تکراری"""
+    """remove and merge duplicate columns"""
     print("\n🧹 Cleaning duplicate columns...")
     
     # گروه‌بندی ستون‌ها بر اساس نام اصلی
