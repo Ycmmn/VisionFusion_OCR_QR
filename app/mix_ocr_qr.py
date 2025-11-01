@@ -65,3 +65,11 @@ for item in ocr_data:
         # 📄 حالت PDF
         elif file_name.lower().endswith(".pdf"):
             item = merge_pdf_pages(item, qr_result)
+             # 🧩 سایر فرمت‌ها
+        else:
+            item["result"] = item.get("result", {})
+            item["result"]["qr_links"] = None
+
+        merged.append(item)
+
+    return merged
