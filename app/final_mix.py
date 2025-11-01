@@ -317,7 +317,7 @@ def clean_and_optimize_dataframe(df):
         df = df.drop(columns=['company_names'])
         print(f"   ✂️ company_names → CompanyName fields")
     
-    # ادغام addresses
+    # addresses
     if 'addresses' in df.columns:
         if 'AddressEN' not in df.columns:
             df['AddressEN'] = ""
@@ -337,7 +337,8 @@ def clean_and_optimize_dataframe(df):
         df = df.drop(columns=['addresses'])
         print(f"   ✂️ addresses → Address fields")
     
-    # ادغام notes
+    # 
+    znotes
     if 'notes' in df.columns and 'Description' in df.columns:
         df['Description'] = df['Description'].fillna(df['notes'])
         df = df.drop(columns=['notes'])
