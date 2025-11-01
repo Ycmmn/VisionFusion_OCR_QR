@@ -476,3 +476,58 @@ def is_domain_alive(url, timeout=5):
         return True
     except Exception:
         return False
+
+
+
+def clean_qr_json(input_file, output_file):
+    """پاکسازی و اعتبارسنجی URLها"""
+    print("\n🧹 Cleaning and validating extracted QR URLs...")
+    
+    if not Path(input_file).exists():
+        print(f"   ❌ Input file not found: {input_file}")
+        return
+    
+    data = json.loads(Path(input_file).read_text(encoding="utf-8"))
+    final_results = []
+    
+    for entry in data:
+        if "error" in entry:
+            final_results.append(entry)
+            continue
+            
+        urls = extract_urls(entry)
+        valid_urls = []
+        
+        if urls:
+            print(f"   🔍 Validating {len(urls)} URL(s) from {entry.get('file_name')}...")
+            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                futures = {executor.submit(is_domain_alive, u): u for u in urls}
+                for f in concurrent.futures.as_completed(futures):
+                    u = futures[f]
+                    try:
+                        if f.result():
+                            valid_urls.append(u)
+                            print(f"      ✅ {u}")
+                        else:
+                            print(f"      ❌ {u} (domain unreachable)")
+                    except Exception as e:
+                        print(f"      ⚠️  {u} (check failed: {e})")
+        
+        result_pages = []
+        for item in entry.get("result", []):
+            page = item.get("page", 1)
+            link = item.get("qr_link")
+            
+            if link and link in valid_urls:
+                result_pages.append({"page": page, "qr_link": link})
+            else:
+                result_pages.append({"page": page, "qr_link": None})
+        
+        final_results.append({
+            "file_id": entry.get("file_id"),
+            "file_name": entry.get("file_name"),
+            "result": result_pages
+        })
+    
+    save_json(output_file, final_results)
+    print(f"\n✅ Cleaned results saved → {output_file}")
