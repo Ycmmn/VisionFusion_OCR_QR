@@ -83,3 +83,8 @@ def main():
 
     ocr_data = read_json(OCR_FILE)
     qr_data = read_json(QR_FILE)
+if not ocr_data:
+        print(f"⚠️ OCR file is empty or not found → continuing with QR data only.")
+
+    if not qr_data:
+        print(f"⚠️ QR file is empty or not found → continuing with OCR data only.")
