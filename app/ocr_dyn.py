@@ -142,3 +142,4 @@ def call_gemini_single_key(data: Image.Image, source_path: Path) -> Dict[str, An
         print("✅ Gemini response received successfully.")
         return ensure_nulls(json.loads(txt))
     except Exception as e:
+        raise RuntimeError(f"Gemini API Error: {e}")
