@@ -251,12 +251,12 @@ For commercial or enterprise licensing, please contact:
 ## 🎥 Live Preview
 
 <p align="center">
-  <img src="./docs/app1.gif" alt="Yabix OCR+QR  Demo" width="48%" />
-  <img src="./docs/app2.gif" alt="Yabix OCR+QR  Demo" width="48%" />
+  <img src="./docs/app1.gif" alt="Yabix OCR+QR How to Run the App Demo" width="48%" />
+  <img src="./docs/app2.gif" alt="Yabix OCR+QR Launch Web App Demo" width="48%" />
 </p>
 
 <p align="center">
-  <b>Left:</b> English Interface &nbsp; | &nbsp; <b>Right:</b> Persian Interface
+  <b>Left:</b> How to Run the App &nbsp; | &nbsp; <b>Right:</b> Launch Web App
 </p>
 
 <!-- Or use a GIF -->
