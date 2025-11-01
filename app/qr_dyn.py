@@ -251,4 +251,102 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
         if w > 50 and h > 50:
             resized = cv2.resize(img, (w, h), interpolation=cv2.INTER_CUBIC)
             try_decode(resized, f"Scale {scale}x")
+    # 10. Rotation (چرخش)
+    rotation_map = {
+        90: cv2.ROTATE_90_CLOCKWISE,
+        180: cv2.ROTATE_180,
+        270: cv2.ROTATE_90_COUNTERCLOCKWISE
+    }
+    for angle, rotate_code in rotation_map.items():
+        rotated = cv2.rotate(img, rotate_code)
+        try_decode(rotated, f"Rotated {angle}°")
     
+    # 11. استفاده از pyzbar
+    if HAS_PYZBAR:
+        for method_img, method_name in [
+            (gray, "Pyzbar-Gray"),
+            (thresh_adapt, "Pyzbar-Adaptive"),
+            (thresh_otsu, "Pyzbar-Otsu")
+        ]:
+            try:
+                barcodes = pyzbar.decode(method_img)
+                for barcode in barcodes:
+                    data = barcode.data.decode("utf-8", errors="ignore").strip()
+                    if data:
+                        if DEBUG_MODE:
+                            print(f"      ✓ Found with {method_name}")
+                        payloads.append(data)
+            except Exception as e:
+                if DEBUG_MODE:
+                    print(f"      ✗ {method_name} failed: {e}")
+    
+    # 12. استفاده از zxing
+    if HAS_ZXING:
+        try:
+            temp_path = DEBUG_DIR / f"_temp_zxing_{img_name}.jpg"
+            cv2.imwrite(str(temp_path), img)
+            results = zxing_reader.decode(str(temp_path), try_harder=True)
+            
+            if results:
+                if isinstance(results, list):
+                    for res in results:
+                        txt = res.get("parsed", "") or res.get("raw", "")
+                        if txt:
+                            if DEBUG_MODE:
+                                print(f"      ✓ Found with ZXing")
+                            payloads.append(txt.strip())
+                elif isinstance(results, dict):
+                    txt = results.get("parsed", "") or results.get("raw", "")
+                    if txt:
+                        if DEBUG_MODE:
+                            print(f"      ✓ Found with ZXing")
+                        payloads.append(txt.strip())
+            
+            temp_path.unlink(missing_ok=True)
+        except Exception as e:
+            if DEBUG_MODE:
+                print(f"      ✗ ZXing failed: {e}")
+    
+    # حذف تکراری‌ها
+    payloads = list(dict.fromkeys(p for p in payloads if p and isinstance(p, str)))
+    
+    if DEBUG_MODE:
+        print(f"   📈 Tried {methods_tried} methods, found {len(payloads)} unique payload(s)")
+    
+    # پردازش و استخراج URL
+    out = []
+    for p in payloads:
+        # بررسی اینکه آیا vCard است
+        vcard_url = extract_url_from_vcard(p)
+        if vcard_url:
+            out.append(vcard_url)
+            continue
+        
+        # جستجوی URL مستقیم
+        p = p.strip()
+        urls = re.findall(r"(https?://[^\s\"'<>\[\]]+|www\.[^\s\"'<>\[\]]+)", p, re.IGNORECASE)
+        
+        if urls:
+            for url in urls:
+                url = url.strip()
+                # حذف کاراکترهای اضافی از انتها
+                url = re.sub(r'[,;.!?\)\]]+$', '', url)
+                
+                if not url.lower().startswith("http"):
+                    url = "https://" + url.lower()
+                
+                # تمیز کردن URL
+                cleaned = clean_url(url)
+                if cleaned:
+                    out.append(cleaned)
+        elif re.search(r"(HTTPS?://|WWW\.)", p.upper()):
+            if not p.lower().startswith("http"):
+                p = "https://" + p.lower()
+            cleaned = clean_url(p)
+            if cleaned:
+                out.append(cleaned)
+    
+    # حذف تکراری URL
+    out = list(dict.fromkeys(out))
+    
+    return out if out else None
