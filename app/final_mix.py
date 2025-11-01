@@ -275,7 +275,7 @@ def clean_and_optimize_dataframe(df):
         df = df.drop(columns=empty)
         print(f"   🗑️ Removed {len(empty)} empty columns")
     
-    # ادغام تکراری‌ها
+    # merge duplicates
     merges = [
         ('urls', 'Website'),
         ('phones', 'Phone1'),
