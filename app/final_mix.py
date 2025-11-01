@@ -384,3 +384,18 @@ def create_final_dataframe(records):
 # =========================================================
 # save
 # =========================================================
+def save_excel(df, path):
+    if df.empty:
+        print("\n⚠️ No data!")
+        return False
+    
+    try:
+        print("\n💾 Saving...")
+        df = df.fillna("")
+        df.to_excel(path, index=False, engine='openpyxl')
+        print(f"   ✅ Saved: {path}")
+        print(f"   📊 {len(df)} rows × {len(df.columns)} columns")
+        return True
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        return False
