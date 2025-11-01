@@ -644,5 +644,5 @@ def process_files_in_batches(uploads_dir, pipeline_type):
     return [], 1
 
 # =========================================================
-# 🔄 اجرای اسکریپت با Fast Mode + Log File
+# run script with fast mode + log file
 # =========================================================
