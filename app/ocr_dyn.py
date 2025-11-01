@@ -107,3 +107,8 @@ def ensure_nulls(obj: Dict[str, Any]) -> Dict[str, Any]:
     if "ocr_text" not in obj or obj["ocr_text"] is None:
         obj["ocr_text"] = ""
     return obj
+
+
+# =========================================================
+# Single-Key Send Function
+# =========================================================
