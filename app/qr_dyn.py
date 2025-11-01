@@ -20,3 +20,4 @@ os.environ["ZBAR_LOG_LEVEL"] = "0"
 # =========================================================
 # Dynamic Paths
 # =========================================================
+SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
