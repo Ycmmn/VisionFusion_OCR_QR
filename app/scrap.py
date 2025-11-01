@@ -53,3 +53,5 @@ SLEEP_BETWEEN = (0.8, 2.0)
 MAX_RETRIES_HTTP = 3  #  increase retry attempts
 MAX_RETRIES_GEMINI = 3
 CHECK_DOMAIN_EXISTENCE = True
+
+# list of Iranian domains that may have SSL issues
