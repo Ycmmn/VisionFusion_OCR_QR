@@ -18,3 +18,11 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # =========================================================
 # Gemini SDK Import
 # =========================================================
+try:
+    import google.genai as genai
+    from google.genai import types
+    print("✅ Gemini SDK loaded successfully")
+except Exception as e:
+    print(f"❌ Gemini SDK error: {e}")
+    import sys
+    sys.exit(1)
