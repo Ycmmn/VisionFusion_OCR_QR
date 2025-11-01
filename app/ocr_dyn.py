@@ -77,3 +77,8 @@ def build_newsdk_schema():
                 },
                 required=["name"]
             ), nullable=True),
+            "notes":    P.Schema(type=P.Type.STRING, nullable=True),
+            "ocr_text": P.Schema(type=P.Type.STRING)
+        },
+        required=["ocr_text"]
+    )
