@@ -16,7 +16,7 @@ OUTPUT_FILE = Path(os.getenv("OUTPUT_FILE", SESSION_DIR / "mix_ocr_qr.json"))
 # =========================================================
 #  helper functions
 def read_json(path: Path):
-    """خواندن امن فایل JSON"""
+    """safe json file reading"""
     try:
         if not path.exists():
             print(f"⚠️ File not found: {path}")
