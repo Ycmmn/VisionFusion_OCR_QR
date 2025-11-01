@@ -157,3 +157,49 @@ def domain_exists(url: str) -> bool:
 # =============================================================
 # 🔹 Extract URLs (from OCR + QR + Excel)
 # =============================================================
+def extract_urls_from_mix(input_path: str, output_path: str):
+    print("🌐 Extracting all URLs from mix_cor_qr.json (OCR + QR + Excel)...")
+    try:
+        raw = json.loads(Path(input_path).read_text(encoding="utf-8"))
+    except Exception as e:
+        print(f"❌ Error reading input JSON: {e}")
+        return []
+
+    urls = set()
+    SOCIAL_EXCLUDE = ("instagram.com", "linkedin.com", "twitter.com", "x.com",
+                      "facebook.com", "t.me", "wa.me", "youtube.com", "gmail.com", "mail.")
+    url_pattern = re.compile(r"(https?://[^\s\"'<>]+|www\.[^\s\"'<>]+)", re.I)
+
+    def collect(obj):
+        if isinstance(obj, str):
+            for m in url_pattern.findall(obj):
+                u = m.strip().rstrip(".,)")
+                if any(u.lower().endswith(ext) for ext in 
+                       [".jpg", ".jpeg", ".png", ".gif", ".svg", ".pdf", ".zip", ".rar", ".xls", ".xlsx"]):
+                    continue
+                if not u.lower().startswith("http"):
+                    u = "https://" + u
+                r = normalize_root(u)
+                if any(s in r for s in SOCIAL_EXCLUDE): continue
+                urls.add(r)
+        elif isinstance(obj, list):
+            for v in obj: collect(v)
+        elif isinstance(obj, dict):
+            for k, v in obj.items():
+                if k == "raw_excel_data":
+                    sheets = v.get("sheets", [])
+                    for sh in sheets:
+                        for row in sh.get("data", []):
+                            for val in row.values():
+                                collect(val)
+                else:
+                    collect(v)
+
+    collect(raw)
+    roots = sorted(urls)
+    if CHECK_DOMAIN_EXISTENCE:
+        roots = [u for u in roots if domain_exists(u)]
+
+    Path(output_path).write_text(json.dumps(roots, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"✅ Found {len(roots)} clean root URLs → {output_path}")
+    return roots
