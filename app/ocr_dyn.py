@@ -14,3 +14,7 @@ try:
 except Exception as e:
     print("❌ Gemini SDK failed to load:", e)
     sys.exit(1)
+
+# =========================================================
+# 🧩 Dynamic Paths
+# =========================================================
