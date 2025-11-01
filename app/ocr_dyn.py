@@ -207,3 +207,9 @@ def main():
         except Exception as e:
             all_out.append({"file_id": p.stem, "file_name": p.name, "error": str(e)})
         time.sleep(1)
+
+    OUT_JSON.write_text(json.dumps(all_out, ensure_ascii=False, indent=2), encoding="utf-8")
+    print(f"\n✅ پردازش کامل شد. نتیجه: {OUT_JSON}")
+
+if __name__ == "__main__":
+    main()
