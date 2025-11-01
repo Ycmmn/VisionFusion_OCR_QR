@@ -137,7 +137,7 @@ def extract_url_from_vcard(data):
 
 
 def is_low_contrast(img, sharp_thresh=85, contrast_thresh=25):
-    """بررسی کنتراست پایین تصویر"""
+    """check for low image contrast"""
     g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     sharpness = cv2.Laplacian(g, cv2.CV_64F).var()
     contrast = g.std()
