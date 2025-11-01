@@ -567,3 +567,22 @@ def add_exhibition_and_source(excel_path, exhibition_name):
 # =========================================================
 # detect pipeline type and exhibition name
 # =========================================================
+def detect_pipeline_type(files):
+    extensions = [f.name.split('.')[-1].lower() for f in files]
+    if any(ext in ['xlsx', 'xls'] for ext in extensions):
+        return 'excel'
+    elif any(ext in ['pdf', 'jpg', 'jpeg', 'png'] for ext in extensions):
+        return 'ocr_qr'
+    return None
+
+def extract_exhibition_name(files):
+    if not files:
+        return "Unknown_Exhibition"
+    first_file = files[0].name
+    name_without_ext = first_file.rsplit('.', 1)[0]
+    name_parts = re.split(r'[_\-\s]+', name_without_ext)
+    cleaned_parts = [p for p in name_parts if not p.isdigit() and len(p) > 2]
+    if cleaned_parts:
+        return " ".join(cleaned_parts[:3])
+    return "Unknown_Exhibition"
+    
