@@ -27,3 +27,5 @@ IMAGES_FOLDER = SESSION_DIR / "uploads"
 if not IMAGES_FOLDER.exists() or not any(IMAGES_FOLDER.glob("*")):
     IMAGES_FOLDER = SESSION_DIR
 print(f"📂 Using IMAGES_FOLDER → {IMAGES_FOLDER}")
+
+#outputs (Dynamic)
