@@ -181,3 +181,8 @@ def main():
     if not files:
         print("❌ هیچ فایلی برای پردازش وجود ندارد.")
         sys.exit(0)
+
+    all_out = []
+
+    image_files = [f for f in files if f.suffix.lower() in [".jpg", ".jpeg", ".png"]]
+    pdf_files = [f for f in files if f.suffix.lower() == ".pdf"]
