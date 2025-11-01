@@ -41,7 +41,7 @@ WEB_ANALYSIS_XLSX = Path(os.getenv("WEB_ANALYSIS_XLSX", SESSION_DIR / "web_analy
 
 
 
-# 🔧 Configuration
+#  Configuration
 GOOGLE_API_KEY = "AIzaSyAhuC9Grg_FlxwDwYUW-_CpNaFzjwUg24w"
 MODEL_NAME = "gemini-2.5-flash"
 
