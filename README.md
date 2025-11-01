@@ -252,8 +252,8 @@ For commercial or enterprise licensing, please contact:
 
 Experience the Streamlit Web App in action 👇
 
-![Yabix OCR+QR Demo](./docs/app_demo.gif)
-
+![Yabix OCR+QR Demo](./docs/app1.gif)
+![Yabix OCR+QR Demo](./docs/app2.gif)
 
 <!-- Or use a GIF -->
 
