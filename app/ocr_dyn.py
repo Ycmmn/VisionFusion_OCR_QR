@@ -143,3 +143,8 @@ def call_gemini_single_key(data: Image.Image, source_path: Path) -> Dict[str, An
         return ensure_nulls(json.loads(txt))
     except Exception as e:
         raise RuntimeError(f"Gemini API Error: {e}")
+
+
+# =========================================================
+# Process PDF into Images and Send
+# =========================================================
