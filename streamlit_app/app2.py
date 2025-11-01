@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 """
-🎯 smart exhibition pipeline — final unified edition + google sheets  
-a full merge of the two apps: "ultimate smart exhibition pipeline" + "smart data pipeline"  
-- cool ui from version 1 + logic, logging, and quota management from version 2  
-- excel mode and ocr/qr mode with auto detection  
-- smart metadata injection (exhibition + source + smart position)  
-- fast mode, debug mode, rate limiting, daily quota  
-- ✨ batch processing: images (5), pdfs (4), excel (1)  
-- ✨ quality control tracking: user name, role, date, time  
-- ☁️ google sheets integration: auto-save data to google drive  
+🎯 Smart Exhibition Pipeline — Final Unified Edition + Google Sheets  
+A full merge of the two apps: "Ultimate Smart Exhibition Pipeline" + "Smart Data Pipeline"  
+- Cool UI from version 1 + logic, logging, and quota management from version 2  
+- Excel mode and OCR/QR mode with auto detection  
+- Smart metadata injection (exhibition + source + smart position)  
+- Fast mode, debug mode, rate limiting, daily quota  
+- ✨ Batch processing: images (5), PDFs (4), excel (1)  
+- ✨ Quality control tracking: user name, role, date, time  
+- ☁️ Google Sheets integration: auto-save data to Google Drive  
 
-run:  
-    streamlit run smart_exhibition_pipeline_final.py
+Run:  
+    streamlit run smart_exhibition_pipeline_english.py
 
 """
 
@@ -31,7 +31,7 @@ import shutil
 from supabase import create_client, Client
 
 # =========================================================
-# page settings
+# Page Settings
 # =========================================================
 st.set_page_config(
     page_title="Smart Exhibition Pipeline",
@@ -40,14 +40,37 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
+# =========================================================
+# 📌 Permanent Google Sheets Link (Always Visible)
+# =========================================================
+FIXED_SHEET_URL = "https://docs.google.com/spreadsheets/d/1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE/edit"
+
+st.markdown(f"""
+<div style="
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 1.2rem; border-radius: 15px; text-align: center; color: white;
+    box-shadow: 0 6px 20px rgba(102,126,234,0.4); margin-bottom: 1.5rem;">
+    <h3 style="margin: 0;">📊 Central Data Sheet</h3>
+    <a href="{FIXED_SHEET_URL}" target="_blank"
+       style="color: white; background: rgba(255,255,255,0.2);
+              padding: 0.6rem 1.2rem; border-radius: 10px;
+              text-decoration: none; display: inline-block; margin-top: 0.5rem;">
+        🔗 Open in Google Sheets
+    </a>
+    <p style="margin-top: 0.5rem; font-size: 0.85rem; opacity: 0.9;">
+        All processed data are automatically saved here
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
 
 # =========================================================
-# cool ui with professional gradients
+# Cool UI with Professional Gradients
 # =========================================================
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap');
-    * { font-family: 'Vazirmatn', sans-serif; }
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+    * { font-family: 'Inter', sans-serif; }
     .main-header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         padding: 3rem 2rem; border-radius: 20px; text-align: center; margin-bottom: 2rem;
@@ -139,7 +162,7 @@ GOOGLE_SCOPES = [
 
 @st.cache_resource
 def get_google_services():
-    """connect to google drive and sheets"""
+    """Connect to Google Drive and Sheets"""
     try:
         creds = service_account.Credentials.from_service_account_info(
             st.secrets["gcp_service_account"],
@@ -149,11 +172,11 @@ def get_google_services():
         sheets_service = build('sheets', 'v4', credentials=creds)
         return drive_service, sheets_service
     except Exception as e:
-        st.error(f"❌ خطا در اتصال به Google: {e}")
+        st.error(f"❌ Error connecting to Google: {e}")
         return None, None
 
 def _col_index_to_letter(col_index):
-    """convert index to excel column letter (0->A, 25->Z, 26->AA)"""
+    """Convert index to Excel column letter (0->A, 25->Z, 26->AA)"""
     result = ""
     while col_index >= 0:
         result = chr(col_index % 26 + 65) + result
@@ -161,7 +184,7 @@ def _col_index_to_letter(col_index):
     return result
 
 def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
-    """find or create a sheet in drive"""
+    """Find or create a sheet in Drive"""
     try:
         table_name = "Exhibition_Data_Table"
         query = f"name='{table_name}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false"
@@ -177,10 +200,10 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         if files:
             file_id = files[0]['id']
             file_url = files[0].get('webViewLink', f"https://docs.google.com/spreadsheets/d/{file_id}/edit")
-            print(f"   ✅ جدول موجود: {file_id}")
+            print(f"   ✅ Existing table found: {file_id}")
             return file_id, file_url, True
         
-        print(f"   📝 ساخت جدول جدید...")
+        print(f"   📝 Creating new table...")
         spreadsheet = sheets_service.spreadsheets().create(
             body={
                 'properties': {'title': table_name},
@@ -195,38 +218,41 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         if folder_id:
             drive_service.files().update(fileId=file_id, addParents=folder_id, fields='id, parents').execute()
         
-        print(f"   ✅ جدول جدید ساخته شد: {file_id}")
+        print(f"   ✅ New table created: {file_id}")
         return file_id, file_url, False
         
     except Exception as e:
-        print(f"   ❌ خطا: {e}")
+        print(f"   ❌ Error: {e}")
         return None, None, False
 
 def append_excel_data_to_sheets(excel_path, folder_id=None):
-    """read excel data and append to google sheets (variable number of rows)"""
+    """Read Excel data and append to Google Sheets (variable row count)"""
     try:
         drive_service, sheets_service = get_google_services()
         if not drive_service or not sheets_service:
-            return False, "عدم اتصال به Google", None, 0
+            return False, "Google connection failed", None, 0
 
-        print(f"\n☁️ شروع ذخیره داده‌ها در Google Drive...")
+        print(f"\n☁️ Starting data save to Google Drive...")
 
-        # use your existing sheet (instead of creating a new one)
+        # ✅ Use existing Google Sheet instead of creating a new one
         file_id = "1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE"
         file_url = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
         exists = True
-        print(f"   ✅ استفاده از Google Sheet موجود: {file_url}")
+        print(f"   ✅ Using existing Google Sheet: {file_url}")
 
-        #file_id, file_url, exists = find_or_create_data_table(drive_service, sheets_service, folder_id)
+        # file_id, file_url, exists = find_or_create_data_table(drive_service, sheets_service, folder_id)
         if not file_id:
-            return False, "خطا در ساخت جدول", None, 0
+            return False, "Error creating table", None, 0
         
-        print(f"📖 خواندن داده‌های Excel: {excel_path.name}")
+        print(f"📖 Reading Excel data: {excel_path.name}")
         df = pd.read_excel(excel_path)
         if df.empty:
-            return False, "Excel خالی است", None, 0
+            return False, "Excel file is empty", None, 0
         
-        print(f"   ✅ {len(df)} ردیف × {len(df.columns)} ستون خوانده شد")
+        print(f"   ✅ {len(df)} rows × {len(df.columns)} columns read")
+        
+        # ✅ Clean DataFrame from NaN and None values
+        df = df.replace({np.nan: "", None: ""})
         
         for col in df.columns:
             if df[col].dtype == 'object':
@@ -241,11 +267,11 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
         existing_headers = result.get('values', [[]])[0] if result.get('values') else []
         new_headers = df.columns.tolist()
         
-        print(f"   📋 ستون‌های موجود: {len(existing_headers)} | ستون‌های جدید: {len(new_headers)}")
+        print(f"   📋 Existing columns: {len(existing_headers)} | New columns: {len(new_headers)}")
         
         if not existing_headers:
             values = [new_headers] + df.values.tolist()
-            print(f"   ℹ️ جدول خالی، اضافه کردن {len(new_headers)} ستون")
+            print(f"   ℹ️ Empty table, adding {len(new_headers)} columns")
         else:
             new_columns = [col for col in new_headers if col not in existing_headers]
             
@@ -254,11 +280,11 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
                 if col not in all_columns:
                     all_columns.append(col)
             
-            print(f"   📊 ترتیب نهایی: {len(all_columns)} ستون")
+            print(f"   📊 Final order: {len(all_columns)} columns")
             
             if new_columns:
-                print(f"   🆕 ستون‌های جدید: {new_columns}")
-                print(f"   🔄 آپدیت هدرها...")
+                print(f"   🆕 New columns: {new_columns}")
+                print(f"   🔄 Updating headers...")
                 sheets_service.spreadsheets().values().update(
                     spreadsheetId=file_id,
                     range=f'{sheet_name}!1:1',
@@ -272,7 +298,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
                 existing_rows_count = len(result.get('values', [])) - 1
                 
                 if existing_rows_count > 0:
-                    print(f"   📝 پر کردن {existing_rows_count} ردیف قدیمی...")
+                    print(f"   📝 Filling {existing_rows_count} old rows...")
                     empty_values = [[''] * len(new_columns) for _ in range(existing_rows_count)]
                     start_col_index = len(existing_headers)
                     start_col_letter = _col_index_to_letter(start_col_index)
@@ -284,23 +310,26 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
                         valueInputOption='USER_ENTERED',
                         body={'values': empty_values}
                     ).execute()
-                    print(f"   ✅ ردیف‌های قدیمی آپدیت شد")
+                    print(f"   ✅ Old rows updated")
             
             for col in all_columns:
                 if col not in df.columns:
                     df[col] = ''
             
             df = df[all_columns]
-            print(f"   ✅ DataFrame مرتب شد: {len(df)} ردیف × {len(all_columns)} ستون")
+            print(f"   ✅ DataFrame sorted: {len(df)} rows × {len(all_columns)} columns")
             values = df.values.tolist()
+
+        # ✅ Convert all NaN or None to string before sending to Sheets
+        values = [[("" if (pd.isna(cell) or cell is None) else str(cell)) for cell in row] for row in values]
         
         result = sheets_service.spreadsheets().values().get(
             spreadsheetId=file_id, range=f'{sheet_name}!A:A'
         ).execute()
         existing_rows = len(result.get('values', []))
         
-        print(f"   📊 ردیف فعلی: {existing_rows}")
-        print(f"   📤 اضافه کردن {len(values)} ردیف...")
+        print(f"   📊 Current rows: {existing_rows}")
+        print(f"   📤 Adding {len(values)} rows...")
         
         body = {'values': values}
         result = sheets_service.spreadsheets().values().append(
@@ -322,22 +351,23 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
         total_cells = total_rows * total_columns
         capacity = (total_cells / 10_000_000) * 100
         
-        print(f"   ✅ {updated_rows} ردیف جدید اضافه شد")
-        print(f"   📊 جمع: {total_rows} ردیف × {total_columns} ستون")
-        print(f"   📊 کل سلول‌ها: {total_cells:,} ({capacity:.1f}%)")
+        print(f"   ✅ {updated_rows} new rows added")
+        print(f"   📊 Total: {total_rows} rows × {total_columns} columns")
+        print(f"   📊 Total cells: {total_cells:,} ({capacity:.1f}%)")
         print(f"   🔗 {file_url}")
         
-        message = f"✅ {updated_rows} ردیف جدید | جمع: {total_rows} ردیف | {total_columns} ستون"
+        message = f"✅ {updated_rows} new rows | Total: {total_rows} rows | {total_columns} columns"
         return True, message, file_url, total_rows
         
     except Exception as e:
-        print(f"   ❌ خطا: {e}")
+        print(f"   ❌ Error: {e}")
         import traceback
         traceback.print_exc()
         return False, str(e), None, 0
 
+
 def get_or_create_folder(folder_name="Exhibition_Data"):
-    """find or create folder in drive"""
+    """Find or create folder in Drive"""
     try:
         drive_service, _ = get_google_services()
         if not drive_service:
@@ -350,18 +380,18 @@ def get_or_create_folder(folder_name="Exhibition_Data"):
         files = results.get('files', [])
         
         if files:
-            print(f"   ✅ پوشه موجود: {files[0]['name']}")
+            print(f"   ✅ Existing folder: {files[0]['name']}")
             return files[0]['id']
         
         folder = drive_service.files().create(
             body={'name': folder_name, 'mimeType': 'application/vnd.google-apps.folder'},
             fields='id'
         ).execute()
-        print(f"   ✅ پوشه جدید: {folder_name}")
+        print(f"   ✅ New folder: {folder_name}")
         return folder.get('id')
         
     except Exception as e:
-        print(f"   ❌ خطا: {e}")
+        print(f"   ❌ Error: {e}")
         return None
 
 
@@ -408,7 +438,7 @@ def decrease_quota(amount=1):
 # Quality Control Tracking Functions
 # =========================================================
 def get_qc_metadata(user_name, user_role):
-    """create quality control metadata"""
+    """Create quality control metadata"""
     now = datetime.datetime.now()
     return {
         "QC_Supervisor": user_name,
@@ -419,7 +449,7 @@ def get_qc_metadata(user_name, user_role):
     }
 
 def add_qc_metadata_to_excel(excel_path, qc_metadata):
-    """add quality control metadata to excel"""
+    """Add quality control metadata to Excel"""
     try:
         df = pd.read_excel(excel_path)
         for key in ["QC_Supervisor", "QC_Role", "QC_Date", "QC_Time", "QC_Timestamp"]:
@@ -433,7 +463,7 @@ def add_qc_metadata_to_excel(excel_path, qc_metadata):
         return False
 
 def save_qc_log(session_dir, qc_metadata, exhibition_name, pipeline_type, total_files):
-    """save quality control log to a json file"""
+    """Save quality control log to a JSON file"""
     try:
         qc_log_file = session_dir / "qc_log.json"
         qc_log = {
@@ -452,7 +482,7 @@ def save_qc_log(session_dir, qc_metadata, exhibition_name, pipeline_type, total_
 
 
 # =========================================================
-# shared smart functions
+# Shared Smart Functions
 # =========================================================
 def detect_source_type(file_name):
     if not file_name or pd.isna(file_name):
@@ -472,43 +502,49 @@ def smart_position_from_department(department):
         return None
     department = str(department).strip().lower()
     department_position_map = {
-        'فروش': 'مدیر فروش', 'sales': 'مدیر فروش',
-        'بازاریابی': 'مدیر بازاریابی', 'marketing': 'مدیر بازاریابی',
-        'صادرات': 'مدیر صادرات', 'export': 'مدیر صادرات',
-        'واردات': 'مدیر واردات', 'import': 'مدیر واردات',
-        'بازرگانی': 'مدیر بازرگانی', 'commerce': 'مدیر بازرگانی',
-        'مدیریت': 'مدیرعامل', 'management': 'مدیرعامل',
-        'اجرایی': 'مدیر اجرایی', 'executive': 'مدیر اجرایی',
-        'عامل': 'مدیرعامل', 'ceo': 'مدیرعامل',
-        'تولید': 'مدیر تولید', 'production': 'مدیر تولید',
-        'کارخانه': 'مدیر کارخانه', 'factory': 'مدیر کارخانه',
-        'عملیات': 'مدیر عملیات', 'operations': 'مدیر عملیات',
-        'فنی': 'مدیر فنی', 'technical': 'مدیر فنی',
-        'مالی': 'مدیر مالی', 'finance': 'مدیر مالی',
-        'حسابداری': 'مدیر حسابداری', 'accounting': 'مدیر حسابداری',
-        'منابع انسانی': 'مدیر منابع انسانی', 'hr': 'مدیر منابع انسانی',
-        'فناوری': 'مدیر فناوری اطلاعات', 'it': 'مدیر IT',
-        'تحقیق': 'مدیر تحقیق و توسعه', 'r&d': 'مدیر R&D',
-        'کیفیت': 'مدیر کنترل کیفیت', 'qc': 'مدیر کنترل کیفیت',
-        'خدمات': 'مدیر خدمات', 'support': 'مدیر پشتیبانی',
-        'لجستیک': 'مدیر لجستیک', 'logistics': 'مدیر لجستیک',
-        'انبار': 'مدیر انبار', 'warehouse': 'مدیر انبار',
-        'خرید': 'مدیر خرید', 'purchasing': 'مدیر خرید',
-        'روابط عمومی': 'مدیر روابط عمومی', 'pr': 'مدیر روابط عمومی',
+        'sales': 'Sales Manager',
+        'marketing': 'Marketing Manager',
+        'export': 'Export Manager',
+        'import': 'Import Manager',
+        'commerce': 'Commerce Manager',
+        'management': 'CEO',
+        'executive': 'Executive Manager',
+        'ceo': 'CEO',
+        'production': 'Production Manager',
+        'factory': 'Factory Manager',
+        'operations': 'Operations Manager',
+        'technical': 'Technical Manager',
+        'finance': 'Finance Manager',
+        'accounting': 'Accounting Manager',
+        'hr': 'HR Manager',
+        'human resources': 'HR Manager',
+        'it': 'IT Manager',
+        'technology': 'IT Manager',
+        'r&d': 'R&D Manager',
+        'research': 'R&D Manager',
+        'qc': 'QC Manager',
+        'quality': 'Quality Control Manager',
+        'support': 'Support Manager',
+        'service': 'Service Manager',
+        'logistics': 'Logistics Manager',
+        'warehouse': 'Warehouse Manager',
+        'purchasing': 'Purchasing Manager',
+        'pr': 'PR Manager',
+        'public relations': 'PR Manager',
     }
     for key, position in department_position_map.items():
         if key in department:
             return position
-    if any(word in department for word in ['مدیر', 'manager', 'رئیس', 'chief']):
-        return f"مدیر {department.title()}"
-    elif any(word in department for word in ['معاون', 'deputy']):
-        return f"معاون {department.title()}"
-    elif any(word in department for word in ['کارشناس', 'expert']):
-        return f"کارشناس {department.title()}"
-    return f"مسئول {department.title()}"
+    if any(word in department for word in ['manager', 'chief']):
+        return f"{department.title()} Manager"
+    elif any(word in department for word in ['deputy']):
+        return f"Deputy {department.title()}"
+    elif any(word in department for word in ['expert', 'specialist']):
+        return f"{department.title()} Specialist"
+    return f"{department.title()} Head"
 
 def add_exhibition_and_source(excel_path, exhibition_name):
-    """unified version + ui notifications"""
+    """Unified version + UI notifications"""
     try:
         print(f"\n📝 Adding Exhibition & Source metadata...")
         df = pd.read_excel(excel_path)
@@ -534,7 +570,7 @@ def add_exhibition_and_source(excel_path, exhibition_name):
                         filled_count += 1
                         print(f"   ✓ Row {idx + 1}: {department} → {smart_position}")
             if filled_count > 0:
-                st.info(f"🤖 پر شد {filled_count} سمت از روی دپارتمان")
+                st.info(f"🤖 {filled_count} positions filled from department")
 
         columns_to_remove = ['CompanyNameFA_translated']
         removed = 0
@@ -560,12 +596,12 @@ def add_exhibition_and_source(excel_path, exhibition_name):
         return True
     except Exception as e:
         print(f"   ❌ Error adding metadata: {e}")
-        st.error(f"خطا در اضافه کردن متادیتا: {e}")
+        st.error(f"Error adding metadata: {e}")
         return False
 
 
 # =========================================================
-# detect pipeline type and exhibition name
+# Detect Pipeline Type and Exhibition Name
 # =========================================================
 def detect_pipeline_type(files):
     extensions = [f.name.split('.')[-1].lower() for f in files]
@@ -590,7 +626,7 @@ def extract_exhibition_name(files):
 # Batch Processing Logic
 # =========================================================
 def get_batch_size(file_type):
-    """set batch size based on file type"""
+    """Set batch size based on file type"""
     file_type = file_type.lower()
     if file_type in ['jpg', 'jpeg', 'png', 'bmp', 'webp', 'gif']:
         return 5
@@ -602,14 +638,14 @@ def get_batch_size(file_type):
         return 1
 
 def create_batches(files_list, batch_size):
-    """split file list into smaller batches"""
+    """Split file list into smaller batches"""
     batches = []
     for i in range(0, len(files_list), batch_size):
         batches.append(files_list[i:i + batch_size])
     return batches
 
 def process_files_in_batches(uploads_dir, pipeline_type):
-    """process files in batches"""
+    """Process files in batches"""
     if pipeline_type == 'excel':
         excel_files = list(uploads_dir.glob("*.xlsx")) + list(uploads_dir.glob("*.xls"))
         return [(f,) for f in excel_files], 1
@@ -644,7 +680,7 @@ def process_files_in_batches(uploads_dir, pipeline_type):
     return [], 1
 
 # =========================================================
-# run script with fast mode + log file
+# Run Script with Fast Mode + Log File
 # =========================================================
 def run_script(script_name, session_dir, log_area, status_text, script_display_name="", fast_mode=True):
     script_path = Path(script_name)
@@ -654,13 +690,13 @@ def run_script(script_name, session_dir, log_area, status_text, script_display_n
         script_path = Path.cwd() / script_name
         if not script_path.exists():
             status_text.markdown(f"""
-            <div class="status-box status-error">❌ فایل {script_name} یافت نشد!</div>
+            <div class="status-box status-error">❌ File {script_name} not found!</div>
             """, unsafe_allow_html=True)
             return False
 
     status_text.markdown(f"""
     <div class="status-box status-info">
-        <div class="loading-spinner"></div> در حال اجرای {script_display_name}...
+        <div class="loading-spinner"></div> Running {script_display_name}...
     </div>
     """, unsafe_allow_html=True)
 
@@ -671,7 +707,7 @@ def run_script(script_name, session_dir, log_area, status_text, script_display_n
 
     env = os.environ.copy()
     env["SESSION_DIR"] = str(session_dir)
-    env["SOURCE_FOLDER"] = str(session_dir / "uploads")
+    env["SOURCE_FOLDER"] = str(uploads_dir)
 
     try:
         with subprocess.Popen(
@@ -701,12 +737,12 @@ def run_script(script_name, session_dir, log_area, status_text, script_display_n
 
         if process.returncode == 0:
             status_text.markdown(f"""
-            <div class="status-box status-success">✅ {script_display_name} موفقیت‌آمیز بود!</div>
+            <div class="status-box status-success">✅ {script_display_name} completed successfully!</div>
             """, unsafe_allow_html=True)
             return True
         else:
             status_text.markdown(f"""
-            <div class="status-box status-warning">⚠️ {script_display_name} با مشکل مواجه شد (exit code: {process.returncode})</div>
+            <div class="status-box status-warning">⚠️ {script_display_name} encountered an issue (exit code: {process.returncode})</div>
             """, unsafe_allow_html=True)
             try:
                 with open(log_file, 'r', encoding='utf-8') as f:
@@ -719,7 +755,7 @@ def run_script(script_name, session_dir, log_area, status_text, script_display_n
 
     except Exception as e:
         status_text.markdown(f"""
-        <div class="status-box status-error">❌ خطای اجرا: {str(e)}</div>
+        <div class="status-box status-error">❌ Execution error: {str(e)}</div>
         """, unsafe_allow_html=True)
         return False
 
@@ -729,27 +765,27 @@ def run_script(script_name, session_dir, log_area, status_text, script_display_n
 st.markdown("""
 <div class="main-header">
     <h1>🎯 Smart Exhibition Pipeline</h1>
-    <p>تشخیص هوشمند • پردازش خودکار • خروجی یکپارچه • Batch Processing • Quality Control • Google Sheets</p>
+    <p>Smart Detection • Automated Processing • Unified Output • Batch Processing • Quality Control • Google Sheets</p>
 </div>
 """, unsafe_allow_html=True)
 
 # =========================================================
-#  Sidebar
+# Sidebar
 # =========================================================
 
 # ==================================
-#quick link to google sheets
-#=======================================
+# Quick Link to Google Sheets
+# ==================================
 if 'sheet_url' in st.session_state:
     st.sidebar.markdown(f"""
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                 padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
-        <h4 style="color: white; margin: 0 0 0.5rem 0;">📊 جدول داده‌ها</h4>
+        <h4 style="color: white; margin: 0 0 0.5rem 0;">📊 Data Table</h4>
         <a href="{st.session_state['sheet_url']}" target="_blank" 
            style="color: white; background: rgba(255,255,255,0.2); 
                   padding: 0.5rem 1rem; border-radius: 8px; 
                   text-decoration: none; display: block; text-align: center;">
-            🔗 باز کردن جدول
+            🔗 Open Table
         </a>
     </div>
     """, unsafe_allow_html=True)
@@ -762,15 +798,15 @@ elif Path("google_sheet_link.txt").exists():
             st.sidebar.markdown(f"""
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                         padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
-                <h4 style="color: white; margin: 0 0 0.5rem 0;">📊 جدول داده‌ها</h4>
+                <h4 style="color: white; margin: 0 0 0.5rem 0;">📊 Data Table</h4>
                 <a href="{saved_url}" target="_blank" 
                    style="color: white; background: rgba(255,255,255,0.2); 
                           padding: 0.5rem 1rem; border-radius: 8px; 
                           text-decoration: none; display: block; text-align: center;">
-                    🔗 باز کردن جدول
+                    🔗 Open Table
                 </a>
                 <p style="color: rgba(255,255,255,0.8); font-size: 0.85rem; margin: 0.5rem 0 0 0;">
-                    لینک ذخیره شده
+                    Saved link
                 </p>
             </div>
             """, unsafe_allow_html=True)
@@ -779,55 +815,55 @@ elif Path("google_sheet_link.txt").exists():
 
 
 # ======================================
-#end of quick link
-#=========================================
+# End of Quick Link
+# ======================================
 quota = load_quota()
 st.sidebar.markdown(f"""
 <div class="quota-card">
-    <h3>📊 API Quota امروز</h3>
+    <h3>📊 Today's API Quota</h3>
     <div class="quota-number">{quota['remaining']}</div>
-    <p>از {DAILY_LIMIT} درخواست</p>
+    <p>out of {DAILY_LIMIT} requests</p>
 </div>
 """, unsafe_allow_html=True)
 progress_value = quota['used'] / DAILY_LIMIT if DAILY_LIMIT > 0 else 0
 st.sidebar.progress(progress_value)
 
 if quota['remaining'] <= 0:
-    st.sidebar.markdown('<span class="badge badge-error">❌ سهمیه تمام شد</span>', unsafe_allow_html=True)
+    st.sidebar.markdown('<span class="badge badge-error">❌ Quota depleted</span>', unsafe_allow_html=True)
 elif quota['remaining'] < 20:
-    st.sidebar.markdown('<span class="badge badge-warning">⚠️ کم شده</span>', unsafe_allow_html=True)
+    st.sidebar.markdown('<span class="badge badge-warning">⚠️ Running low</span>', unsafe_allow_html=True)
 else:
-    st.sidebar.markdown('<span class="badge badge-success">✅ سهمیه خوب</span>', unsafe_allow_html=True)
+    st.sidebar.markdown('<span class="badge badge-success">✅ Good quota</span>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### ⚙️ تنظیمات")
-rate_limit = st.sidebar.slider("⏱️ فاصله بین درخواست‌ها (ثانیه)", 0, 10, 4)
+st.sidebar.markdown("### ⚙️ Settings")
+rate_limit = st.sidebar.slider("⏱️ Request interval (seconds)", 0, 10, 4)
 if rate_limit < 4:
-    st.sidebar.markdown('<span class="badge badge-error">⚠️ خطر Block</span>', unsafe_allow_html=True)
+    st.sidebar.markdown('<span class="badge badge-error">⚠️ Block risk</span>', unsafe_allow_html=True)
 elif rate_limit == 4:
-    st.sidebar.markdown('<span class="badge badge-success">✅ ایمن (15 RPM)</span>', unsafe_allow_html=True)
+    st.sidebar.markdown('<span class="badge badge-success">✅ Safe (15 RPM)</span>', unsafe_allow_html=True)
 else:
-    st.sidebar.markdown('<span class="badge badge-success">🔒 خیلی ایمن</span>', unsafe_allow_html=True)
+    st.sidebar.markdown('<span class="badge badge-success">🔒 Very safe</span>', unsafe_allow_html=True)
 
 debug_mode = st.sidebar.checkbox("🐛 Debug Mode")
 fast_mode = st.sidebar.checkbox("⚡️ Fast Mode", value=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🔑 وضعیت کلیدها")
+st.sidebar.markdown("### 🔑 Key Status")
 for key_name, key_value in API_KEYS.items():
     st.sidebar.text(f"{key_name.upper()}: {key_value[:20]}...")
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📦 Batch Processing")
-st.sidebar.info("📸 تصاویر: 5 تا\n📄 PDF: 4 تا\n📊 Excel: 1 تا")
+st.sidebar.info("📸 Images: 5\n📄 PDFs: 4\n📊 Excel: 1")
 
 
 # =========================================================
- #upload files
+# Upload Files
 # =========================================================
-st.markdown("## 📂 آپلود فایل‌ها")
+st.markdown("## 📂 Upload Files")
 uploaded_files = st.file_uploader(
-    "فایل‌های خود را بکشید یا کلیک کنید",
+    "Drag files here or click to browse",
     type=['xlsx', 'xls', 'pdf', 'jpg', 'jpeg', 'png'],
     accept_multiple_files=True,
     help="Excel → Excel Mode | Image/PDF → OCR/QR Pipeline"
@@ -836,32 +872,32 @@ uploaded_files = st.file_uploader(
 # =========================================================
 # Quality Control Section
 # =========================================================
-st.markdown("## 👤 اطلاعات ناظر کیفیت")
-st.markdown("*این اطلاعات به عنوان متادیتای کنترل کیفیت در خروجی ثبت می‌شود*")
+st.markdown("## 👤 Quality Control Supervisor Info")
+st.markdown("*This information will be recorded as quality control metadata in the output*")
 
 col_qc1, col_qc2 = st.columns(2)
 with col_qc1:
     qc_user_name = st.text_input(
-        "🧑‍💼 نام و نام خانوادگی",
-        placeholder="مثال: علی احمدی",
-        help="نام کامل ناظر کیفیت داده‌ها"
+        "🧑‍💼 Full Name",
+        placeholder="e.g., John Smith",
+        help="Full name of the data quality supervisor"
     )
 with col_qc2:
     qc_user_role = st.text_input(
-        "💼 سمت/نقش",
-        placeholder="مثال: کارشناس کنترل کیفیت",
-        help="سمت یا نقش شما در سازمان"
+        "💼 Position/Role",
+        placeholder="e.g., QC Specialist",
+        help="Your position or role in the organization"
     )
 
 if qc_user_name and qc_user_role:
     qc_preview = get_qc_metadata(qc_user_name, qc_user_role)
     st.markdown(f"""
     <div class="qc-card">
-        <h4>✅ پیش‌نمایش اطلاعات کنترل کیفیت</h4>
-        <p><strong>👤 ناظر:</strong> {qc_preview['QC_Supervisor']}</p>
-        <p><strong>💼 نقش:</strong> {qc_preview['QC_Role']}</p>
-        <p><strong>📅 تاریخ:</strong> {qc_preview['QC_Date']}</p>
-        <p><strong>🕐 ساعت:</strong> {qc_preview['QC_Time']}</p>
+        <h4>✅ Quality Control Info Preview</h4>
+        <p><strong>👤 Supervisor:</strong> {qc_preview['QC_Supervisor']}</p>
+        <p><strong>💼 Role:</strong> {qc_preview['QC_Role']}</p>
+        <p><strong>📅 Date:</strong> {qc_preview['QC_Date']}</p>
+        <p><strong>🕐 Time:</strong> {qc_preview['QC_Time']}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -875,29 +911,29 @@ if uploaded_files:
     with col1:
         st.markdown(f"""
         <div class="metric-card">
-            <h3>🔍 نوع Pipeline</h3>
+            <h3>🔍 Pipeline Type</h3>
             <h2>{'📊 Excel' if pipeline_type == 'excel' else '🖼 OCR/QR'}</h2>
         </div>
         """, unsafe_allow_html=True)
     with col2:
         st.markdown(f"""
         <div class="metric-card">
-            <h3>📁 تعداد فایل</h3>
+            <h3>📁 File Count</h3>
             <h2>{len(uploaded_files)}</h2>
         </div>
         """, unsafe_allow_html=True)
     with col3:
         st.markdown(f"""
         <div class="metric-card">
-            <h3>🏢 نمایشگاه</h3>
+            <h3>🏢 Exhibition</h3>
             <h2>{exhibition_name[:15]}</h2>
         </div>
         """, unsafe_allow_html=True)
 
     exhibition_name = st.text_input(
-        "📝 ویرایش نام نمایشگاه",
+        "📝 Edit Exhibition Name",
         value=exhibition_name,
-        help="در ستون Exhibition ثبت می‌شود"
+        help="Will be saved in the Exhibition column"
     )
 
     session_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -923,29 +959,29 @@ if uploaded_files:
     total_batches = len(batches)
     
     if total_batches > 0:
-        st.info(f"📦 تعداد Batch‌ها: {total_batches} | اندازه هر Batch: {batch_size}")
+        st.info(f"📦 Number of batches: {total_batches} | Batch size: {batch_size}")
 
     st.markdown("---")
 
-    if st.button("🚀 شروع پردازش", type="primary"):
+    if st.button("🚀 Start Processing", type="primary"):
         if not qc_user_name or not qc_user_role:
             st.markdown("""
             <div class="status-box status-warning">
-                ⚠️ لطفاً اطلاعات ناظر کیفیت (نام و نقش) را وارد کنید!
+                ⚠️ Please enter quality control supervisor info (name and role)!
             </div>
             """, unsafe_allow_html=True)
             st.stop()
         
         if quota['remaining'] <= 0:
             st.markdown("""
-            <div class="status-box status-error">❌ سهمیه API تمام شد! فردا دوباره امتحان کنید.</div>
+            <div class="status-box status-error">❌ API quota depleted! Try again tomorrow.</div>
             """, unsafe_allow_html=True)
             st.stop()
 
         qc_metadata = get_qc_metadata(qc_user_name, qc_user_role)
         save_qc_log(session_dir, qc_metadata, exhibition_name, pipeline_type, len(uploaded_files))
         
-        st.markdown("## 🔄 پردازش در حال انجام...")
+        st.markdown("## 🔄 Processing in Progress...")
         progress_bar = st.progress(0)
         status_text = st.empty()
         log_area = st.empty()
@@ -958,34 +994,34 @@ if uploaded_files:
         try:
             if pipeline_type == 'excel':
                 st.markdown("""
-                <div class="status-box status-info">📊 Excel Mode فعال شد</div>
+                <div class="status-box status-info">📊 Excel Mode activated</div>
                 """, unsafe_allow_html=True)
 
                 excel_input = os.environ.get("INPUT_EXCEL")
                 if not excel_input or not Path(excel_input).exists():
                     st.markdown("""
-                    <div class="status-box status-error">❌ فایل Excel پیدا نشد!</div>
+                    <div class="status-box status-error">❌ Excel file not found!</div>
                     """, unsafe_allow_html=True)
                     st.stop()
 
                 try:
                     df_input = pd.read_excel(excel_input)
                     total_rows = len(df_input)
-                    st.info(f"📊 تعداد شرکت‌ها: {total_rows}")
+                    st.info(f"📊 Number of companies: {total_rows}")
                     current_quota = load_quota()
                     if current_quota['remaining'] < total_rows:
-                        st.warning(f"⚠️ Quota کافی نیست! نیاز: {total_rows}, موجود: {current_quota['remaining']}")
-                        if not st.checkbox("ادامه با Quota ناکافی؟"):
+                        st.warning(f"⚠️ Insufficient quota! Need: {total_rows}, Available: {current_quota['remaining']}")
+                        if not st.checkbox("Continue with insufficient quota?"):
                             st.stop()
                 except Exception as e:
-                    st.warning(f"نتوانستم تعداد ردیف‌ها را بخوانم: {e}")
+                    st.warning(f"Could not read row count: {e}")
                     total_rows = 0
 
                 progress_bar.progress(10)
                 current_quota = load_quota()
-                quota_display.info(f"🔋 سهمیه باقیمانده: {current_quota['remaining']}/{DAILY_LIMIT}")
+                quota_display.info(f"🔋 Remaining quota: {current_quota['remaining']}/{DAILY_LIMIT}")
 
-                st.info(f"📦 پردازش {total_rows} ردیف به صورت Batch (اندازه: 1)")
+                st.info(f"📦 Processing {total_rows} rows in batches (size: 1)")
                 
                 success = run_script(
                     "excel_mode.py",
@@ -999,10 +1035,10 @@ if uploaded_files:
 
                 if total_rows > 0:
                     quota = decrease_quota(total_rows)
-                    quota_display.success(f"✅ سهمیه باقیمانده: {quota['remaining']}/{DAILY_LIMIT} (استفاده شده: {total_rows})")
+                    quota_display.success(f"✅ Remaining quota: {quota['remaining']}/{DAILY_LIMIT} (Used: {total_rows})")
                 else:
                     quota = decrease_quota(1)
-                    quota_display.success(f"✅ سهمیه باقیمانده: {quota['remaining']}/{DAILY_LIMIT}")
+                    quota_display.success(f"✅ Remaining quota: {quota['remaining']}/{DAILY_LIMIT}")
 
                 output_files = list(session_dir.glob("output_enriched_*.xlsx"))
                 if not output_files:
@@ -1011,11 +1047,11 @@ if uploaded_files:
 
             else:
                 st.markdown("""
-                <div class="status-box status-info">🖼 OCR/QR Pipeline فعال شد</div>
+                <div class="status-box status-info">🖼 OCR/QR Pipeline activated</div>
                 """, unsafe_allow_html=True)
 
                 if total_batches > 0:
-                    st.info(f"📦 پردازش {total_batches} Batch | هر Batch حدود {batch_size} فایل")
+                    st.info(f"📦 Processing {total_batches} batches | Each batch ~{batch_size} files")
 
                 stages = [
                     ("📘 OCR Extraction", "ocr_dyn.py", 20),
@@ -1028,10 +1064,10 @@ if uploaded_files:
                 all_success = True
                 for stage_name, script, progress_val in stages:
                     current_quota = load_quota()
-                    quota_display.info(f"🔋 سهمیه باقیمانده: {current_quota['remaining']}/{DAILY_LIMIT}")
+                    quota_display.info(f"🔋 Remaining quota: {current_quota['remaining']}/{DAILY_LIMIT}")
 
                     if total_batches > 0:
-                        st.markdown(f"**{stage_name}** - پردازش {total_batches} Batch...")
+                        st.markdown(f"**{stage_name}** - Processing {total_batches} batches...")
 
                     stage_success = run_script(
                         script, session_dir, log_area, status_text,
@@ -1040,7 +1076,7 @@ if uploaded_files:
                     if not stage_success:
                         all_success = False
                         st.markdown(f"""
-                        <div class="status-box status-warning">⚠️ {stage_name} با مشکل مواجه شد، ادامه می‌دهیم...</div>
+                        <div class="status-box status-warning">⚠️ {stage_name} encountered an issue, continuing...</div>
                         """, unsafe_allow_html=True)
 
                     progress_bar.progress(progress_val)
@@ -1048,10 +1084,10 @@ if uploaded_files:
                     
                     quota_decrease_amount = max(1, total_batches)
                     quota = decrease_quota(quota_decrease_amount)
-                    quota_display.success(f"✅ سهمیه باقیمانده: {quota['remaining']}/{DAILY_LIMIT}")
+                    quota_display.success(f"✅ Remaining quota: {quota['remaining']}/{DAILY_LIMIT}")
                     
                     if quota['remaining'] <= 0:
-                        st.markdown('<div class="status-box status-error">❌ سهمیه API تمام شد!</div>', unsafe_allow_html=True)
+                        st.markdown('<div class="status-box status-error">❌ API quota depleted!</div>', unsafe_allow_html=True)
                         break
 
                 success = all_success
@@ -1063,18 +1099,18 @@ if uploaded_files:
             elapsed = time.time() - start_time
 
             if success and output_files:
-                st.info("📝 در حال اضافه کردن Exhibition، Source و QC Metadata...")
+                st.info("📝 Adding Exhibition, Source and QC Metadata...")
                 for output_file in output_files:
                     add_exhibition_and_source(output_file, exhibition_name)
                     add_qc_metadata_to_excel(output_file, qc_metadata)
                 
                 # ========== GOOGLE SHEETS UPLOAD ==========
                 st.markdown("---")
-                st.markdown("## ☁️ ذخیره داده‌ها در Google Drive")
-                st.info("💡 فقط داده‌های داخل Excel ذخیره می‌شود، نه خود فایل!")
+                st.markdown("## ☁️ Saving Data to Google Drive")
+                st.info("💡 Only Excel data is saved, not the file itself!")
                 
                 sheets_status = st.empty()
-                sheets_status.info("📤 در حال آپلود داده‌ها...")
+                sheets_status.info("📤 Uploading data...")
                 
                 try:
                     folder_id = get_or_create_folder("Exhibition_Data")
@@ -1096,29 +1132,29 @@ if uploaded_files:
                             st.session_state['sheet_id'] = url_gs.split('/d/')[1].split('/')[0] if '/d/' in url_gs else ''
                             
                             link_file = Path("google_sheet_link.txt")
-                            link_file.write_text(f"لینک جدول:\n{url_gs}", encoding='utf-8')
+                            link_file.write_text(f"Table link:\n{url_gs}", encoding='utf-8')
                             
                             total_cells = total_rows * 90
                             capacity = (total_cells / 10_000_000) * 100
                             
                             col_a, col_b, col_c = st.columns(3)
                             with col_a:
-                                st.metric("📊 کل ردیف‌ها", f"{total_rows:,}")
+                                st.metric("📊 Total Rows", f"{total_rows:,}")
                             with col_b:
-                                st.metric("📦 کل سلول‌ها", f"{total_cells:,}")
+                                st.metric("📦 Total Cells", f"{total_cells:,}")
                             with col_c:
-                                st.metric("⚡️ ظرفیت", f"{capacity:.1f}%")
+                                st.metric("⚡️ Capacity", f"{capacity:.1f}%")
                             
                             st.markdown(f"""
                             <div class="file-display" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                                <h4>🔗 لینک دائمی جدول</h4>
+                                <h4>🔗 Permanent Table Link</h4>
                                 <p style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
                                     <a href="{url_gs}" target="_blank" style="color: white; font-weight: bold; font-size: 1.1rem;">
-                                        📊 باز کردن در Google Drive
+                                        📊 Open in Google Drive
                                     </a>
                                 </p>
                                 <p style="font-size: 0.9rem; margin: 0.5rem 0 0 0; opacity: 0.9;">
-                                    💡 این لینک همیشه ثابت است! Bookmark کنید!
+                                    💡 This link is permanent! Bookmark it!
                                 </p>
                             </div>
                             """, unsafe_allow_html=True)
@@ -1126,15 +1162,15 @@ if uploaded_files:
                             st.code(url_gs, language=None)
                             
                             if capacity > 80:
-                                st.warning(f"⚠️ ظرفیت بالا ({capacity:.1f}%)!")
+                                st.warning(f"⚠️ High capacity ({capacity:.1f}%)!")
                             else:
-                                st.success(f"✅ فضای کافی ({100-capacity:.1f}% باقی)")
+                                st.success(f"✅ Sufficient space ({100-capacity:.1f}% remaining)")
                         else:
-                            sheets_status.error(f"❌ خطا: {msg_gs}")
+                            sheets_status.error(f"❌ Error: {msg_gs}")
                 
                 except Exception as e:
-                    sheets_status.error(f"❌ خطا: {e}")
-                    st.warning("💡 مطمئن شوید Google Drive API و Sheets API فعال است")
+                    sheets_status.error(f"❌ Error: {e}")
+                    st.warning("💡 Make sure Google Drive API and Sheets API are enabled")
                 # ========== END GOOGLE SHEETS ==========
 
             st.markdown("---")
@@ -1142,15 +1178,15 @@ if uploaded_files:
             if success and output_files:
                 st.markdown("""
                 <div class="status-box status-success">
-                    <h2>🎉 پردازش با موفقیت کامل شد!</h2>
+                    <h2>🎉 Processing completed successfully!</h2>
                 </div>
                 """, unsafe_allow_html=True)
 
                 st.markdown(f"""
                 <div class="qc-card">
-                    <h4>👤 اطلاعات ناظر کیفیت</h4>
-                    <p><strong>ناظر:</strong> {qc_metadata['QC_Supervisor']} | <strong>نقش:</strong> {qc_metadata['QC_Role']}</p>
-                    <p><strong>تاریخ و ساعت:</strong> {qc_metadata['QC_Timestamp']}</p>
+                    <h4>👤 Quality Control Supervisor Info</h4>
+                    <p><strong>Supervisor:</strong> {qc_metadata['QC_Supervisor']} | <strong>Role:</strong> {qc_metadata['QC_Role']}</p>
+                    <p><strong>Date & Time:</strong> {qc_metadata['QC_Timestamp']}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -1158,7 +1194,7 @@ if uploaded_files:
                 with col1:
                     st.markdown(f"""
                     <div class="metric-card">
-                        <h3>⏱️ زمان اجرا</h3>
+                        <h3>⏱️ Execution Time</h3>
                         <h2>{elapsed:.1f}s</h2>
                     </div>
                     """, unsafe_allow_html=True)
@@ -1166,19 +1202,19 @@ if uploaded_files:
                     quota_now = load_quota()
                     st.markdown(f"""
                     <div class="metric-card">
-                        <h3>🔋 سهمیه باقیمانده</h3>
+                        <h3>🔋 Remaining Quota</h3>
                         <h2>{quota_now['remaining']}</h2>
                     </div>
                     """, unsafe_allow_html=True)
                 with col3:
                     st.markdown(f"""
                     <div class="metric-card">
-                        <h3>📊 فایل خروجی</h3>
+                        <h3>📊 Output Files</h3>
                         <h2>{len(output_files)}</h2>
                     </div>
                     """, unsafe_allow_html=True)
 
-                st.markdown("## 📥 دانلود فایل‌های نهایی")
+                st.markdown("## 📥 Download Final Files")
                 for output_file in output_files:
                     with st.container():
                         colA, colB = st.columns([3, 1])
@@ -1186,13 +1222,13 @@ if uploaded_files:
                             st.markdown(f"""
                             <div class="file-display">
                                 <h4>📄 {output_file.name}</h4>
-                                <p>حجم: {output_file.stat().st_size / 1024:.1f} KB</p>
+                                <p>Size: {output_file.stat().st_size / 1024:.1f} KB</p>
                             </div>
                             """, unsafe_allow_html=True)
                         with colB:
                             with open(output_file, "rb") as f:
                                 st.download_button(
-                                    label="⬇️ دانلود",
+                                    label="⬇️ Download",
                                     data=f,
                                     file_name=output_file.name,
                                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -1203,34 +1239,34 @@ if uploaded_files:
                             for c in df_prev.columns:
                                 if df_prev[c].dtype == 'object':
                                     df_prev[c] = df_prev[c].astype(str).replace('nan', '')
-                            with st.expander(f"👁 پیش‌نمایش {output_file.name}"):
+                            with st.expander(f"👁 Preview {output_file.name}"):
                                 st.markdown(f"""
                                 <div class="status-box status-info" style="margin-top:0;">
-                                    <p style="margin:0;">📊 <strong>{len(df_prev)}</strong> ردیف × 
-                                       <strong>{len(df_prev.columns)}</strong> ستون</p>
+                                    <p style="margin:0;">📊 <strong>{len(df_prev)}</strong> rows × 
+                                       <strong>{len(df_prev.columns)}</strong> columns</p>
                                 </div>
                                 """, unsafe_allow_html=True)
                                 cols_display = ", ".join(df_prev.columns.tolist()[:20])
                                 if len(df_prev.columns) > 20: cols_display += "..."
-                                st.info(f"🔤 ستون‌ها: {cols_display}")
+                                st.info(f"🔤 Columns: {cols_display}")
                                 st.dataframe(df_prev.head(10), width='stretch')
                         except Exception as e:
-                            st.warning(f"⚠️ خطا در نمایش پیش‌نمایش: {e}")
+                            st.warning(f"⚠️ Error displaying preview: {e}")
 
                 json_files = [f for f in session_dir.glob("*.json") if f.name != "quota.json"]
                 if json_files:
-                    with st.expander("📄 فایل‌های JSON و لاگ‌ها (اختیاری)"):
+                    with st.expander("📄 JSON files and logs (optional)"):
                         for json_file in json_files:
                             col1, col2 = st.columns([3, 1])
                             with col1:
                                 if json_file.name == "qc_log.json":
-                                    st.write(f"**👤 {json_file.name}** (لاگ کنترل کیفیت)")
+                                    st.write(f"**👤 {json_file.name}** (Quality control log)")
                                 else:
                                     st.write(f"**{json_file.name}**")
                             with col2:
                                 with open(json_file, "rb") as f:
                                     st.download_button(
-                                        label="⬇️ دانلود",
+                                        label="⬇️ Download",
                                         data=f,
                                         file_name=json_file.name,
                                         mime="application/json",
@@ -1241,13 +1277,13 @@ if uploaded_files:
             else:
                 st.markdown("""
                 <div class="status-box status-warning">
-                    <h2>⚠️ پردازش کامل نشد</h2>
-                    <p>بعضی داده‌ها پردازش نشدند. لاگ‌ها را بررسی کنید.</p>
+                    <h2>⚠️ Processing incomplete</h2>
+                    <p>Some data was not processed. Check the logs.</p>
                 </div>
                 """, unsafe_allow_html=True)
-                st.info("💡 نکته: اگر شرکتی URL نداشته باشد، نمی‌توان اطلاعات آن را از وب دریافت کرد.")
+                st.info("💡 Note: If a company doesn't have a URL, its information cannot be retrieved from the web.")
                 if debug_mode:
-                    with st.expander("🔍 لیست فایل‌های Session"):
+                    with st.expander("🔍 Session file list"):
                         for f in session_dir.rglob("*"):
                             if f.is_file():
                                 st.write(f"📄 {f.relative_to(session_dir)}")
@@ -1255,20 +1291,20 @@ if uploaded_files:
         except Exception as e:
             st.markdown("""
             <div class="status-box status-error">
-                <h2>❌ خطای غیرمنتظره</h2>
+                <h2>❌ Unexpected error</h2>
             </div>
             """, unsafe_allow_html=True)
-            st.error(f"خطا: {str(e)}")
+            st.error(f"Error: {str(e)}")
             if debug_mode:
                 import traceback
-                with st.expander("📋 جزئیات خطا"):
+                with st.expander("📋 Error details"):
                     st.code(traceback.format_exc())
 
 else:
     st.markdown("""
     <div class="status-box status-info">
-        <h3>👋 خوش آمدید!</h3>
-        <p>لطفاً ابتدا اطلاعات ناظر کیفیت را وارد کنید، سپس فایل‌های خود را آپلود کنید</p>
+        <h3>👋 Welcome!</h3>
+        <p>Please first enter quality control supervisor info, then upload your files</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -1279,11 +1315,11 @@ else:
                     padding: 2rem; border-radius: 15px; color: white; height: 100%;">
             <h3>📊 Excel Mode</h3>
             <ul style="line-height: 2;">
-                <li>فایل Excel با URL/Website</li>
-                <li>وب‌اسکرپینگ هوشمند</li>
-                <li>استخراج اطلاعات کامل شرکت</li>
-                <li>خروجی: Excel غنی‌شده</li>
-                <li>📦 Batch: 1 ردیف</li>
+                <li>Excel file with URL/Website</li>
+                <li>Smart web scraping</li>
+                <li>Complete company info extraction</li>
+                <li>Output: Enriched Excel</li>
+                <li>📦 Batch: 1 row</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
@@ -1293,28 +1329,28 @@ else:
                     padding: 2rem; border-radius: 15px; color: white; height: 100%;">
             <h3>🖼 OCR/QR Mode</h3>
             <ul style="line-height: 2;">
-                <li>تصاویر (JPG, PNG) یا PDF</li>
-                <li>استخراج OCR + تشخیص QR</li>
-                <li>وب‌اسکرپینگ از URLها</li>
-                <li>خروجی: Excel یکپارچه</li>
-                <li>📦 Batch: تصاویر(5) | PDF(4)</li>
+                <li>Images (JPG, PNG) or PDF</li>
+                <li>OCR extraction + QR detection</li>
+                <li>Web scraping from URLs</li>
+                <li>Output: Unified Excel</li>
+                <li>📦 Batch: Images(5) | PDF(4)</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown("### ✨ ویژگی‌های کلیدی")
+    st.markdown("### ✨ Key Features")
     features = [
-        ("🎯", "تشخیص خودکار", "Excel یا OCR/QR به صورت هوشمند"),
-        ("🏢", "Exhibition Field", "نام نمایشگاه قابل ویرایش"),
-        ("📊", "Source Tracking", "تشخیص منبع (Image/PDF/Excel)"),
-        ("🤖", "Smart Position", "50+ دپارتمان فارسی/انگلیسی"),
-        ("🔋", "Quota Management", "مدیریت هوشمند API (240/روز)"),
-        ("⚡️", "Fast Mode", "پردازش سریع با لاگ بهینه"),
-        ("🔒", "Rate Limit", "4 ثانیه (ایمن - 15 RPM)"),
-        ("📦", "Batch Processing", "تصاویر(5) | PDF(4) | Excel(1)"),
-        ("👤", "Quality Control", "ثبت نام و نقش ناظر کیفیت"),
-        ("☁️", "Google Sheets", "ذخیره خودکار در Drive")
+        ("🎯", "Auto Detection", "Excel or OCR/QR smartly detected"),
+        ("🏢", "Exhibition Field", "Editable exhibition name"),
+        ("📊", "Source Tracking", "Source detection (Image/PDF/Excel)"),
+        ("🤖", "Smart Position", "50+ departments English/Persian"),
+        ("🔋", "Quota Management", "Smart API management (240/day)"),
+        ("⚡️", "Fast Mode", "Fast processing with optimized logs"),
+        ("🔒", "Rate Limit", "4 seconds (safe - 15 RPM)"),
+        ("📦", "Batch Processing", "Images(5) | PDF(4) | Excel(1)"),
+        ("👤", "Quality Control", "Record supervisor name and role"),
+        ("☁️", "Google Sheets", "Auto-save to Drive")
     ]
     cols = st.columns(3)
     for idx, (icon, title, desc) in enumerate(features):
@@ -1334,19 +1370,19 @@ st.markdown("""
             border-radius: 15px; color: white; margin-top: 2rem;">
     <h4>🚀 Smart Exhibition Pipeline + Google Sheets</h4>
     <p style="margin: 0.5rem 0;">
-        ⚡️ Rate Limiting: 4s (ایمن) | 🔒 API Limit: 15 RPM, 240/روز
+        ⚡️ Rate Limiting: 4s (safe) | 🔒 API Limit: 15 RPM, 240/day
     </p>
     <p style="margin: 0.5rem 0;">
         📌 Exhibition + Source Tracking | 🤖 Smart Position Detection
     </p>
     <p style="margin: 0.5rem 0;">
-        📦 Batch Processing: تصاویر(5) | PDF(4) | Excel(1)
+        📦 Batch Processing: Images(5) | PDF(4) | Excel(1)
     </p>
     <p style="margin: 0.5rem 0;">
-        👤 Quality Control Tracking: نام، نقش، تاریخ، ساعت
+        👤 Quality Control Tracking: Name, Role, Date, Time
     </p>
     <p style="margin: 0.5rem 0;">
-        ☁️ Google Sheets: ذخیره خودکار داده‌ها در Drive
+        ☁️ Google Sheets: Auto-save data to Drive
     </p>
     <p style="margin: 1rem 0 0 0; opacity: 0.8; font-size: 0.9rem;">
         Made with ❤️ using Streamlit & Gemini AI
