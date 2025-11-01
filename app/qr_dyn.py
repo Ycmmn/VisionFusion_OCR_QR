@@ -176,3 +176,8 @@ def enhance_image_aggressive(img):
 # ----------------------------------------------------------
 # qr detection - advanced version
 # ----------------------------------------------------------
+def detect_qr_payloads_enhanced(img, img_name="image"):
+    """تشخیص QR با چندین روش مختلف"""
+    detector = cv2.QRCodeDetector()
+    payloads = []
+    methods_tried = 0
