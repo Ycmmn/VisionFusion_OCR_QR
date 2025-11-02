@@ -5,9 +5,6 @@ import os, sys, json, time, io
 from typing import Any, Dict, List, Union
 from PIL import Image
 
-from pathlib import Path
-import os
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 INPUT_DIR = DATA_DIR / "input"
@@ -15,8 +12,6 @@ OUTPUT_DIR = DATA_DIR / "output"
 
 os.makedirs(INPUT_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-
 
 # =========================================================
 # 🔹 Gemini SDK Import
@@ -30,12 +25,21 @@ except Exception as e:
     sys.exit(1)
 
 # =========================================================
-#  Dynamic Paths (Fixed for Render/GitHub)
+#  Dynamic Paths (Fixed for Render/GitHub) + SESSION_DIR Support
 # =========================================================
-SOURCE_FOLDER = INPUT_DIR       
-OUT_JSON = OUTPUT_DIR / "gemini_output.json"  
+# 🔥 اگر SESSION_DIR تنظیم شده، از اون استفاده کن
+SESSION_DIR = os.environ.get("SESSION_DIR")
+if SESSION_DIR:
+    SESSION_PATH = Path(SESSION_DIR)
+    SOURCE_FOLDER = SESSION_PATH / "uploads"
+    OUTPUT_DIR = SESSION_PATH / "data" / "output"
+    os.makedirs(OUTPUT_DIR, exist_ok=True)
+    print(f"✅ Using SESSION_DIR: {SESSION_DIR}")
+else:
+    SOURCE_FOLDER = INPUT_DIR
+    print(f"✅ Using default INPUT_DIR: {INPUT_DIR}")
 
-
+OUT_JSON = OUTPUT_DIR / "gemini_output.json"
 
 #path to Poppler for converting PDF to images
 POPPLER_PATH = os.getenv("POPPLER_PATH", r"C:\poppler\Library\bin")
@@ -53,7 +57,7 @@ BATCH_SIZE_IMAGES = 3
 # =========================================================
 # Set API Key (only one key)
 # =========================================================
-API_KEY = "AIzaSyC......JDGGXI....rt61Cl2ZTs"
+API_KEY = "AIzaSyCKoaWh0jM4oCJDGGXIt_sJqiBHy1rt61Cl2ZTs"
 CLIENT = _genai_new.Client(api_key=API_KEY)
 
 
@@ -102,7 +106,6 @@ def build_newsdk_schema():
 # =========================================================
 # Helper Functions
 # =========================================================
-
 def list_files(path: Union[str, Path]) -> List[Path]:
     exts = {".jpg", ".jpeg", ".png", ".pdf"}
     return sorted([f for f in Path(path).rglob("*") if f.suffix.lower() in exts])
@@ -186,13 +189,37 @@ def pdf_to_images_and_process(pdf_path: Path) -> List[Dict[str, Any]]:
 # Main Program 
 # =========================================================
 def main():
-    print(f"🔑 Using single API key.\n")
+    print(f"\n{'='*70}")
+    print("🔍 OCR Extraction - Debug Mode")
+    print(f"{'='*70}")
+    
+    # 🔥 DEBUG: نمایش کامل مسیرها
+    print(f"📂 SESSION_DIR env: {os.environ.get('SESSION_DIR', 'NOT SET')}")
+    print(f"📂 SOURCE_FOLDER: {SOURCE_FOLDER}")
+    print(f"   → Exists: {SOURCE_FOLDER.exists()}")
+    print(f"📂 OUTPUT_DIR: {OUTPUT_DIR}")
+    print(f"   → Exists: {OUTPUT_DIR.exists()}")
+    print(f"📂 OUT_JSON: {OUT_JSON}")
+    print(f"{'='*70}\n")
     
     if not SOURCE_FOLDER.exists():
         print(f"❌ پوشه ورودی پیدا نشد: {SOURCE_FOLDER}")
+        # 🔥 لیست کردن فایل‌های موجود
+        print(f"\n🔍 Listing files in parent directory:")
+        parent = SOURCE_FOLDER.parent
+        if parent.exists():
+            for item in parent.iterdir():
+                print(f"   - {item.name} ({'dir' if item.is_dir() else 'file'})")
         sys.exit(1)
 
     files = list_files(SOURCE_FOLDER)
+    
+    # 🔥 DEBUG: نمایش فایل‌های پیدا شده
+    print(f"📁 Files found: {len(files)}")
+    for f in files:
+        print(f"   - {f.name} ({f.suffix})")
+    print()
+    
     if not files:
         print("❌ هیچ فایلی برای پردازش وجود ندارد.")
         sys.exit(0)
@@ -225,6 +252,7 @@ def main():
 
     OUT_JSON.write_text(json.dumps(all_out, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n✅ پردازش کامل شد. نتیجه: {OUT_JSON}")
+    print(f"📊 Total items saved: {len(all_out)}")
 
 
 def run_ocr_extraction():
