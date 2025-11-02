@@ -21,26 +21,30 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # =========================================================
 # 🔧 Dynamic Path Resolution (Works on Streamlit Cloud)
 # =========================================================
-SESSION_DIR = os.getenv("SESSION_DIR")
+# مسیرهای داینامیک
+SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
+SOURCE_FOLDER = Path(os.getenv("SOURCE_FOLDER", SESSION_DIR / "uploads"))
+RENAMED_DIR = Path(os.getenv("RENAMED_DIR", SESSION_DIR / "renamed"))
 
-if SESSION_DIR:
-    # حالت Streamlit Cloud
-    BASE_DIR = Path(SESSION_DIR)
-    DATA_DIR = BASE_DIR
-    INPUT_DIR = BASE_DIR / "uploads"
-    OUTPUT_DIR = BASE_DIR
+# ورودی: جستجوی خودکار فایل Excel
+INPUT_EXCEL_ENV = os.getenv("INPUT_EXCEL")
+if INPUT_EXCEL_ENV:
+    INPUT_EXCEL = Path(INPUT_EXCEL_ENV)
 else:
-    # حالت Local
-    BASE_DIR = Path(__file__).resolve().parent.parent
-    DATA_DIR = BASE_DIR / "data"
-    INPUT_DIR = DATA_DIR / "input"
-    OUTPUT_DIR = DATA_DIR / "output"
-
-os.makedirs(INPUT_DIR, exist_ok=True)
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-print(f"📂 SESSION_DIR: {SESSION_DIR or 'Not Set'}")
-print(f"📂 OUTPUT_DIR: {OUTPUT_DIR}")
+    search_paths = [SESSION_DIR, SOURCE_FOLDER, RENAMED_DIR, SESSION_DIR / "input"]
+    INPUT_EXCEL = None
+    for search_path in search_paths:
+        if search_path.exists():
+            excel_files = list(search_path.glob("*.xlsx"))
+            if excel_files:
+                for f in excel_files:
+                    if not f.name.startswith("output_enriched"):
+                        INPUT_EXCEL = f
+                        break
+                if INPUT_EXCEL:
+                    break
+    if not INPUT_EXCEL:
+        INPUT_EXCEL = SESSION_DIR / "input.xlsx"
 
 # =========================================================
 # Gemini SDK Import
