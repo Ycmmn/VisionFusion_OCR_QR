@@ -429,46 +429,80 @@ def main():
 
 
 # =========================================================
-# 🔹 WRAPPER FUNCTION FOR IMPORT
+# 🔹 WRAPPER FUNCTION FOR IMPORT (RENDER SAFE)
 # =========================================================
-def run_final_merge(session_dir, fast_mode=True, rate_limit=4):
+def run_final_merge(session_dir=None, fast_mode=True, rate_limit=4):
     """
-    Wrapper function to run final JSON+Excel merge as an imported module.
+    Wrapper function to safely run final JSON+Excel merge.
+    Auto-detects paths when running in Render or Streamlit environments.
     
     Args:
-        session_dir: Path to session directory
-        fast_mode: Not used in this script (kept for compatibility)
-        rate_limit: Not used in this script (kept for compatibility)
+        session_dir (str | Path): Directory containing JSON and Excel files.
+        fast_mode (bool): Placeholder for backward compatibility.
+        rate_limit (int): Placeholder for backward compatibility.
     
     Returns:
         tuple: (success: bool, output_files: list)
     """
     global SESSION_DIR, INPUT_JSON, INPUT_EXCEL, OUTPUT_EXCEL
-    
-    # Set dynamic paths
-    SESSION_DIR = Path(session_dir)
-    INPUT_JSON = SESSION_DIR / "mix_ocr_qr.json"
-    INPUT_EXCEL = SESSION_DIR / "web_analysis.xlsx"
-    timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-    OUTPUT_EXCEL = SESSION_DIR / f"merged_final_{timestamp}.xlsx"
-    
+
     try:
-        # Run the main function
+        # 🧭 Detect working directory
+        base_dir = Path(session_dir or Path.cwd()).resolve()
+        print(f"\n🗂 Using session directory → {base_dir}")
+
+        # 🌐 Auto-detect JSON + Excel paths
+        candidates = [
+            base_dir,
+            base_dir.parent,
+            Path("/opt/render/project/src"),
+        ]
+        for c in candidates:
+            json_path = c / "mix_ocr_qr.json"
+            excel_path = c / "web_analysis.xlsx"
+            if json_path.exists() and excel_path.exists():
+                SESSION_DIR = c
+                INPUT_JSON = json_path
+                INPUT_EXCEL = excel_path
+                break
+
+        timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+        OUTPUT_EXCEL = SESSION_DIR / f"merged_final_{timestamp}.xlsx"
+
+        print(f"📥 JSON → {INPUT_JSON}")
+        print(f"📘 EXCEL → {INPUT_EXCEL}")
+        print(f"📤 OUTPUT → {OUTPUT_EXCEL}")
+
+        if not INPUT_JSON.exists():
+            print("❌ mix_ocr_qr.json not found.")
+            return False, []
+        if not INPUT_EXCEL.exists():
+            print("❌ web_analysis.xlsx not found.")
+            return False, []
+
+        # ✅ Run the merge
         result = main()
-        
-        # Check if output file was created
+
         if OUTPUT_EXCEL.exists() and result == 0:
-            print(f"✅ Final merge completed: {OUTPUT_EXCEL}")
+            print(f"\n✅ Final merge successful → {OUTPUT_EXCEL}")
             return True, [OUTPUT_EXCEL]
         else:
-            print(f"⚠️ Final merge completed with issues")
+            print(f"\n⚠️ Final merge completed with warnings.")
             return False, []
-            
+
     except Exception as e:
         print(f"❌ Final merge failed: {e}")
         import traceback
         traceback.print_exc()
         return False, []
+
+
+# =========================================================
+# Entry point
+# =========================================================
+if __name__ == "__main__":
+    print("🧩 Running standalone Final Merge...\n")
+    exit(main())
 
 if __name__ == "__main__":
     exit(main())
