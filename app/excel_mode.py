@@ -19,6 +19,17 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
+import logging
+import tempfile
+
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 INPUT_DIR = DATA_DIR / "input"
@@ -66,7 +77,14 @@ print(f"{'='*70}\n")
 #  settings
 # =========================================================
 # api key - only one key
-GOOGLE_API_KEY = "AIzaSyB.....ZDouR35hoZNxqsW6pc"
+try:
+    import streamlit as st
+    GOOGLE_API_KEY = st.secrets["gemini"]["api_key_excel"]
+    logger.info("✅ API key loaded from Streamlit secrets")
+except:
+    GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY_EXCEL", "AIzaSyBzVNw34fbQRcxCSZDouR35hoZNxqsW6pc")
+    logger.info("✅ API key loaded from environment")
+
 
 MODEL_NAME = "gemini-2.0-flash-exp"
 THREAD_COUNT = 5

@@ -4,7 +4,21 @@ from pathlib import Path
 import os, sys, json, time, io
 from typing import Any, Dict, List, Union
 from PIL import Image
+import tempfile
+import logging
 
+# =========================================================
+# 🔧 Setup Logging
+# =========================================================
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
+# =========================================================
+# 🔧 Cloud-Ready Paths
+# =========================================================
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 INPUT_DIR = DATA_DIR / "input"
@@ -19,34 +33,40 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 try:
     import google.genai as _genai_new
     from google.genai import types as _genai_types
-    print("✅ Gemini SDK loaded successfully (google-genai).")
+    logger.info("✅ Gemini SDK loaded successfully (google-genai).")
 except Exception as e:
-    print("❌ Gemini SDK failed to load:", e)
+    logger.error(f"❌ Gemini SDK failed to load: {e}")
     sys.exit(1)
 
 # =========================================================
-#  Dynamic Paths (Fixed for Render/GitHub) + SESSION_DIR Support
+# 🔧 Dynamic Paths (Cloud Compatible)
 # =========================================================
-# 🔥 اگر SESSION_DIR تنظیم شده، از اون استفاده کن
 SESSION_DIR = os.environ.get("SESSION_DIR")
 if SESSION_DIR:
     SESSION_PATH = Path(SESSION_DIR)
     SOURCE_FOLDER = SESSION_PATH / "uploads"
     OUTPUT_DIR = SESSION_PATH / "data" / "output"
     os.makedirs(OUTPUT_DIR, exist_ok=True)
-    print(f"✅ Using SESSION_DIR: {SESSION_DIR}")
+    logger.info(f"✅ Using SESSION_DIR: {SESSION_DIR}")
 else:
     SOURCE_FOLDER = INPUT_DIR
-    print(f"✅ Using default INPUT_DIR: {INPUT_DIR}")
+    logger.info(f"✅ Using default INPUT_DIR: {INPUT_DIR}")
 
 OUT_JSON = OUTPUT_DIR / "gemini_output.json"
 
-#path to Poppler for converting PDF to images
-POPPLER_PATH = os.getenv("POPPLER_PATH", r"C:\poppler\Library\bin")
-os.environ["PATH"] += os.pathsep + POPPLER_PATH
+# =========================================================
+# 🔧 Poppler Path (Cloud Compatible)
+# =========================================================
+POPPLER_PATH = os.getenv("POPPLER_PATH", "/usr/bin")
+if os.path.exists(POPPLER_PATH):
+    os.environ["PATH"] += os.pathsep + POPPLER_PATH
+    logger.info(f"✅ Poppler path set: {POPPLER_PATH}")
+else:
+    POPPLER_PATH = None
+    logger.warning("⚠️ Poppler path not found, using system default")
 
 # =========================================================
-# General Settings
+# ⚙️ General Settings
 # =========================================================
 MODEL_NAME = "gemini-2.5-flash"
 TEMPERATURE = 0.0
@@ -55,14 +75,20 @@ BATCH_SIZE_PDF = 1
 BATCH_SIZE_IMAGES = 3
 
 # =========================================================
-# Set API Key (only one key)
+# 🔑 API Key (Cloud Compatible)
 # =========================================================
-API_KEY = "AIzaSyCKoaWh0jM4oCJDGGXIt_sJqiBHy1rt61Cl2ZTs"
+try:
+    import streamlit as st
+    API_KEY = st.secrets["gemini"]["api_key_ocr"]
+    logger.info("✅ API key loaded from Streamlit secrets")
+except:
+    API_KEY = os.getenv("GEMINI_API_KEY_OCR", "AIzaSyCKoaWh0jM4oCJDGGXIt_sJqiBHy1rt61Cl2ZTs")
+    logger.info("✅ API key loaded from environment variable")
+
 CLIENT = _genai_new.Client(api_key=API_KEY)
 
-
 # =========================================================
-# Gemini Prompt
+# 🧩 Gemini Prompt
 # =========================================================
 JSON_INSTRUCTIONS = """
 You are an information extraction engine. Extract OCR text and structured fields from the scanned document.
@@ -71,7 +97,7 @@ If a field has no value, return null.
 """
 
 # =========================================================
-# Define JSON Output Structure
+# 🧩 Define JSON Output Structure
 # =========================================================
 def build_newsdk_schema():
     P = _genai_types
@@ -102,18 +128,20 @@ def build_newsdk_schema():
         required=["ocr_text"]
     )
 
-
 # =========================================================
-# Helper Functions
+# 📦 Helper Functions
 # =========================================================
 def list_files(path: Union[str, Path]) -> List[Path]:
+    """List all supported files in directory"""
     exts = {".jpg", ".jpeg", ".png", ".pdf"}
     return sorted([f for f in Path(path).rglob("*") if f.suffix.lower() in exts])
 
 def to_pil(image_path: Path) -> Image.Image:
+    """Convert image to PIL format"""
     return Image.open(image_path).convert("RGB")
 
 def ensure_nulls(obj: Dict[str, Any]) -> Dict[str, Any]:
+    """Ensure null values for empty fields"""
     fields = ["addresses","phones","faxes","emails","urls","telegram","instagram","linkedin","company_names","services"]
     for f in fields:
         if f not in obj or not obj[f]:
@@ -126,11 +154,11 @@ def ensure_nulls(obj: Dict[str, Any]) -> Dict[str, Any]:
         obj["ocr_text"] = ""
     return obj
 
-
 # =========================================================
-# Single-Key Send Function
+# 🤖 Gemini API Call
 # =========================================================
 def call_gemini_single_key(data: Image.Image, source_path: Path) -> Dict[str, Any]:
+    """Send image to Gemini and get structured response"""
     schema = build_newsdk_schema()
     cfg = _genai_types.GenerateContentConfig(
         temperature=TEMPERATURE,
@@ -138,6 +166,7 @@ def call_gemini_single_key(data: Image.Image, source_path: Path) -> Dict[str, An
         response_schema=schema,
     )
 
+    # Convert image to bytes
     buffer = io.BytesIO()
     data.save(buffer, format="JPEG", quality=85)
     image_bytes = buffer.getvalue()
@@ -157,23 +186,34 @@ def call_gemini_single_key(data: Image.Image, source_path: Path) -> Dict[str, An
             txt = "\n".join(p.text for p in resp.candidates[0].content.parts if getattr(p, "text", None))
         if not txt:
             raise RuntimeError("Empty response from Gemini.")
-        print("✅ Gemini response received successfully.")
+        logger.info("✅ Gemini response received successfully.")
         return ensure_nulls(json.loads(txt))
     except Exception as e:
         raise RuntimeError(f"Gemini API Error: {e}")
 
-
 # =========================================================
-# Process PDF into Images and Send
+# 📄 PDF Processing
 # =========================================================
 def pdf_to_images_and_process(pdf_path: Path) -> List[Dict[str, Any]]:
+    """Convert PDF to images and process each page"""
     from pdf2image import convert_from_path
-    print(f"📑 Converting PDF: {pdf_path.name}")
-    images = convert_from_path(pdf_path, dpi=PDF_IMG_DPI)
+    
+    logger.info(f"📑 Converting PDF: {pdf_path.name}")
+    
+    kwargs = {}
+    if POPPLER_PATH and os.path.exists(POPPLER_PATH):
+        kwargs["poppler_path"] = POPPLER_PATH
+    
+    try:
+        images = convert_from_path(pdf_path, dpi=PDF_IMG_DPI, **kwargs)
+    except Exception as e:
+        logger.error(f"❌ PDF conversion failed: {e}")
+        return [{"page": 1, "error": str(e)}]
+    
     results = []
 
     for i, img in enumerate(images, start=1):
-        print(f"📄 Page {i}/{len(images)} of {pdf_path.name}")
+        logger.info(f"📄 Page {i}/{len(images)} of {pdf_path.name}")
         try:
             data = call_gemini_single_key(img, pdf_path)
             results.append({"page": i, "result": data})
@@ -181,47 +221,46 @@ def pdf_to_images_and_process(pdf_path: Path) -> List[Dict[str, Any]]:
             results.append({"page": i, "error": str(e)})
         time.sleep(1)
 
-    print(f"✅ {len(results)} page(s) processed from {pdf_path.name}")
+    logger.info(f"✅ {len(results)} page(s) processed from {pdf_path.name}")
     return results
 
-
 # =========================================================
-# Main Program 
+# 🚀 Main Program
 # =========================================================
 def main():
-    print(f"\n{'='*70}")
-    print("🔍 OCR Extraction - Debug Mode")
-    print(f"{'='*70}")
+    logger.info("=" * 70)
+    logger.info("🔍 OCR Extraction - Cloud Mode")
+    logger.info("=" * 70)
     
-    # 🔥 DEBUG: نمایش کامل مسیرها
-    print(f"📂 SESSION_DIR env: {os.environ.get('SESSION_DIR', 'NOT SET')}")
-    print(f"📂 SOURCE_FOLDER: {SOURCE_FOLDER}")
-    print(f"   → Exists: {SOURCE_FOLDER.exists()}")
-    print(f"📂 OUTPUT_DIR: {OUTPUT_DIR}")
-    print(f"   → Exists: {OUTPUT_DIR.exists()}")
-    print(f"📂 OUT_JSON: {OUT_JSON}")
-    print(f"{'='*70}\n")
+    # Debug info
+    logger.info(f"📂 SESSION_DIR env: {os.environ.get('SESSION_DIR', 'NOT SET')}")
+    logger.info(f"📂 SOURCE_FOLDER: {SOURCE_FOLDER}")
+    logger.info(f"   → Exists: {SOURCE_FOLDER.exists()}")
+    logger.info(f"📂 OUTPUT_DIR: {OUTPUT_DIR}")
+    logger.info(f"   → Exists: {OUTPUT_DIR.exists()}")
+    logger.info(f"📂 OUT_JSON: {OUT_JSON}")
+    logger.info("=" * 70)
     
     if not SOURCE_FOLDER.exists():
-        print(f"❌ پوشه ورودی پیدا نشد: {SOURCE_FOLDER}")
-        # 🔥 لیست کردن فایل‌های موجود
-        print(f"\n🔍 Listing files in parent directory:")
+        logger.error(f"❌ Source folder not found: {SOURCE_FOLDER}")
+        
+        # List parent directory
+        logger.info(f"\n🔍 Listing parent directory:")
         parent = SOURCE_FOLDER.parent
         if parent.exists():
             for item in parent.iterdir():
-                print(f"   - {item.name} ({'dir' if item.is_dir() else 'file'})")
+                logger.info(f"   - {item.name} ({'dir' if item.is_dir() else 'file'})")
         sys.exit(1)
 
     files = list_files(SOURCE_FOLDER)
     
-    # 🔥 DEBUG: نمایش فایل‌های پیدا شده
-    print(f"📁 Files found: {len(files)}")
+    # Show found files
+    logger.info(f"📁 Files found: {len(files)}")
     for f in files:
-        print(f"   - {f.name} ({f.suffix})")
-    print()
+        logger.info(f"   - {f.name} ({f.suffix})")
     
     if not files:
-        print("❌ هیچ فایلی برای پردازش وجود ندارد.")
+        logger.warning("❌ No files to process.")
         sys.exit(0)
 
     all_out = []
@@ -229,38 +268,52 @@ def main():
     image_files = [f for f in files if f.suffix.lower() in [".jpg", ".jpeg", ".png"]]
     pdf_files = [f for f in files if f.suffix.lower() == ".pdf"]
 
-    print(f"📊 Found: {len(image_files)} images, {len(pdf_files)} PDFs\n")
+    logger.info(f"📊 Found: {len(image_files)} images, {len(pdf_files)} PDFs\n")
 
+    # Process images
     for idx, p in enumerate(image_files, start=1):
-        print(f"🖼 Processing image [{idx}/{len(image_files)}]: {p.name}")
+        logger.info(f"🖼 Processing image [{idx}/{len(image_files)}]: {p.name}")
         try:
             img = to_pil(p)
             res = call_gemini_single_key(img, p)
             all_out.append({"file_id": f"{idx:03d}", "file_name": p.name, "result": res})
         except Exception as e:
+            logger.error(f"❌ Error: {e}")
             all_out.append({"file_id": f"{idx:03d}", "file_name": p.name, "error": str(e)})
         time.sleep(1)
 
+    # Process PDFs
     for p in pdf_files:
-        print(f"\n📑 Processing PDF: {p.name}")
+        logger.info(f"\n📑 Processing PDF: {p.name}")
         try:
             res = pdf_to_images_and_process(p)
             all_out.append({"file_id": p.stem, "file_name": p.name, "result": res})
         except Exception as e:
+            logger.error(f"❌ Error: {e}")
             all_out.append({"file_id": p.stem, "file_name": p.name, "error": str(e)})
         time.sleep(1)
 
+    # Save results
+    OUT_JSON.parent.mkdir(parents=True, exist_ok=True)
     OUT_JSON.write_text(json.dumps(all_out, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"\n✅ پردازش کامل شد. نتیجه: {OUT_JSON}")
-    print(f"📊 Total items saved: {len(all_out)}")
-
+    
+    logger.info(f"\n✅ Processing complete. Result: {OUT_JSON}")
+    logger.info(f"📊 Total items saved: {len(all_out)}")
+    
+    return True
 
 def run_ocr_extraction():
-    """OCR extraction"""
-    print("🔍 Starting OCR extraction...")
-    main()
-    return str(OUTPUT_DIR / "gemini_output.json")
-
+    """OCR extraction wrapper"""
+    logger.info("🔍 Starting OCR extraction...")
+    success = main()
+    return str(OUTPUT_DIR / "gemini_output.json") if success else None
 
 if __name__ == "__main__":
-    main()
+    try:
+        success = main()
+        sys.exit(0 if success else 1)
+    except Exception as e:
+        logger.error(f"Fatal error: {e}")
+        import traceback
+        logger.error(traceback.format_exc())
+        sys.exit(1)

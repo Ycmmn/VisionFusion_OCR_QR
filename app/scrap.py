@@ -11,6 +11,13 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
+
+import logging
+import tempfile
+
+
+
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 INPUT_DIR = DATA_DIR / "input"
@@ -20,6 +27,12 @@ os.makedirs(INPUT_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
+# Setup logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 # =========================================================
 # 🔹 Gemini SDK Import (Fixed)
@@ -58,8 +71,14 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 
-#  Configuration
-GOOGLE_API_KEY = "AIzaSyAhuC9Grg_FlxwDwYUW-_CpNaFzjwUg24w"
+try:
+    import streamlit as st
+    GOOGLE_API_KEY = st.secrets["gemini"]["api_key_scrap"]
+    logger.info("✅ API key loaded from Streamlit secrets")
+except:
+    GOOGLE_API_KEY = os.getenv("GEMINI_API_KEY_SCRAP", "AIzaSyAhuC9Grg_FlxwDwYUW-_CpNaFzjwUg24w")
+    logger.info("✅ API key loaded from environment")
+    
 MODEL_NAME = "gemini-2.5-flash"
 
 THREAD_COUNT = 5

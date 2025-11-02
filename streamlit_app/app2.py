@@ -138,17 +138,18 @@ st.markdown("""
 # =========================================================
 # API Keys
 # =========================================================
-API_KEYS = {
-    "excel": "AIzaSyBzVNw....R35hoZNxqsW6pc",
-    "ocr": "AIzaSyCKoa.....IBHy1rt61Cl2ZTs",
-    "scrap": "AIzaSyAhuC9Grg_.....aFzjwUg24w"
-}
-for key_name, key_value in API_KEYS.items():
-    os.environ[f"GOOGLE_API_KEY_{key_name.upper()}"] = key_value
-    os.environ["GOOGLE_API_KEY"] = key_value
-    os.environ["GEMINI_API_KEY"] = key_value
-
-
+try:
+    API_KEYS = {
+        "excel": st.secrets["gemini"]["api_key_excel"],
+        "ocr": st.secrets["gemini"]["api_key_ocr"],
+        "scrap": st.secrets["gemini"]["api_key_scrap"]
+    }
+except:
+    API_KEYS = {
+        "excel": os.getenv("GEMINI_API_KEY_EXCEL", "AIzaSyBzVNw34fbQRcxCSZDouR35hoZNxqsW6pc"),
+        "ocr": os.getenv("GEMINI_API_KEY_OCR", "AIzaSyCKoaSP6Wgj5FCJDGGXIBHy1rt61Cl2ZTs"),
+        "scrap": os.getenv("GEMINI_API_KEY_SCRAP", "AIzaSyAhuC9Grg_FlxwDwYUW-_CpNaFzjwUg24w")
+    }
 # =========================================================
 # GOOGLE SHEETS INTEGRATION
 # =========================================================
@@ -162,18 +163,21 @@ GOOGLE_SCOPES = [
 
 @st.cache_resource
 def get_google_services():
-    """Connect to Google Drive and Sheets"""
     try:
         creds = service_account.Credentials.from_service_account_info(
             st.secrets["gcp_service_account"],
             scopes=GOOGLE_SCOPES
         )
-        drive_service = build('drive', 'v3', credentials=creds)
-        sheets_service = build('sheets', 'v4', credentials=creds)
-        return drive_service, sheets_service
-    except Exception as e:
-        st.error(f"❌ Error connecting to Google: {e}")
-        return None, None
+    except Exception:
+        # ✅ اضافه کن:
+        creds_path = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+        if creds_path and Path(creds_path).exists():
+            creds = service_account.Credentials.from_service_account_file(
+                creds_path, scopes=GOOGLE_SCOPES
+            )
+        else:
+            st.error("❌ No Google credentials found!")
+            return None, None
 
 def _col_index_to_letter(col_index):
     """Convert index to Excel column letter (0->A, 25->Z, 26->AA)"""
