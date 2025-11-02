@@ -1,0 +1,6 @@
+streamlit
+google-genai
+pillow
+pdf2image
+supabase
+python-dotenv
