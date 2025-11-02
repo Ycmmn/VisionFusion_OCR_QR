@@ -36,7 +36,8 @@ from qr_dyn import run_qr_detection
 from mix_ocr_qr_dyn import run_ocr_qr_merge
 from scrap import run_web_scraping
 from excel_mode import run_excel_mode
-from final_mix import run_final_merge
+from app.final_mix import run_final_merge
+
 
 # =========================================================
 # Page Settings
