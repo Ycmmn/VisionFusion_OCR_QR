@@ -1,10 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-🚀 Excel Web Scraper - Professional Edition
-Professional Excel web scraper + Gemini smart analysis + translation
+🚀 Excel Web Scraper - Professional Edition (Universal Paths)
+این نسخه همان منطق نسخهٔ اول است، اما مسیرها و I/O کاملاً داینامیک
+تا روی لوکال، Render و Streamlit Cloud به‌راحتی کار کند.
 """
-
-
 
 from pathlib import Path
 import os, json, re, time, random, threading, socket, shutil
@@ -19,106 +18,121 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 # =========================================================
-# 🔧 Dynamic Path Resolution (Works on Streamlit Cloud)
+# 📁 Dynamic Path Resolution (Compatible with Streamlit Cloud / Render / Local)
 # =========================================================
-SESSION_DIR = os.getenv("SESSION_DIR")
+# Try to read SESSION_DIR env var (set by Streamlit Cloud). If set, use it.
+SESSION_DIR_ENV = os.getenv("SESSION_DIR")  # may be None
 
-if SESSION_DIR:
-    # حالت Streamlit Cloud
-    BASE_DIR = Path(SESSION_DIR)
-    DATA_DIR = BASE_DIR
-    INPUT_DIR = BASE_DIR / "uploads"
-    OUTPUT_DIR = BASE_DIR
+if SESSION_DIR_ENV:
+    BASE_DIR = Path(SESSION_DIR_ENV)
 else:
-    # حالت Local
-    BASE_DIR = Path(__file__).resolve().parent.parent
-    DATA_DIR = BASE_DIR / "data"
-    INPUT_DIR = DATA_DIR / "input"
-    OUTPUT_DIR = DATA_DIR / "output"
+    # default to folder where this script lives
+    try:
+        BASE_DIR = Path(__file__).resolve().parent
+    except NameError:
+        # __file__ may not exist in some interactive environments
+        BASE_DIR = Path.cwd()
 
-os.makedirs(INPUT_DIR, exist_ok=True)
-os.makedirs(OUTPUT_DIR, exist_ok=True)
+UPLOADS_DIR = BASE_DIR / "uploads"
+OUTPUT_DIR = BASE_DIR / "output"
+JSON_DIR = BASE_DIR / "json_data"
 
-print(f"📂 SESSION_DIR: {SESSION_DIR or 'Not Set'}")
-print(f"📂 OUTPUT_DIR: {OUTPUT_DIR}")
+# ensure folders exist
+for d in (UPLOADS_DIR, OUTPUT_DIR, JSON_DIR):
+    try:
+        d.mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass
+
+# prefer /tmp when available and writable (common on cloud platforms)
+TMP_DIR = Path("/tmp")
+if TMP_DIR.exists() and os.access(str(TMP_DIR), os.W_OK):
+    ACTIVE_OUTPUT_DIR = TMP_DIR
+else:
+    ACTIVE_OUTPUT_DIR = OUTPUT_DIR
+
+def path_str(p: Path):
+    try:
+        return str(p)
+    except:
+        return p.as_posix()
+
+print(f"\n✅ Path system initialized")
+print(f" BASE_DIR: {path_str(BASE_DIR)}")
+print(f" UPLOADS_DIR: {path_str(UPLOADS_DIR)}")
+print(f" OUTPUT_DIR: {path_str(OUTPUT_DIR)}")
+print(f" JSON_DIR: {path_str(JSON_DIR)}")
+print(f" ACTIVE_OUTPUT_DIR: {path_str(ACTIVE_OUTPUT_DIR)}\n")
 
 # =========================================================
-# Gemini SDK Import
+# 🔹 Gemini SDK Import
 # =========================================================
 try:
     import google.genai as genai
     from google.genai import types
     print("✅ Gemini SDK loaded successfully")
 except Exception as e:
-    print(f"❌ Gemini SDK error: {e}")
-    import sys
-    sys.exit(1)
+    print(f"❌ Gemini SDK import error: {e}")
+    # we don't exit here; downstream code will try to fail gracefully if SDK missing
+    genai = None
+    types = None
 
 # =========================================================
-# Fixed Paths for Render/GitHub
+# 🧩 Input / Output selection logic (search uploads & defaults)
 # =========================================================
-
-# ✅ جستجوی خودکار فایل Excel
+# allow user to override via env vars
 INPUT_EXCEL_ENV = os.getenv("INPUT_EXCEL")
 if INPUT_EXCEL_ENV:
     INPUT_EXCEL = Path(INPUT_EXCEL_ENV)
 else:
-    # جستجو در uploads
+    # search likely locations for an .xlsx (prefer uploads)
     search_paths = [
-        INPUT_DIR,
-        SESSION_DIR / "uploads",
-        SESSION_DIR,
+        UPLOADS_DIR,
+        BASE_DIR / "uploads",
+        BASE_DIR,
         Path.cwd()
     ]
     INPUT_EXCEL = None
-    for search_path in search_paths:
-        if search_path.exists():
-            excel_files = list(search_path.glob("*.xlsx"))
-            if excel_files:
-                for f in excel_files:
-                    if not f.name.startswith(("output_enriched", "merged_final", "temp_output")):
-                        INPUT_EXCEL = f
-                        print(f"✅ Found Excel file: {f}")
+    for sp in search_paths:
+        try:
+            if sp and sp.exists():
+                excel_files = list(sp.glob("*.xlsx"))
+                if excel_files:
+                    for f in excel_files:
+                        if not f.name.startswith(("output_enriched", "merged_final", "temp_output")):
+                            INPUT_EXCEL = f
+                            break
+                    if INPUT_EXCEL:
                         break
-                if INPUT_EXCEL:
-                    break
-    
+        except Exception:
+            continue
     if not INPUT_EXCEL:
-        INPUT_EXCEL = INPUT_DIR / "input.xlsx"
-        print(f"⚠️ No Excel found, using default: {INPUT_EXCEL}")
+        INPUT_EXCEL = UPLOADS_DIR / "input.xlsx"
 
-        
+# output filenames (go to ACTIVE_OUTPUT_DIR or JSON_DIR)
 timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-OUTPUT_EXCEL = OUTPUT_DIR / f"output_enriched_{timestamp}.xlsx" 
-TEMP_EXCEL = OUTPUT_DIR / "temp_output.xlsx"
-OUTPUT_JSON = OUTPUT_DIR / "scraped_data.json"
+OUTPUT_EXCEL = Path(ACTIVE_OUTPUT_DIR) / f"output_enriched_{timestamp}.xlsx"
+TEMP_EXCEL = Path(ACTIVE_OUTPUT_DIR) / "temp_output.xlsx"
+OUTPUT_JSON = JSON_DIR / "scraped_data.json"
 
-os.makedirs(INPUT_DIR, exist_ok=True)
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-print(f"\n{'='*70}")
-print("🚀 Excel Web Scraper - Professional Edition (Fixed Paths)")
-print(f"{'='*70}")
-print(f"📥 Input Excel: {INPUT_EXCEL}")
-print(f"📤 Output Excel: {OUTPUT_EXCEL}")
-print(f"🗃 JSON Backup: {OUTPUT_JSON}")
-print(f"{'='*70}\n")
-
+print(f"📥 Input Excel: {path_str(INPUT_EXCEL)}")
+print(f"📤 Output Excel: {path_str(OUTPUT_EXCEL)}")
+print(f"🗃 Output JSON: {path_str(OUTPUT_JSON)}\n")
 
 # =========================================================
-#  settings
+# ⚙️ تنظیمات (unchanged logic)
 # =========================================================
-# api key - only one key
-GOOGLE_API_KEY = "AIzaSyBzVNw34fbQRcxCSZDouR35hoZNxqsW6pc"
+# API Key - only one key (keep same as original; you might move to env var)
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY", "AIzaSyBzVNw34fbQRcxCSZDouR35hoZNxqsW6pc")
 
 MODEL_NAME = "gemini-2.0-flash-exp"
-THREAD_COUNT = 5
-MAX_DEPTH = 2
-MAX_PAGES_PER_SITE = 25
+THREAD_COUNT = int(os.getenv("THREAD_COUNT", 5))
+MAX_DEPTH = int(os.getenv("MAX_DEPTH", 2))
+MAX_PAGES_PER_SITE = int(os.getenv("MAX_PAGES_PER_SITE", 25))
 REQUEST_TIMEOUT = (8, 20)
 SLEEP_BETWEEN = (0.8, 2.0)
-MAX_RETRIES_HTTP = 3
-MAX_RETRIES_GEMINI = 3
+MAX_RETRIES_HTTP = int(os.getenv("MAX_RETRIES_HTTP", 3))
+MAX_RETRIES_GEMINI = int(os.getenv("MAX_RETRIES_GEMINI", 3))
 IRANIAN_TLDS = ['.ir', '.ac.ir', '.co.ir', '.org.ir', '.gov.ir', '.id.ir', '.net.ir']
 
 # Fields to extract
@@ -164,12 +178,11 @@ print(f"📥 Input: {INPUT_EXCEL}")
 print(f"📤 Output: {OUTPUT_EXCEL}")
 print(f"{'='*70}\n")
 
-
 # =========================================================
-#  helper functions
+# 🧠 توابع کمکی
 # =========================================================
 def normalize_url(url):
-    """normalize url"""
+    """نرمال‌سازی URL"""
     if not url or pd.isna(url) or str(url).lower() in ['nan', 'none', '']:
         return None
     url = str(url).strip()
@@ -182,7 +195,7 @@ def normalize_url(url):
     return None
 
 def normalize_root(url):
-    """extract root domain"""
+    """استخراج root domain"""
     u = normalize_url(url)
     if not u:
         return None
@@ -190,7 +203,7 @@ def normalize_root(url):
     return f"{p.scheme}://{p.netloc}".lower()
 
 def is_iranian_domain(url):
-    """detect Iranian domain"""
+    """تشخیص دامنه ایرانی"""
     try:
         netloc = urlparse(normalize_root(url)).netloc.lower()
         return any(netloc.endswith(tld) for tld in IRANIAN_TLDS)
@@ -198,7 +211,7 @@ def is_iranian_domain(url):
         return False
 
 def domain_exists(url):
-    """check domain existence"""
+    """بررسی وجود دامنه"""
     try:
         host = urlparse(normalize_root(url)).netloc
         socket.gethostbyname(host)
@@ -207,16 +220,16 @@ def domain_exists(url):
         return False
 
 def are_values_same(v1, v2):
-    """check if two values are identical"""
+    """بررسی یکسان بودن دو مقدار"""
     if not v1 or not v2:
         return False
     return str(v1).strip().lower() == str(v2).strip().lower()
 
 # =========================================================
-# web scraping with smart ssl
+# 🌐 Web Scraping با SSL هوشمند
 # =========================================================
 def fetch(url):
-    """fetch page content with smart ssl handling"""
+    """دریافت محتوای صفحه با مدیریت هوشمند SSL"""
     verify_ssl = not is_iranian_domain(url)
     ssl_status = "🔒 SSL ON" if verify_ssl else "🔓 SSL OFF (Iranian)"
     
@@ -261,7 +274,7 @@ def fetch(url):
     return ("", "MAX_RETRIES")
 
 def clean_text(html):
-    """clean html and extract text"""
+    """تمیز کردن HTML و استخراج متن"""
     if not html:
         return ""
     soup = BeautifulSoup(html, "html.parser")
@@ -271,7 +284,7 @@ def clean_text(html):
     return re.sub(r"\s+", " ", text).strip()
 
 def crawl_site(root):
-    """full site crawl"""
+    """کرال کامل سایت"""
     print(f"   🕷️ Crawling: {root}")
     seen = set()
     q = [(root, 0)]
@@ -314,7 +327,7 @@ def crawl_site(root):
     return (combined, "")
 
 # =========================================================
-# Gemini Extraction & Translation
+# 🤖 Gemini Extraction & Translation
 # =========================================================
 PROMPT_EXTRACT = """
 You are a bilingual (Persian-English) company information extractor.
@@ -339,7 +352,7 @@ Fields JSON:
 """
 
 def gemini_json(prompt, schema):
-    """send request to Gemini with JSON output"""
+    """درخواست به Gemini با خروجی JSON"""
     schema_obj = types.Schema(type=types.Type.OBJECT, properties=schema, required=[])
     
     for i in range(MAX_RETRIES_GEMINI):
@@ -362,7 +375,7 @@ def gemini_json(prompt, schema):
     return {}
 
 def extract_with_gemini(text):
-    """extract information using Gemini"""
+    """استخراج اطلاعات با Gemini"""
     fields = "\n".join([f"- {f}" for f in FIELDS])
     prompt = PROMPT_EXTRACT.format(fields=fields, text=text[:8000])
     schema = {f: types.Schema(type=types.Type.STRING, nullable=True) for f in FIELDS}
@@ -370,10 +383,10 @@ def extract_with_gemini(text):
     return {f: (data.get(f) or "") for f in FIELDS}
 
 def translate_fields(data):
-    """translate English fields to Farsi"""
+    """ترجمه فیلدهای انگلیسی به فارسی"""
     to_translate = {en: data.get(en) for en, _ in TRANSLATABLE_FIELDS if data.get(en)}
     
-    # add empty FA columns
+    # اضافه کردن ستون‌های خالی FA
     for en, fa_col in TRANSLATABLE_FIELDS:
         if fa_col not in data:
             data[fa_col] = ""
@@ -392,18 +405,18 @@ def translate_fields(data):
     return data
 
 # =========================================================
-#  Smart Merge 
+# 🔗 Smart Merge با تمیزکاری
 # =========================================================
 def clean_duplicate_columns(df):
-    """remove and merge duplicate columns"""
+    """حذف و ادغام ستون‌های تکراری"""
     print("\n🧹 Cleaning duplicate columns...")
     
-    # group columns based on main name
+    # گروه‌بندی ستون‌ها بر اساس نام اصلی
     base_cols = {}
-    pattern = re.compile(r'\[\d+\]$')  # pattern [2], [3], ...
+    pattern = re.compile(r'\[\d+\]$')  # الگوی [2], [3], ...
     
     for col in df.columns:
-        # extract main name
+        # استخراج نام اصلی
         base = pattern.sub('', str(col))
         if base not in base_cols:
             base_cols[base] = []
@@ -411,14 +424,14 @@ def clean_duplicate_columns(df):
     
     cleaned_df = df.copy()
     
-    # for each column group
+    # برای هر گروه ستون
     for base, cols in base_cols.items():
         if len(cols) <= 1:
             continue
         
         print(f"   🔄 Merging {len(cols)} versions of '{base}'")
         
-        # merge all versions
+        # ادغام تمام نسخه‌ها
         for idx in df.index:
             values = []
             for col in cols:
@@ -431,7 +444,7 @@ def clean_duplicate_columns(df):
                 except:
                     continue
             
-            # merge with separator
+            # ادغام با جداکننده
             if values:
                 if base in ['Phone1', 'Phone2', 'Email', 'OtherEmails', 'WhatsApp', 'Telegram']:
                     merged = ", ".join(values)
@@ -448,7 +461,7 @@ def clean_duplicate_columns(df):
                 except:
                     pass
         
-        # remove duplicate columns
+        # حذف ستون‌های تکراری
         for col in cols[1:]:
             if col in cleaned_df.columns:
                 try:
@@ -460,7 +473,7 @@ def clean_duplicate_columns(df):
     return cleaned_df
 
 def smart_merge(original_df, scraped_data):
-    """smart data merging"""
+    """ادغام هوشمند داده‌ها"""
     print("\n🔗 Smart merging data...")
     
     scraped_df = pd.DataFrame(scraped_data)
@@ -509,9 +522,8 @@ def smart_merge(original_df, scraped_data):
     print(f"   ✅ Merged: {len(result_df)} rows × {len(result_df.columns)} columns")
     return result_df
 
-
 # =========================================================
-# Worker Thread
+# 🔄 Worker Thread
 # =========================================================
 def worker(q, results):
     while True:
@@ -572,9 +584,8 @@ def worker(q, results):
         q.task_done()
         time.sleep(random.uniform(*SLEEP_BETWEEN))
 
-
 # =========================================================
-#  Main
+# 🚀 Main
 # =========================================================
 def main():
     print("📥 Loading Excel file...")
@@ -677,13 +688,6 @@ def main():
     print(f"📁 Output saved: {OUTPUT_EXCEL}")
     print(f"📊 Final size: {len(final_df)} rows × {len(final_df.columns)} columns")
     print(f"{'='*70}\n")
-
-
-def run_excel_mode():
-    """اجرای Excel mode"""
-    print("📋 Starting Excel mode...")
-    main()
-    return str(OUTPUT_EXCEL)
 
 if __name__ == "__main__":
     main()
