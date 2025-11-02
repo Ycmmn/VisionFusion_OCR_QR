@@ -58,7 +58,36 @@ except Exception as e:
 # Fixed Paths for Render/GitHub
 # =========================================================
 
-INPUT_EXCEL = INPUT_DIR / "input.xlsx"  
+# ✅ جستجوی خودکار فایل Excel
+INPUT_EXCEL_ENV = os.getenv("INPUT_EXCEL")
+if INPUT_EXCEL_ENV:
+    INPUT_EXCEL = Path(INPUT_EXCEL_ENV)
+else:
+    # جستجو در uploads
+    search_paths = [
+        INPUT_DIR,
+        SESSION_DIR / "uploads",
+        SESSION_DIR,
+        Path.cwd()
+    ]
+    INPUT_EXCEL = None
+    for search_path in search_paths:
+        if search_path.exists():
+            excel_files = list(search_path.glob("*.xlsx"))
+            if excel_files:
+                for f in excel_files:
+                    if not f.name.startswith(("output_enriched", "merged_final", "temp_output")):
+                        INPUT_EXCEL = f
+                        print(f"✅ Found Excel file: {f}")
+                        break
+                if INPUT_EXCEL:
+                    break
+    
+    if not INPUT_EXCEL:
+        INPUT_EXCEL = INPUT_DIR / "input.xlsx"
+        print(f"⚠️ No Excel found, using default: {INPUT_EXCEL}")
+
+        
 timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
 OUTPUT_EXCEL = OUTPUT_DIR / f"output_enriched_{timestamp}.xlsx" 
 TEMP_EXCEL = OUTPUT_DIR / "temp_output.xlsx"
