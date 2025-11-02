@@ -33,7 +33,7 @@ opencv-python
 pyzbar
 pyzxing
 pytesseract
-poppler-utils   # ⬅️ For Linux/Mac; on Windows install Poppler manually and set POPPLER_PATH
+
 
 # =========================================================
 # ⚙️ Utilities & Helpers
