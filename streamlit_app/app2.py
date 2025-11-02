@@ -41,7 +41,7 @@ sys.path.insert(0, str(BASE_DIR / "app"))
 
 from ocr_dyn import run_ocr_extraction
 from qr_dyn import run_qr_detection
-from mix_ocr_qr_dyn import run_mix_ocr_qr
+from mix_ocr_qr import run_mix_ocr_qr
 from scrap import run_web_scraping
 from final_mix import run_final_merge
 from excel_mode import run_excel_mode
