@@ -1,7 +1,8 @@
 # =========================================================
 # 🧩 Core AI & Google Libraries
 # =========================================================
-google-genai==0.7.0
+# Downgrade to avoid websockets conflict with supabase
+google-genai==0.6.0
 google-api-python-client
 google-auth
 google-auth-oauthlib
@@ -33,6 +34,7 @@ opencv-python
 pyzbar
 pyzxing
 pytesseract
+
 # =========================================================
 # ⚙️ Utilities & Helpers
 # =========================================================
@@ -47,7 +49,9 @@ shutilwhich
 # 🚀 Streamlit App
 # =========================================================
 streamlit==1.39.0
-#websockets==13.1
+# Let pip resolve websockets version automatically
+websockets>=11.0,<12.0
+
 # =========================================================
 # 🗄️ Supabase Integration
 # =========================================================
