@@ -226,5 +226,13 @@ def main():
     OUT_JSON.write_text(json.dumps(all_out, ensure_ascii=False, indent=2), encoding="utf-8")
     print(f"\n✅ پردازش کامل شد. نتیجه: {OUT_JSON}")
 
+
+
+def run_ocr_extraction():
+    """اجرای OCR extraction"""
+    print("🔍 Starting OCR extraction...")
+    main()
+    return str(OUTPUT_DIR / "gemini_output.json")
+
 if __name__ == "__main__":
     main()

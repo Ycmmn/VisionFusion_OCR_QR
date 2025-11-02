@@ -73,14 +73,10 @@ except ImportError:
     HAS_PYZBAR = False
     print("⚠️ pyzbar not available")
 
-try:
-    from pyzxing import BarCodeReader
-    zxing_reader = BarCodeReader()
-    HAS_ZXING = True
-    print("✅ pyzxing loaded")
-except ImportError:
-    HAS_ZXING = False
-    print("⚠️ pyzxing not available")
+# pyzxing غیرفعال شد (مشکل‌ساز در Streamlit Cloud)
+HAS_ZXING = False
+zxing_reader = None
+print("⚠️ pyzxing disabled (not available in cloud)")
 
 # ----------------------------------------------------------
 def clean_url(url):
@@ -620,7 +616,11 @@ def main():
     if DEBUG_MODE:
         print(f"🐛 Debug images saved in: {DEBUG_DIR}")
 
-
+def run_qr_detection():
+    """اجرای QR detection"""
+    print("📷 Starting QR detection...")
+    main()
+    return str(OUTPUT_DIR / "final_superqr_v6_clean.json")
 # ----------------------------------------------------------
 if __name__ == "__main__":
     main()

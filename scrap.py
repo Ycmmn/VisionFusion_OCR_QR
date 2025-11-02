@@ -44,14 +44,15 @@ except ImportError:
 SOURCE_FOLDER = INPUT_DIR
 RENAMED_DIR = DATA_DIR / "renamed"
 
-
 MIX_OCR_QR_JSON = OUTPUT_DIR / "mix_ocr_qr.json"
 OUT_JSON = OUTPUT_DIR / "gemini_scrap_output.json"
 CLEAN_URLS = OUTPUT_DIR / "urls_clean.json"
 WEB_ANALYSIS_XLSX = OUTPUT_DIR / "web_analysis.xlsx"
 TEMP_EXCEL = OUTPUT_DIR / "web_analysis.tmp.xlsx"
 
-
+os.makedirs(SOURCE_FOLDER, exist_ok=True)
+os.makedirs(RENAMED_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 os.makedirs(SOURCE_FOLDER, exist_ok=True)
 os.makedirs(RENAMED_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -82,7 +83,7 @@ lock = threading.Lock()
 #  dynamic input and output paths
 # =========================================================
 RAW_INPUT = Path(os.getenv("RAW_INPUT", MIX_OCR_QR_JSON))
-CLEAN_URLS = Path(os.getenv("CLEAN_URLS", SESSION_DIR / "urls_clean.json"))
+CLEAN_URLS = OUTPUT_DIR / "urls_clean.json"
 OUTPUT_JSON = Path(os.getenv("OUTPUT_JSON", OUT_JSON))
 OUTPUT_EXCEL = Path(os.getenv("OUTPUT_EXCEL", WEB_ANALYSIS_XLSX))
 TEMP_EXCEL = Path(os.getenv("TEMP_EXCEL", SESSION_DIR / "web_analysis.tmp.xlsx"))
@@ -515,6 +516,13 @@ def main():
     print(f"✅ Success: {success}/{len(results)}")
     print(f"❌ Failed: {failed}/{len(results)}")
     print("="*60 + "\n")
+
+
+def run_web_scraping():
+    """اجرای web scraping"""
+    print("🌐 Starting web scraping...")
+    main()
+    return str(WEB_ANALYSIS_XLSX)
 
 if __name__ == "__main__":
     main()
