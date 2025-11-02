@@ -314,9 +314,13 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
                     ).execute()
                     print(f"   ✅ Old rows updated")
             
-            for col in all_columns:
-                if col not in df.columns:
-                    df[col] = ''
+            
+            
+            missing_cols = [col for col in all_columns if col not in df.columns]
+            if missing_cols:
+                missing_data = {col: '' for col in missing_cols}
+                df = df.assign(**missing_data)
+                
             
             df = df[all_columns]
             print(f"   ✅ DataFrame sorted: {len(df)} rows × {len(all_columns)} columns")
@@ -1250,7 +1254,7 @@ if uploaded_files:
                                 cols_display = ", ".join(df_prev.columns.tolist()[:20])
                                 if len(df_prev.columns) > 20: cols_display += "..."
                                 st.info(f"🔤 Columns: {cols_display}")
-                                st.dataframe(df_prev.head(10), use_container_width=True)
+                                st.dataframe(df_prev.head(10), width='stretch')
                         except Exception as e:
                             st.warning(f"⚠️ Error displaying preview: {e}")
 
