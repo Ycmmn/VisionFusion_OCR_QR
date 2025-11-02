@@ -427,5 +427,48 @@ def main():
         return 0
     return 1
 
+
+# =========================================================
+# 🔹 WRAPPER FUNCTION FOR IMPORT
+# =========================================================
+def run_final_merge(session_dir, fast_mode=True, rate_limit=4):
+    """
+    Wrapper function to run final JSON+Excel merge as an imported module.
+    
+    Args:
+        session_dir: Path to session directory
+        fast_mode: Not used in this script (kept for compatibility)
+        rate_limit: Not used in this script (kept for compatibility)
+    
+    Returns:
+        tuple: (success: bool, output_files: list)
+    """
+    global SESSION_DIR, INPUT_JSON, INPUT_EXCEL, OUTPUT_EXCEL
+    
+    # Set dynamic paths
+    SESSION_DIR = Path(session_dir)
+    INPUT_JSON = SESSION_DIR / "mix_ocr_qr.json"
+    INPUT_EXCEL = SESSION_DIR / "web_analysis.xlsx"
+    timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+    OUTPUT_EXCEL = SESSION_DIR / f"merged_final_{timestamp}.xlsx"
+    
+    try:
+        # Run the main function
+        result = main()
+        
+        # Check if output file was created
+        if OUTPUT_EXCEL.exists() and result == 0:
+            print(f"✅ Final merge completed: {OUTPUT_EXCEL}")
+            return True, [OUTPUT_EXCEL]
+        else:
+            print(f"⚠️ Final merge completed with issues")
+            return False, []
+            
+    except Exception as e:
+        print(f"❌ Final merge failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return False, []
+
 if __name__ == "__main__":
     exit(main())
