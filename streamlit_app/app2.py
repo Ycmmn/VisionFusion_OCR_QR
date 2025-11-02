@@ -30,6 +30,23 @@ import shutil
 
 from supabase import create_client, Client
 
+
+
+import sys
+from pathlib import Path
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(BASE_DIR / "app"))
+
+
+from ocr_dyn import run_ocr_extraction
+from qr_dyn import run_qr_detection
+from mix_ocr_qr_dyn import run_mix_ocr_qr
+from scrap import run_web_scraping
+from final_mix import run_final_merge
+from excel_mode import run_excel_mode
+
+
 # =========================================================
 # Page Settings
 # =========================================================
@@ -679,85 +696,6 @@ def process_files_in_batches(uploads_dir, pipeline_type):
     
     return [], 1
 
-# =========================================================
-# Run Script with Fast Mode + Log File
-# =========================================================
-def run_script(script_name, session_dir, log_area, status_text, script_display_name="", fast_mode=True):
-    script_path = Path(script_name)
-    if not script_display_name:
-        script_display_name = script_name
-    if not script_path.exists():
-        script_path = Path.cwd() / script_name
-        if not script_path.exists():
-            status_text.markdown(f"""
-            <div class="status-box status-error">❌ File {script_name} not found!</div>
-            """, unsafe_allow_html=True)
-            return False
-
-    status_text.markdown(f"""
-    <div class="status-box status-info">
-        <div class="loading-spinner"></div> Running {script_display_name}...
-    </div>
-    """, unsafe_allow_html=True)
-
-    logs_dir = session_dir / "logs"
-    logs_dir.mkdir(exist_ok=True)
-    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_file = logs_dir / f"log_{script_path.stem}_{timestamp}.txt"
-
-    env = os.environ.copy()
-    env["SESSION_DIR"] = str(session_dir)
-    env["SOURCE_FOLDER"] = str(uploads_dir)
-
-    try:
-        with subprocess.Popen(
-            [sys.executable, str(script_path)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            cwd=Path.cwd(),
-            env=env,
-            text=True,
-            bufsize=1
-        ) as process:
-            all_output = ""
-            line_count = 0
-            with open(log_file, "w", encoding="utf-8") as log_f:
-                for line in process.stdout:
-                    all_output += line
-                    log_f.write(line)
-                    log_f.flush()
-                    line_count += 1
-                    if fast_mode:
-                        if line_count % 10 == 0:
-                            log_area.code(all_output[-2000:], language="bash")
-                    else:
-                        log_area.code(all_output[-3000:], language="bash")
-                        time.sleep(0.05)
-            process.wait()
-
-        if process.returncode == 0:
-            status_text.markdown(f"""
-            <div class="status-box status-success">✅ {script_display_name} completed successfully!</div>
-            """, unsafe_allow_html=True)
-            return True
-        else:
-            status_text.markdown(f"""
-            <div class="status-box status-warning">⚠️ {script_display_name} encountered an issue (exit code: {process.returncode})</div>
-            """, unsafe_allow_html=True)
-            try:
-                with open(log_file, 'r', encoding='utf-8') as f:
-                    lines = f.readlines()
-                    if lines:
-                        st.code(''.join(lines[-50:]), language='bash')
-            except:
-                pass
-            return False
-
-    except Exception as e:
-        status_text.markdown(f"""
-        <div class="status-box status-error">❌ Execution error: {str(e)}</div>
-        """, unsafe_allow_html=True)
-        return False
 
 # =========================================================
 # Header
@@ -1023,14 +961,19 @@ if uploaded_files:
 
                 st.info(f"📦 Processing {total_rows} rows in batches (size: 1)")
                 
-                success = run_script(
-                    "excel_mode.py",
-                    session_dir,
-                    log_area,
-                    status_text,
-                    "📊 Excel Web Scraper",
-                    fast_mode
-                )
+                # کد جدید:
+                try:
+                    st.info("📊 Running Excel Mode...")
+                    result_file = run_excel_mode()
+                    success = True
+                    log_area.success(f"✅ Excel processing completed: {result_file}")
+                except Exception as e:
+                    success = False
+                    log_area.error(f"❌ Excel Mode failed: {e}")
+                    import traceback
+                    log_area.code(traceback.format_exc())
+
+
                 progress_bar.progress(100)
 
                 if total_rows > 0:
@@ -1053,26 +996,40 @@ if uploaded_files:
                 if total_batches > 0:
                     st.info(f"📦 Processing {total_batches} batches | Each batch ~{batch_size} files")
 
+                # کد جدید:
                 stages = [
-                    ("📘 OCR Extraction", "ocr_dyn.py", 20),
-                    ("🔍 QR Detection", "qr_dyn.py", 40),
-                    ("🧩 Merge OCR+QR", "mix_ocr_qr_dyn.py", 60),
-                    ("🌐 Web Scraping", "scrap.py", 80),
-                    ("💠 Final Merge", "final_mix.py", 100)
-                ]
+                    ("📘 OCR Extraction", run_ocr_extraction, 20),
+                    ("🔍 QR Detection", run_qr_detection, 40),
+                    ("🧩 Merge OCR+QR", run_mix_ocr_qr, 60),
+                    ("🌐 Web Scraping", run_web_scraping, 80),
+                    ("💠 Final Merge", run_final_merge, 100)
+                    ]
 
                 all_success = True
-                for stage_name, script, progress_val in stages:
+                for stage_name, stage_func, progress_val in stages:
                     current_quota = load_quota()
                     quota_display.info(f"🔋 Remaining quota: {current_quota['remaining']}/{DAILY_LIMIT}")
 
                     if total_batches > 0:
                         st.markdown(f"**{stage_name}** - Processing {total_batches} batches...")
 
-                    stage_success = run_script(
-                        script, session_dir, log_area, status_text,
-                        stage_name, fast_mode
-                    )
+                    try:
+                        log_area.info(f"🚀 Running {stage_name}...")
+        
+        
+                        if stage_name == "💠 Final Merge":
+                            stage_success, result_files = stage_func()
+                        else:
+                            result_file = stage_func()
+                            stage_success = True
+                            log_area.success(f"✅ {stage_name} completed: {result_file}")
+            
+                    except Exception as e:
+                        stage_success = False
+                        log_area.error(f"❌ {stage_name} failed: {e}")
+                        import traceback
+                        log_area.code(traceback.format_exc())
+    
                     if not stage_success:
                         all_success = False
                         st.markdown(f"""
@@ -1081,15 +1038,16 @@ if uploaded_files:
 
                     progress_bar.progress(progress_val)
                     time.sleep(rate_limit)
-                    
+    
                     quota_decrease_amount = max(1, total_batches)
                     quota = decrease_quota(quota_decrease_amount)
                     quota_display.success(f"✅ Remaining quota: {quota['remaining']}/{DAILY_LIMIT}")
-                    
+    
                     if quota['remaining'] <= 0:
                         st.markdown('<div class="status-box status-error">❌ API quota depleted!</div>', unsafe_allow_html=True)
                         break
 
+            
                 success = all_success
                 output_files = list(session_dir.glob("merged_final_*.xlsx"))
                 if not output_files:

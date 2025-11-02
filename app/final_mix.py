@@ -439,27 +439,13 @@ def main():
     return 1
 
 
-def run_final_merge(session_dir=None, fast_mode=True, rate_limit=4):
-    try:
-        global INPUT_JSON, INPUT_EXCEL, OUTPUT_EXCEL
-
-        INPUT_JSON = OUTPUT_DIR / "mix_ocr_qr.json"
-        INPUT_EXCEL = OUTPUT_DIR / "web_analysis.xlsx"
-        timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-        OUTPUT_EXCEL = OUTPUT_DIR / f"merged_final_{timestamp}.xlsx"
-
-        print(f"\n🚀 [Streamlit] Running Final Merge (Fixed Paths)")
-
-        code = main()
-        if code == 0 and OUTPUT_EXCEL.exists():
-            return True, [str(OUTPUT_EXCEL)]
-        else:
-            return False, []
-    except Exception as e:
-        print(f"❌ Error in run_final_merge: {e}")
-        import traceback
-        traceback.print_exc()
-        return False, []
+def run_final_merge():
+    """final merge"""
+    print("📊 Starting final merge...")
+    code = main()
+    if code == 0 and OUTPUT_EXCEL.exists():
+        return True, [str(OUTPUT_EXCEL)]
+    return False, []
 
 if __name__ == "__main__":
     exit(main())

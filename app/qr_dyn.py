@@ -621,6 +621,12 @@ def main():
         print(f"🐛 Debug images saved in: {DEBUG_DIR}")
 
 
+def run_qr_detection():
+    """QR detection"""
+    print("📷 Starting QR detection...")
+    main()
+    return str(OUTPUT_DIR / "final_superqr_v6_clean.json")
+
 # ----------------------------------------------------------
 if __name__ == "__main__":
     main()

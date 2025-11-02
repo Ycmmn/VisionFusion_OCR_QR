@@ -516,5 +516,13 @@ def main():
     print(f"❌ Failed: {failed}/{len(results)}")
     print("="*60 + "\n")
 
+
+def run_web_scraping():
+    """web scraping"""
+    print("🌐 Starting web scraping...")
+    main()
+    return str(WEB_ANALYSIS_XLSX)
+
+
 if __name__ == "__main__":
     main()

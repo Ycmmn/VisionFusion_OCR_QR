@@ -635,5 +635,12 @@ def main():
     print(f"📊 Final size: {len(final_df)} rows × {len(final_df.columns)} columns")
     print(f"{'='*70}\n")
 
+
+def run_excel_mode():
+    """اجرای Excel mode"""
+    print("📋 Starting Excel mode...")
+    main()
+    return str(OUTPUT_EXCEL)
+
 if __name__ == "__main__":
     main()

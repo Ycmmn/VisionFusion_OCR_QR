@@ -120,5 +120,11 @@ def main():
     print(f"📊 Total merged records: {len(merged_results)}\n")
 
 
+def run_mix_ocr_qr():
+    """OCR + QR"""
+    print("🔗 Starting OCR+QR merge...")
+    main()
+    return str(OUTPUT_FILE)
+
 if __name__ == "__main__":
     main()
