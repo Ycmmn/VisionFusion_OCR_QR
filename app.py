@@ -1108,10 +1108,60 @@ if uploaded_files:
                 for output_file in output_files:
                     add_exhibition_and_source(output_file, exhibition_name)
                     add_qc_metadata_to_excel(output_file, qc_metadata)
-                
+    
+                # 🔍 DEBUG: چک کردن وضعیت
+                print("\n" + "="*80)
+                print("🔍 DEBUG: Checking Google Sheets Upload conditions")
+                print(f"🔍 DEBUG: success = {success}")
+                print(f"🔍 DEBUG: output_files = {output_files}")
+                print(f"🔍 DEBUG: len(output_files) = {len(output_files)}")
+                print(f"🔍 DEBUG: About to start Google Sheets upload...")
+                print("="*80 + "\n")
+    
                 # ========== GOOGLE SHEETS UPLOAD ==========
                 st.markdown("---")
                 st.markdown("## ☁️ Saving Data to Google Drive")
+                st.info("💡 Only Excel data is saved, not the file itself!")
+    
+                sheets_status = st.empty()
+                sheets_status.info("📤 Uploading data...")
+    
+                print("🔍 DEBUG: Starting Google Sheets try block...")
+    
+                try:
+                    print("🔍 DEBUG: Getting folder...")
+                    folder_id = get_or_create_folder("Exhibition_Data")
+                    print(f"🔍 DEBUG: folder_id = {folder_id}")
+        
+                    print(f"🔍 DEBUG: Processing {len(output_files)} files...")
+        
+                    for output_file in output_files:
+                        print(f"\n{'='*80}")
+                        print(f"🔍 DEBUG: Processing file: {output_file}")
+                        print(f"🔍 DEBUG: File exists: {output_file.exists()}")
+                        print(f"🔍 DEBUG: File size: {output_file.stat().st_size} bytes")
+                        print(f"🔍 DEBUG: Calling append_excel_data_to_sheets...")
+                        print(f"{'='*80}\n")
+            
+                        success_gs, msg_gs, url_gs, total_rows = append_excel_data_to_sheets(
+                            excel_path=output_file,
+                            folder_id=folder_id
+                        )
+            
+                        print(f"\n🔍 DEBUG: Result from append_excel_data_to_sheets:")
+                        print(f"  - success_gs = {success_gs}")
+                        print(f"  - msg_gs = {msg_gs}")
+                        print(f"  - url_gs = {url_gs}")
+                        print(f"  - total_rows = {total_rows}\n")
+            
+                        if success_gs:
+                            sheets_status.markdown(f"""
+                            <div class="status-box status-success">
+                                {msg_gs}
+                            </div>
+                            """, unsafe_allow_html=True)
+
+
                 st.info("💡 Only Excel data is saved, not the file itself!")
                 
                 sheets_status = st.empty()
