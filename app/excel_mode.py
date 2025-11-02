@@ -19,10 +19,6 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
-
-from pathlib import Path
-import os
-
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
 INPUT_DIR = DATA_DIR / "input"
@@ -45,38 +41,25 @@ except Exception as e:
     sys.exit(1)
 
 # =========================================================
-#  dynamic paths
+# Fixed Paths for Render/GitHub
 # =========================================================
-SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
-SOURCE_FOLDER = Path(os.getenv("SOURCE_FOLDER", SESSION_DIR / "uploads"))
-RENAMED_DIR = Path(os.getenv("RENAMED_DIR", SESSION_DIR / "renamed"))
 
-# input: auto-search for Excel file
-INPUT_EXCEL_ENV = os.getenv("INPUT_EXCEL")
-if INPUT_EXCEL_ENV:
-    INPUT_EXCEL = Path(INPUT_EXCEL_ENV)
-else:
-    search_paths = [SESSION_DIR, SOURCE_FOLDER, RENAMED_DIR, SESSION_DIR / "input"]
-    INPUT_EXCEL = None
-    for search_path in search_paths:
-        if search_path.exists():
-            excel_files = list(search_path.glob("*.xlsx"))
-            if excel_files:
-                for f in excel_files:
-                    if not f.name.startswith("output_enriched"):
-                        INPUT_EXCEL = f
-                        break
-                if INPUT_EXCEL:
-                    break
-    if not INPUT_EXCEL:
-        INPUT_EXCEL = SESSION_DIR / "input.xlsx"
+INPUT_EXCEL = INPUT_DIR / "input.xlsx"  
+timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+OUTPUT_EXCEL = OUTPUT_DIR / f"output_enriched_{timestamp}.xlsx" 
+TEMP_EXCEL = OUTPUT_DIR / "temp_output.xlsx"
+OUTPUT_JSON = OUTPUT_DIR / "scraped_data.json"
 
-OUTPUT_EXCEL = Path(os.getenv(
-    "OUTPUT_EXCEL", 
-    SESSION_DIR / f"output_enriched_{pd.Timestamp.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
-))
-TEMP_EXCEL = Path(os.getenv("TEMP_EXCEL", SESSION_DIR / "temp_output.xlsx"))
-OUTPUT_JSON = Path(os.getenv("OUTPUT_JSON", SESSION_DIR / "scraped_data.json"))
+os.makedirs(INPUT_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+print(f"\n{'='*70}")
+print("🚀 Excel Web Scraper - Professional Edition (Fixed Paths)")
+print(f"{'='*70}")
+print(f"📥 Input Excel: {INPUT_EXCEL}")
+print(f"📤 Output Excel: {OUTPUT_EXCEL}")
+print(f"🗃 JSON Backup: {OUTPUT_JSON}")
+print(f"{'='*70}\n")
 
 
 # =========================================================

@@ -5,6 +5,7 @@
 
 from pathlib import Path
 import os
+import json
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
@@ -15,21 +16,20 @@ os.makedirs(INPUT_DIR, exist_ok=True)
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
-
-
-from pathlib import Path
-import os
-import json
-
 # =========================================================
-#  dynamic paths
-SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
-SOURCE_FOLDER = Path(os.getenv("SOURCE_FOLDER", SESSION_DIR / "uploads"))
-RENAMED_DIR = Path(os.getenv("RENAMED_DIR", SESSION_DIR / "renamed"))
+# 🧩 Dynamic Paths (Fixed for Render/GitHub)
+# =========================================================
+SOURCE_FOLDER = INPUT_DIR
+RENAMED_DIR = DATA_DIR / "renamed"
 
-OCR_FILE = Path(os.getenv("OCR_FILE", SESSION_DIR / "gemini_output.json"))
-QR_FILE = Path(os.getenv("QR_FILE", SESSION_DIR / "final_superqr_v6_clean.json"))
-OUTPUT_FILE = Path(os.getenv("OUTPUT_FILE", SESSION_DIR / "mix_ocr_qr.json"))
+
+OCR_FILE = OUTPUT_DIR / "gemini_output.json"
+QR_FILE = OUTPUT_DIR / "final_superqr_v6_clean.json"
+OUTPUT_FILE = OUTPUT_DIR / "mix_ocr_qr.json"
+
+os.makedirs(SOURCE_FOLDER, exist_ok=True)
+os.makedirs(RENAMED_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # =========================================================
 #  helper functions

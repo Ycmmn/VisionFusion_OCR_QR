@@ -10,8 +10,6 @@ import pandas as pd
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-from pathlib import Path
-import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
@@ -41,16 +39,22 @@ except ImportError:
         sys.exit(1)
 
 # =========================================================
-# dynamic session paths
+# Fixed Paths for Render/GitHub
 # =========================================================
-SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
-SOURCE_FOLDER = Path(os.getenv("SOURCE_FOLDER", SESSION_DIR / "uploads"))
-RENAMED_DIR = Path(os.getenv("RENAMED_DIR", SESSION_DIR / "renamed"))
-OUT_JSON = Path(os.getenv("OUT_JSON", SESSION_DIR / "gemini_scrap_output.json"))
-QR_RAW_JSON = Path(os.getenv("QR_RAW_JSON", SESSION_DIR / "final_superqr_v6_raw.json"))
-QR_CLEAN_JSON = Path(os.getenv("QR_CLEAN_JSON", SESSION_DIR / "final_superqr_v6_clean.json"))
-MIX_OCR_QR_JSON = Path(os.getenv("MIX_OCR_QR_JSON", SESSION_DIR / "mix_ocr_qr.json"))
-WEB_ANALYSIS_XLSX = Path(os.getenv("WEB_ANALYSIS_XLSX", SESSION_DIR / "web_analysis.xlsx"))
+SOURCE_FOLDER = INPUT_DIR
+RENAMED_DIR = DATA_DIR / "renamed"
+
+
+MIX_OCR_QR_JSON = OUTPUT_DIR / "mix_ocr_qr.json"
+OUT_JSON = OUTPUT_DIR / "gemini_scrap_output.json"
+CLEAN_URLS = OUTPUT_DIR / "urls_clean.json"
+WEB_ANALYSIS_XLSX = OUTPUT_DIR / "web_analysis.xlsx"
+TEMP_EXCEL = OUTPUT_DIR / "web_analysis.tmp.xlsx"
+
+
+os.makedirs(SOURCE_FOLDER, exist_ok=True)
+os.makedirs(RENAMED_DIR, exist_ok=True)
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 
@@ -448,7 +452,7 @@ def main():
     print("🚀 Starting Web Scraping Process")
     print("="*60 + "\n")
     
-    roots = extract_urls_from_mix(RAW_INPUT, CLEAN_URLS)
+    roots = extract_urls_from_mix(MIX_OCR_QR_JSON, CLEAN_URLS)
     if not roots:
         print("⚠️ No URLs found.")
         return
@@ -498,8 +502,8 @@ def main():
     try:
         tmp = TEMP_EXCEL
         df.to_excel(tmp, index=False)
-        shutil.move(tmp, OUTPUT_EXCEL)
-        print(f"✅ Excel saved: {OUTPUT_EXCEL}")
+        shutil.move(tmp, WEB_ANALYSIS_XLSX)
+        print(f"✅ Excel saved: {WEB_ANALYSIS_XLSX}")
     except Exception as e:
         print(f"❌ Failed to save Excel: {e}")
     

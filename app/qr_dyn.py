@@ -31,22 +31,22 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 
 # =========================================================
-# Dynamic Paths
+#  Dynamic Paths (Fixed for Render/GitHub)
 # =========================================================
-SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
 
-#inputs: If uploads is empty, use SESSION_DIR path
-IMAGES_FOLDER = SESSION_DIR / "uploads"
-if not IMAGES_FOLDER.exists() or not any(IMAGES_FOLDER.glob("*")):
-    IMAGES_FOLDER = SESSION_DIR
-print(f"📂 Using IMAGES_FOLDER → {IMAGES_FOLDER}")
+IMAGES_FOLDER = INPUT_DIR         
+OUTPUT_JSON_RAW = OUTPUT_DIR / "final_superqr_v6_raw.json"
+OUTPUT_JSON_CLEAN = OUTPUT_DIR / "final_superqr_v6_clean.json"
+DEBUG_DIR = OUTPUT_DIR / "_debug"
 
-#outputs (Dynamic)
-OUTPUT_JSON_RAW = Path(os.getenv("QR_RAW_JSON", SESSION_DIR / "final_superqr_v6_raw.json"))
-OUTPUT_JSON_CLEAN = Path(os.getenv("QR_CLEAN_JSON", SESSION_DIR / "final_superqr_v6_clean.json"))
-DEBUG_DIR = SESSION_DIR / "_debug"
+
 os.makedirs(IMAGES_FOLDER, exist_ok=True)
 os.makedirs(DEBUG_DIR, exist_ok=True)
+
+print(f"📂 Using IMAGES_FOLDER → {IMAGES_FOLDER}")
+print(f"📂 Output JSONs will be saved in → {OUTPUT_DIR}")
+
+
 
 
 ## dpi for pdf
@@ -413,7 +413,7 @@ def process_image_for_qr(image_path: Path) -> Union[List[str], None]:
 def process_pdf_for_qr(pdf_path: Path) -> Dict[str, Any]:
     """process pdf and convert to image"""
     print(f"\n📄 Processing PDF: {pdf_path.name}")
-    temp_dir = SESSION_DIR / "_pdf_pages"
+    temp_dir = OUTPUT_DIR / "_pdf_pages"
     os.makedirs(temp_dir, exist_ok=True)
     
     kwargs = {}

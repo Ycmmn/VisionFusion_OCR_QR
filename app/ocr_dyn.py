@@ -30,11 +30,12 @@ except Exception as e:
     sys.exit(1)
 
 # =========================================================
-# 🧩 Dynamic Paths
+#  Dynamic Paths (Fixed for Render/GitHub)
 # =========================================================
-SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
-SOURCE_FOLDER = Path(os.getenv("SOURCE_FOLDER", SESSION_DIR / "uploads"))
-OUT_JSON = Path(os.getenv("OUT_JSON", SESSION_DIR / "gemini_output.json"))
+SOURCE_FOLDER = INPUT_DIR       
+OUT_JSON = OUTPUT_DIR / "gemini_output.json"  
+
+
 
 #path to Poppler for converting PDF to images
 POPPLER_PATH = os.getenv("POPPLER_PATH", r"C:\poppler\Library\bin")

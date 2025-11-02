@@ -4,8 +4,6 @@
 Smart merging of JSON and Excel with full cleaning and optimization
 """
 
-from pathlib import Path
-import os
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = BASE_DIR / "data"
@@ -22,22 +20,23 @@ from collections import defaultdict
 import time
 
 # =========================================================
-#  dynamic paths
+# 🧩 Fixed Paths for Render/GitHub
 # =========================================================
-SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
-INPUT_JSON = Path(os.getenv("INPUT_JSON", SESSION_DIR / "mix_ocr_qr.json"))
-INPUT_EXCEL = Path(os.getenv("INPUT_EXCEL", SESSION_DIR / "web_analysis.xlsx"))
+INPUT_JSON = OUTPUT_DIR / "mix_ocr_qr.json"         # ورودی از ادغام OCR + QR
+INPUT_EXCEL = OUTPUT_DIR / "web_analysis.xlsx"      # ورودی از Web Scraper
 timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-OUTPUT_EXCEL = Path(os.getenv("OUTPUT_EXCEL", SESSION_DIR / f"merged_final_{timestamp}.xlsx"))
+OUTPUT_EXCEL = OUTPUT_DIR / f"merged_final_{timestamp}.xlsx"  # خروجی نهایی
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 print("\n" + "="*70)
 print("🚀 Complete JSON + Excel Merger (Optimized)")
 print("="*70)
-print(f"📂 Session: {SESSION_DIR}")
 print(f"📥 JSON: {INPUT_JSON}")
 print(f"📥 Excel: {INPUT_EXCEL}")
 print(f"📤 Output: {OUTPUT_EXCEL}")
 print("="*70 + "\n")
+
 
 # =========================================================
 #  helper functions
@@ -440,17 +439,16 @@ def main():
     return 1
 
 
-def run_final_merge(session_dir, fast_mode=True, rate_limit=4):
+def run_final_merge(session_dir=None, fast_mode=True, rate_limit=4):
     try:
-        global SESSION_DIR, INPUT_JSON, INPUT_EXCEL, OUTPUT_EXCEL
+        global INPUT_JSON, INPUT_EXCEL, OUTPUT_EXCEL
 
-        SESSION_DIR = Path(session_dir)
-        INPUT_JSON = Path(os.getenv("INPUT_JSON", SESSION_DIR / "mix_ocr_qr.json"))
-        INPUT_EXCEL = Path(os.getenv("INPUT_EXCEL", SESSION_DIR / "web_analysis.xlsx"))
+        INPUT_JSON = OUTPUT_DIR / "mix_ocr_qr.json"
+        INPUT_EXCEL = OUTPUT_DIR / "web_analysis.xlsx"
         timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-        OUTPUT_EXCEL = Path(os.getenv("OUTPUT_EXCEL", SESSION_DIR / f"merged_final_{timestamp}.xlsx"))
+        OUTPUT_EXCEL = OUTPUT_DIR / f"merged_final_{timestamp}.xlsx"
 
-        print(f"\n🚀 [Streamlit] Running Final Merge on session: {SESSION_DIR}")
+        print(f"\n🚀 [Streamlit] Running Final Merge (Fixed Paths)")
 
         code = main()
         if code == 0 and OUTPUT_EXCEL.exists():
