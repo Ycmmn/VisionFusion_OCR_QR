@@ -12,7 +12,6 @@ A full merge of the two apps: "Ultimate Smart Exhibition Pipeline" + "Smart Data
 
 Run:  
     streamlit run smart_exhibition_pipeline_english.py
-
 """
 
 import streamlit as st
@@ -27,8 +26,6 @@ import pandas as pd
 import numpy as np
 import re
 import shutil
-
-from supabase import create_client, Client
 
 # =========================================================
 # Page Settings
@@ -62,7 +59,6 @@ st.markdown(f"""
     </p>
 </div>
 """, unsafe_allow_html=True)
-
 
 # =========================================================
 # Cool UI with Professional Gradients
@@ -148,9 +144,8 @@ for key_name, key_value in API_KEYS.items():
     os.environ["GOOGLE_API_KEY"] = key_value
     os.environ["GEMINI_API_KEY"] = key_value
 
-
 # =========================================================
-# GOOGLE SHEETS INTEGRATION - نسخه تصحیح شده کامل
+# GOOGLE SHEETS INTEGRATION
 # =========================================================
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -175,7 +170,6 @@ def get_google_services():
         st.error(f"❌ Error connecting to Google: {e}")
         return None, None
 
-
 def _col_index_to_letter(col_index):
     """Convert index to Excel column letter (0->A, 25->Z, 26->AA)"""
     result = ""
@@ -183,7 +177,6 @@ def _col_index_to_letter(col_index):
         result = chr(col_index % 26 + 65) + result
         col_index = col_index // 26 - 1
     return result
-
 
 def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
     """Find or create a sheet in Drive"""
@@ -227,12 +220,9 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         print(f"   ❌ Error: {e}")
         return None, None, False
 
-
 def append_excel_data_to_sheets(excel_path, folder_id=None):
     """Read Excel data and append to Google Sheets (variable row count)"""
     
-
-    # 🔍 DEBUG: ورودی تابع
     print("\n" + "🟢"*50)
     print("🔍 DEBUG: ===== ENTERED append_excel_data_to_sheets =====")
     print(f"🔍 DEBUG: excel_path = {excel_path}")
@@ -448,8 +438,6 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
         print("🔴"*50 + "\n")
         return False, str(e), None, 0
 
-
-        
 def get_or_create_folder(folder_name="Exhibition_Data"):
     """Find or create folder in Drive"""
     try:
@@ -477,7 +465,6 @@ def get_or_create_folder(folder_name="Exhibition_Data"):
     except Exception as e:
         print(f"   ❌ Error: {e}")
         return None
-
 
 # =========================================================
 # Quota Management
@@ -515,7 +502,6 @@ def decrease_quota(amount=1):
     quota["remaining"] = max(0, DAILY_LIMIT - quota["used"])
     save_quota(quota)
     return quota
-
 
 # =========================================================
 # Quality Control Tracking Functions
@@ -569,7 +555,6 @@ def save_qc_log(session_dir, qc_metadata, exhibition_name, pipeline_type, total_
     except Exception as e:
         print(f"   ❌ Error saving QC log: {e}")
         return False
-
 
 # =========================================================
 # Shared Smart Functions
@@ -688,7 +673,6 @@ def add_exhibition_and_source(excel_path, exhibition_name):
         print(f"   ❌ Error adding metadata: {e}")
         st.error(f"Error adding metadata: {e}")
         return False
-
 
 # =========================================================
 # Detect Pipeline Type and Exhibition Name
@@ -903,7 +887,6 @@ elif Path("google_sheet_link.txt").exists():
     except:
         pass
 
-
 # ======================================
 # End of Quick Link
 # ======================================
@@ -946,7 +929,6 @@ for key_name, key_value in API_KEYS.items():
 st.sidebar.markdown("---")
 st.sidebar.markdown("### 📦 Batch Processing")
 st.sidebar.info("📸 Images: 5\n📄 PDFs: 4\n📊 Excel: 1")
-
 
 # =========================================================
 # Upload Files
@@ -1186,44 +1168,36 @@ if uploaded_files:
                     output_files = [f for f in session_dir.glob("**/*.xlsx")
                                     if any(kw in f.name.lower() for kw in ["merged", "final", "output"])]
 
-            elapsed = time.time() - start_time
-            print("🧩 DEBUG: Entering Sheets Section Check")
-            print(f"success = {success}")
-            print(f"output_files = {output_files}")
-            print(f"len(output_files) = {len(output_files) if output_files else 0}")
-
-            if success and output_files:
+            # ============================================================
+            # ☁️ GOOGLE SHEETS UPLOAD — ALWAYS EXECUTE IF OUTPUT EXISTS
+            # ============================================================
+            if output_files:
                 st.info("📝 Adding Exhibition, Source and QC Metadata...")
                 for output_file in output_files:
                     add_exhibition_and_source(output_file, exhibition_name)
                     add_qc_metadata_to_excel(output_file, qc_metadata)
-    
-                # 🔍 DEBUG: چک کردن وضعیت
+
                 print("\n" + "="*80)
-                print("🔍 DEBUG: Checking Google Sheets Upload conditions")
-                print(f"🔍 DEBUG: success = {success}")
+                print("🚀 DEBUG: Starting Google Sheets Upload (no success check)")
                 print(f"🔍 DEBUG: output_files = {output_files}")
                 print(f"🔍 DEBUG: len(output_files) = {len(output_files)}")
-                print(f"🔍 DEBUG: About to start Google Sheets upload...")
                 print("="*80 + "\n")
-    
+
                 # ========== GOOGLE SHEETS UPLOAD ==========
                 st.markdown("---")
                 st.markdown("## ☁️ Saving Data to Google Drive")
                 st.info("💡 Only Excel data is saved, not the file itself!")
-    
+
                 sheets_status = st.empty()
                 sheets_status.info("📤 Uploading data...")
-    
-                print("🔍 DEBUG: Starting Google Sheets try block...")
-    
+
                 try:
                     print("🔍 DEBUG: Getting folder...")
                     folder_id = get_or_create_folder("Exhibition_Data")
                     print(f"🔍 DEBUG: folder_id = {folder_id}")
-        
+
                     print(f"🔍 DEBUG: Processing {len(output_files)} files...")
-        
+
                     for output_file in output_files:
                         print(f"\n{'='*80}")
                         print(f"🔍 DEBUG: Processing file: {output_file}")
@@ -1231,34 +1205,36 @@ if uploaded_files:
                         print(f"🔍 DEBUG: File size: {output_file.stat().st_size} bytes")
                         print(f"🔍 DEBUG: Calling append_excel_data_to_sheets...")
                         print(f"{'='*80}\n")
-            
+
                         success_gs, msg_gs, url_gs, total_rows = append_excel_data_to_sheets(
                             excel_path=output_file,
                             folder_id=folder_id
                         )
-            
+
                         print(f"\n🔍 DEBUG: Result from append_excel_data_to_sheets:")
                         print(f"  - success_gs = {success_gs}")
                         print(f"  - msg_gs = {msg_gs}")
                         print(f"  - url_gs = {url_gs}")
                         print(f"  - total_rows = {total_rows}\n")
-            
+
                         if success_gs:
                             sheets_status.markdown(f"""
                             <div class="status-box status-success">
                                 {msg_gs}
                             </div>
                             """, unsafe_allow_html=True)
-                            
+
                             st.session_state['sheet_url'] = url_gs
-                            st.session_state['sheet_id'] = url_gs.split('/d/')[1].split('/')[0] if '/d/' in url_gs else ''
-                            
+                            st.session_state['sheet_id'] = (
+                                url_gs.split('/d/')[1].split('/')[0] if '/d/' in url_gs else ''
+                            )
+
                             link_file = Path("google_sheet_link.txt")
                             link_file.write_text(f"Table link:\n{url_gs}", encoding='utf-8')
-                            
+
                             total_cells = total_rows * 90
                             capacity = (total_cells / 10_000_000) * 100
-                            
+
                             col_a, col_b, col_c = st.columns(3)
                             with col_a:
                                 st.metric("📊 Total Rows", f"{total_rows:,}")
@@ -1266,7 +1242,7 @@ if uploaded_files:
                                 st.metric("📦 Total Cells", f"{total_cells:,}")
                             with col_c:
                                 st.metric("⚡️ Capacity", f"{capacity:.1f}%")
-                            
+
                             st.markdown(f"""
                             <div class="file-display" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
                                 <h4>🔗 Permanent Table Link</h4>
@@ -1280,9 +1256,9 @@ if uploaded_files:
                                 </p>
                             </div>
                             """, unsafe_allow_html=True)
-                            
+
                             st.code(url_gs, language=None)
-                            
+
                             if capacity > 80:
                                 st.warning(f"⚠️ High capacity ({capacity:.1f}%)!")
                             else:
@@ -1290,7 +1266,7 @@ if uploaded_files:
                         else:
                             sheets_status.error(f"❌ Error: {msg_gs}")
                             print(f"❌ DEBUG: Google Sheets upload failed: {msg_gs}")
-                
+
                 except Exception as e:
                     sheets_status.error(f"❌ Error: {e}")
                     st.warning("💡 Make sure Google Drive API and Sheets API are enabled")
@@ -1299,6 +1275,9 @@ if uploaded_files:
                     traceback.print_exc()
                 # ========== END GOOGLE SHEETS ==========
 
+            elapsed = time.time() - start_time
+
+            if success:
                 st.markdown("---")
 
                 st.markdown("""
