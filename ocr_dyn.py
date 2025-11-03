@@ -208,3 +208,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+#import gemini_ocr_module
+#gemini_ocr_module.main()

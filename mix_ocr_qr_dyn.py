@@ -100,3 +100,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+#import merge_ocr_qr_module
+#merge_ocr_qr_module.main()

@@ -496,3 +496,6 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+#import web_scraper_module
+#web_scraper_module.main()

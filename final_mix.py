@@ -423,3 +423,6 @@ def main():
 
 if __name__ == "__main__":
     exit(main())
+
+#import json_excel_merger_module
+#json_excel_merger_module.main()

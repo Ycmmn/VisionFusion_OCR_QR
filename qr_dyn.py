@@ -595,3 +595,7 @@ def main():
 # ----------------------------------------------------------
 if __name__ == "__main__":
     main()
+
+
+#import superqr_module
+#superqr_module.main()
