@@ -163,7 +163,6 @@ GOOGLE_SCOPES = [
 def get_google_services():
     """اتصال به Google Drive و Sheets"""
     try:
-        # ✅ اضافه کن
         print("🔍 DEBUG: Trying to connect to Google Services...")
         
         creds = service_account.Credentials.from_service_account_info(
@@ -173,14 +172,11 @@ def get_google_services():
         drive_service = build('drive', 'v3', credentials=creds)
         sheets_service = build('sheets', 'v4', credentials=creds)
         
-        # ✅ اضافه کن
         print("✅ DEBUG: Google Services connected successfully!")
         
         return drive_service, sheets_service
     except Exception as e:
-        # ✅ اضافه کن
         print(f"❌ DEBUG: Failed to connect: {e}")
-        
         st.error(f"❌ خطا در اتصال به Google: {e}")
         return None, None
 
@@ -237,7 +233,6 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
 def append_excel_data_to_sheets(excel_path, folder_id=None):
     """Read Excel data and append to Google Sheets"""
     try:
-        # ✅ اضافه کن این خطوط
         print("\n" + "="*80)
         print("🔍 DEBUG: append_excel_data_to_sheets CALLED")
         print(f"🔍 DEBUG: excel_path type = {type(excel_path)}")
@@ -248,23 +243,6 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
         if not drive_service or not sheets_service:
             print("❌ DEBUG: Google services are None!")
             return False, "Google connection failed", None, 0
-    
-    if success and output_files:
-                st.info("📝 در حال اضافه کردن Exhibition، Source و QC Metadata...")
-                for output_file in output_files:
-                    add_exhibition_and_source(output_file, exhibition_name)
-                    add_qc_metadata_to_excel(output_file, qc_metadata)
-                
-                # ✅ اضافه کن این خط رو
-                st.warning(f"🔍 DEBUG: تعداد فایل‌های خروجی: {len(output_files)}")
-                for f in output_files:
-                    st.info(f"📄 فایل: {f.name} | حجم: {f.stat().st_size} bytes")
-                
-                # ========== GOOGLE SHEETS UPLOAD ==========
-    try:
-        drive_service, sheets_service = get_google_services()
-        if not drive_service or not sheets_service:
-            return False, "Google connection failed", None, 0
 
         print(f"\n☁️ Starting data save to Google Drive...")
 
@@ -273,26 +251,19 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
         original_name = None
         
         if hasattr(excel_path, "read"):
-            # این یک UploadedFile از Streamlit است
             print("📤 Processing Streamlit UploadedFile...")
             import tempfile
             
-            # ✅ ذخیره اسم اصلی قبل از تبدیل
             original_name = excel_path.name
-            
-            # ✅ Seek به ابتدای فایل
             excel_path.seek(0)
             
-            # ✅ ذخیره در temp file
             with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
                 tmp.write(excel_path.read())
                 temp_path = Path(tmp.name)
             
-            # ✅ حالا excel_path یک Path object است
             excel_path = temp_path
             print(f"📁 Saved to temp: {excel_path}")
         else:
-            # این از قبل یک Path است
             excel_path = Path(excel_path)
             original_name = excel_path.name
         
@@ -304,7 +275,6 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
         file_url = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
         print(f"   ✅ Using existing Google Sheet: {file_url}")
         
-        # ✅ حالا می‌تونی original_name رو استفاده کنی
         print(f"📖 Reading Excel data: {original_name}")
         df = pd.read_excel(excel_path)
         
@@ -443,6 +413,34 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
         
         return False, str(e), None, 0
 
+
+def get_or_create_folder(folder_name="Exhibition_Data"):
+    """پیدا/ساخت پوشه در Drive"""
+    try:
+        drive_service, _ = get_google_services()
+        if not drive_service:
+            return None
+        
+        query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        results = drive_service.files().list(
+            q=query, spaces='drive', fields='files(id, name)', pageSize=1
+        ).execute()
+        files = results.get('files', [])
+        
+        if files:
+            print(f"   ✅ پوشه موجود: {files[0]['name']}")
+            return files[0]['id']
+        
+        folder = drive_service.files().create(
+            body={'name': folder_name, 'mimeType': 'application/vnd.google-apps.folder'},
+            fields='id'
+        ).execute()
+        print(f"   ✅ پوشه جدید: {folder_name}")
+        return folder.get('id')
+        
+    except Exception as e:
+        print(f"   ❌ خطا: {e}")
+        return None
 
 def get_or_create_folder(folder_name="Exhibition_Data"):
     """پیدا/ساخت پوشه در Drive"""
