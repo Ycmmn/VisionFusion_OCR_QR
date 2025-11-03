@@ -1187,6 +1187,10 @@ if uploaded_files:
                                     if any(kw in f.name.lower() for kw in ["merged", "final", "output"])]
 
             elapsed = time.time() - start_time
+            print("🧩 DEBUG: Entering Sheets Section Check")
+            print(f"success = {success}")
+            print(f"output_files = {output_files}")
+            print(f"len(output_files) = {len(output_files) if output_files else 0}")
 
             if success and output_files:
                 st.info("📝 Adding Exhibition, Source and QC Metadata...")
