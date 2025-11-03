@@ -466,27 +466,33 @@ def main():
     print("="*60 + "\n")
 
     df = pd.DataFrame(results)
-    
+
+    # ترتیب ستون‌ها
     ordered_cols = ["url", "status", "error"]
-    
+
+    # اضافه کردن ستون‌های اصلی و کنار هم قرار دادن ترجمه‌ها
     for field in FIELDS:
         ordered_cols.append(field)
         for en_field, fa_field in TRANSLATABLE_FIELDS:
             if en_field == field:
                 ordered_cols.append(fa_field)
                 break
-    
+
+    # اضافه کردن ستون‌های ترجمه‌ای که در FIELDS نیستند
     for en_field, fa_field in TRANSLATABLE_FIELDS:
         if en_field not in FIELDS and en_field not in ordered_cols:
             ordered_cols.append(en_field)
             ordered_cols.append(fa_field)
-    
+
+    # اطمینان از وجود همه ستون‌ها حتی اگر داده‌ای ندارند
     for col in ordered_cols:
         if col not in df.columns:
             df[col] = ""
-    
+
+    # مرتب کردن ستون‌ها
     df = df[ordered_cols]
-    
+
+    # ذخیره اکسل به شکل امن
     try:
         df.to_excel(TEMP_EXCEL, index=False)
         shutil.move(str(TEMP_EXCEL), str(WEB_ANALYSIS_XLSX))
@@ -501,12 +507,3 @@ def main():
     print(f"✅ Success: {success}/{len(results)}")
     print(f"❌ Failed: {failed}/{len(results)}")
     print("="*60 + "\n")
-
-def run_web_scraping():
-    """Run web scraping"""
-    print("🌐 Starting web scraping...")
-    main()
-    return str(WEB_ANALYSIS_XLSX)
-
-if __name__ == "__main__":
-    main()
