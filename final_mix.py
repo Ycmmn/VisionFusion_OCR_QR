@@ -480,13 +480,7 @@ def run_final_merge(session_dir=None, fast_mode=True, rate_limit=4):
         return False, []
 
 
-def run_final_merge():
-    """اجرای final merge"""
-    print("📊 Starting final merge...")
-    code = main()
-    if code == 0 and OUTPUT_EXCEL.exists():
-        return True, [str(OUTPUT_EXCEL)]
-    return False, []
+
 
 if __name__ == "__main__":
     exit(main())
