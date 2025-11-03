@@ -1160,11 +1160,74 @@ if uploaded_files:
                             st.session_state['sheet_url'] = url_gs
                             st.session_state['sheet_id'] = url_gs.split('/d/')[1].split('/')[0] if '/d/' in url_gs else ''
                             
-                            link_file = Path("google_sheet_link.txt")
-                            link_file.write_text(f"لینک جدول:\n{url_gs}", encoding='link_file.write_text(f"لینک جدول:\n{url_gs}", encoding='utf-8')
+                            # ========== GOOGLE SHEETS UPLOAD ==========
+                            st.markdown("---")
+                            st.markdown("## ☁️ ذخیره داده‌ها در Google Drive")
+                            st.info("💡 فقط داده‌های داخل Excel ذخیره می‌شود، نه خود فایل!")
+                
+                            sheets_status = st.empty()
+                            sheets_status.info("📤 در حال آپلود داده‌ها...")
+                
+                            try:
+                                folder_id = get_or_create_folder("Exhibition_Data")
+                    
+                            for output_file in output_files:
+                                success_gs, msg_gs, url_gs, total_rows = append_excel_data_to_sheets(
+                                    excel_path=output_file,
+                                    folder_id=folder_id
+                                    )
+                        
+                                if success_gs:
+                                    sheets_status.markdown(f"""
+                                    <div class="status-box status-success">
+                                        {msg_gs}
+                                    </div>
+                                    """, unsafe_allow_html=True)
                             
-                            total_cells = total_rows * 90
-                            capacity = (total_cells / 10_000_000) * 100
+                                    st.session_state['sheet_url'] = url_gs
+                                    st.session_state['sheet_id'] = url_gs.split('/d/')[1].split('/')[0] if '/d/' in url_gs else ''
+                            
+                                    link_file = Path("google_sheet_link.txt")
+                                    link_file.write_text(f"لینک جدول:\n{url_gs}", encoding='utf-8')
+                            
+                                    total_cells = total_rows * 90
+                                    capacity = (total_cells / 10_000_000) * 100
+                            
+                                    col_a, col_b, col_c = st.columns(3)
+                                    with col_a:
+                                        st.metric("📊 کل ردیف‌ها", f"{total_rows:,}")
+                                    with col_b:
+                                        st.metric("📦 کل سلول‌ها", f"{total_cells:,}")
+                                    with col_c:
+                                        st.metric("⚡️ ظرفیت", f"{capacity:.1f}%")
+                            
+                                    st.markdown(f"""
+                                    <div class="file-display" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                        <h4>🔗 لینک دائمی جدول</h4>
+                                        <p style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
+                                            <a href="{url_gs}" target="_blank" style="color: white; font-weight: bold; font-size: 1.1rem;">
+                                                📊 باز کردن در Google Drive
+                                            </a>
+                                        </p>
+                                        <p style="font-size: 0.9rem; margin: 0.5rem 0 0 0; opacity: 0.9;">
+                                            💡 این لینک همیشه ثابت است! Bookmark کنید!
+                                        </p>
+                                    </div>
+                                    """, unsafe_allow_html=True)
+                            
+                                    st.code(url_gs, language=None)
+                            
+                                    if capacity > 80:
+                                        st.warning(f"⚠️ ظرفیت بالا ({capacity:.1f}%)!")
+                                    else:
+                                        st.success(f"✅ فضای کافی ({100-capacity:.1f}% باقی)")
+                                else:
+                                    sheets_status.error(f"❌ خطا: {msg_gs}")
+                
+                            except Exception as e:
+                                sheets_status.error(f"❌ خطا: {e}")
+                                st.warning("💡 مطمئن شوید Google Drive API و Sheets API فعال است")
+                            # ========== END GOOGLE SHEETS ==========
                             
                             col_a, col_b, col_c = st.columns(3)
                             with col_a:
