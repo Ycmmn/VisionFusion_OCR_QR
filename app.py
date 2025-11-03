@@ -1126,7 +1126,7 @@ if uploaded_files:
                 # ✅ بررسی وجود فایل
                 if not output_file.exists():
                     st.error(f"❌ فایل پیدا نشد: {output_file}")
-        continue
+    continue
 
 
             if output_file.stat().st_size == 0:
