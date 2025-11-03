@@ -1079,57 +1079,34 @@ if uploaded_files:
                                     if "output" in f.name.lower() or "enriched" in f.name.lower()]
 
             
-
-            else:
+else:
                 st.markdown("""
                 <div class="status-box status-info">🖼 OCR/QR Pipeline فعال شد</div>
                 """, unsafe_allow_html=True)
 
-            if total_batches > 0:
-                st.info(f"📦 پردازش {total_batches} Batch | هر Batch حدود {batch_size} فایل")
+                if total_batches > 0:
+                    st.info(f"📦 پردازش {total_batches} Batch | هر Batch حدود {batch_size} فایل")
 
-            stages = [
-                ("📘 OCR Extraction", "ocr_dyn.py", 20),
-                ("🔍 QR Detection", "qr_dyn.py", 40),
-                ("🧩 Merge OCR+QR", "mix_ocr_qr_dyn.py", 60),
-                ("🌐 Web Scraping", "scrap.py", 80),
-                ("💠 Final Merge", "final_mix.py", 100)
-            ]
+                stages = [
+                    ("📘 OCR Extraction", "ocr_dyn.py", 20),
+                    ("🔍 QR Detection", "qr_dyn.py", 40),
+                    ("🧩 Merge OCR+QR", "mix_ocr_qr_dyn.py", 60),
+                    ("🌐 Web Scraping", "scrap.py", 80),
+                    ("💠 Final Merge", "final_mix.py", 100)
+                ]
 
-            all_success = True
-            for stage_name, script, progress_val in stages:
-                # ✅ دریافت quota قبل از نمایش
-                current_quota = load_quota()
-                quota_display.info(f"🔋 سهمیه باقیمانده: {current_quota['remaining']}/{DAILY_LIMIT}")
-
-            
-        
-                if not stage_success:
-                    all_success = False
-                    st.markdown(f"""
-                    <div class="status-box status-warning">⚠️ {stage_name} با مشکل مواجه شد، ادامه می‌دهیم...</div>
-                    """, unsafe_allow_html=True)
-
-                progress_bar.progress(progress_val)
-                time.sleep(rate_limit)
-        
-                quota_decrease_amount = max(1, total_batches)
-                quota = decrease_quota(quota_decrease_amount)
-                quota_display.success(f"✅ سهمیه باقیمانده: {quota['remaining']}/{DAILY_LIMIT}")
-        
-                if quota['remaining'] <= 0:
-                    st.markdown('<div class="status-box status-error">❌ سهمیه API تمام شد!</div>', unsafe_allow_html=True)
-                    break
-
-
+                all_success = True
+                for stage_name, script, progress_val in stages:
+                    current_quota = load_quota()
+                    quota_display.info(f"🔋 سهمیه باقیمانده: {current_quota['remaining']}/{DAILY_LIMIT}")
 
                     if total_batches > 0:
                         st.markdown(f"**{stage_name}** - پردازش {total_batches} Batch...")
 
-                    stage_success = run_script(
-                        script, session_dir, log_area, status_text,
-                        stage_name, fast_mode
+                    stage_success = run_script_as_function(
+                        script, session_dir, log_area, status_text, stage_name
                     )
+            
                     if not stage_success:
                         all_success = False
                         st.markdown(f"""
@@ -1138,11 +1115,11 @@ if uploaded_files:
 
                     progress_bar.progress(progress_val)
                     time.sleep(rate_limit)
-                    
+            
                     quota_decrease_amount = max(1, total_batches)
                     quota = decrease_quota(quota_decrease_amount)
                     quota_display.success(f"✅ سهمیه باقیمانده: {quota['remaining']}/{DAILY_LIMIT}")
-                    
+            
                     if quota['remaining'] <= 0:
                         st.markdown('<div class="status-box status-error">❌ سهمیه API تمام شد!</div>', unsafe_allow_html=True)
                         break
