@@ -1079,7 +1079,7 @@ if uploaded_files:
                                     if "output" in f.name.lower() or "enriched" in f.name.lower()]
 
             
-else:
+            else:
                 st.markdown("""
                 <div class="status-box status-info">🖼 OCR/QR Pipeline فعال شد</div>
                 """, unsafe_allow_html=True)
