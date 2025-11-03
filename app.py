@@ -273,6 +273,86 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
             print(f"   ℹ️ Empty table, adding {len(new_headers)} columns")
         else:
             new_columns = [col for col in new_headers if col not in existing_headers]
+            def append_excel_data_to_sheets(excel_path, folder_id=None):
+    """
+    Read Excel data and append to Google Sheets (variable row count).
+    ✅ FIXED: Compatible with Streamlit Cloud UploadedFile
+    """
+    try:
+        drive_service, sheets_service = get_google_services()
+        if not drive_service or not sheets_service:
+            return False, "Google connection failed", None, 0
+
+        print(f"\n☁️ Starting data save to Google Drive...")
+
+        # ✅ CRITICAL FIX: هندل فایل آپلودی Streamlit BEFORE accessing .name
+        temp_path = None
+        original_name = None
+        
+        if hasattr(excel_path, "read"):
+            # این یک UploadedFile از Streamlit است
+            print("📤 Processing Streamlit UploadedFile...")
+            import tempfile
+            
+            # ✅ ذخیره اسم اصلی قبل از تبدیل
+            original_name = excel_path.name
+            
+            # ✅ Seek به ابتدای فایل
+            excel_path.seek(0)
+            
+            # ✅ ذخیره در temp file
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+                tmp.write(excel_path.read())
+                temp_path = Path(tmp.name)
+            
+            # ✅ حالا excel_path یک Path object است
+            excel_path = temp_path
+            print(f"📁 Saved to temp: {excel_path}")
+        else:
+            # این از قبل یک Path است
+            excel_path = Path(excel_path)
+            original_name = excel_path.name
+        
+        if not excel_path.exists():
+            return False, f"File not found: {excel_path}", None, 0
+
+        # ✅ Use existing Google Sheet
+        file_id = "1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE"
+        file_url = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
+        print(f"   ✅ Using existing Google Sheet: {file_url}")
+        
+        # ✅ حالا می‌تونی original_name رو استفاده کنی
+        print(f"📖 Reading Excel data: {original_name}")
+        df = pd.read_excel(excel_path)
+        
+        if df.empty:
+            return False, "Excel file is empty", None, 0
+        
+        print(f"   ✅ {len(df)} rows × {len(df.columns)} columns read")
+        
+        # ✅ Clean DataFrame from NaN and None values
+        df = df.replace({np.nan: "", None: ""})
+        
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                df[col] = df[col].astype(str).replace('nan', '').replace('None', '').replace('NaT', '')
+        
+        sheet_name = 'Sheet1'
+        
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=file_id, range=f'{sheet_name}!1:1'
+        ).execute()
+        
+        existing_headers = result.get('values', [[]])[0] if result.get('values') else []
+        new_headers = df.columns.tolist()
+        
+        print(f"   📋 Existing columns: {len(existing_headers)} | New columns: {len(new_headers)}")
+        
+        if not existing_headers:
+            values = [new_headers] + df.values.tolist()
+            print(f"   ℹ️ Empty table, adding {len(new_headers)} columns")
+        else:
+            new_columns = [col for col in new_headers if col not in existing_headers]
             
             all_columns = existing_headers.copy()
             for col in new_columns:
@@ -355,6 +435,14 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
         print(f"   📊 Total cells: {total_cells:,} ({capacity:.1f}%)")
         print(f"   🔗 {file_url}")
         
+        # ✅ CRITICAL: Clean up temp file
+        if temp_path and temp_path.exists():
+            try:
+                temp_path.unlink()
+                print(f"   🗑️ Cleaned temp file: {temp_path}")
+            except Exception as e:
+                print(f"   ⚠️ Could not delete temp file: {e}")
+        
         message = f"✅ {updated_rows} new rows | Total: {total_rows} rows | {total_columns} columns"
         return True, message, file_url, total_rows
         
@@ -362,36 +450,15 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
         print(f"   ❌ Error: {e}")
         import traceback
         traceback.print_exc()
+        
+        # ✅ Clean up temp file in case of error
+        if 'temp_path' in locals() and temp_path and temp_path.exists():
+            try:
+                temp_path.unlink()
+            except:
+                pass
+        
         return False, str(e), None, 0
-
-
-def get_or_create_folder(folder_name="Exhibition_Data"):
-    """پیدا/ساخت پوشه در Drive"""
-    try:
-        drive_service, _ = get_google_services()
-        if not drive_service:
-            return None
-        
-        query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
-        results = drive_service.files().list(
-            q=query, spaces='drive', fields='files(id, name)', pageSize=1
-        ).execute()
-        files = results.get('files', [])
-        
-        if files:
-            print(f"   ✅ پوشه موجود: {files[0]['name']}")
-            return files[0]['id']
-        
-        folder = drive_service.files().create(
-            body={'name': folder_name, 'mimeType': 'application/vnd.google-apps.folder'},
-            fields='id'
-        ).execute()
-        print(f"   ✅ پوشه جدید: {folder_name}")
-        return folder.get('id')
-        
-    except Exception as e:
-        print(f"   ❌ خطا: {e}")
-        return None
 
 # =========================================================
 # 📅 Quota Management
