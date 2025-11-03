@@ -225,55 +225,6 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         return None, None, False
 
 def append_excel_data_to_sheets(excel_path, folder_id=None):
-    """Read Excel data and append to Google Sheets (variable row count)"""
-    try:
-        drive_service, sheets_service = get_google_services()
-        if not drive_service or not sheets_service:
-            return False, "Google connection failed", None, 0
-
-        print(f"\n☁️ Starting data save to Google Drive...")
-
-        # ✅ Use existing Google Sheet instead of creating a new one
-        file_id = "1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE"
-        file_url = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
-        exists = True
-        print(f"   ✅ Using existing Google Sheet: {file_url}")
-
-        # file_id, file_url, exists = find_or_create_data_table(drive_service, sheets_service, folder_id)
-        if not file_id:
-            return False, "Error creating table", None, 0
-        
-        print(f"📖 Reading Excel data: {excel_path.name}")
-        df = pd.read_excel(excel_path)
-        if df.empty:
-            return False, "Excel file is empty", None, 0
-        
-        print(f"   ✅ {len(df)} rows × {len(df.columns)} columns read")
-        
-        # ✅ Clean DataFrame from NaN and None values
-        df = df.replace({np.nan: "", None: ""})
-        
-        for col in df.columns:
-            if df[col].dtype == 'object':
-                df[col] = df[col].astype(str).replace('nan', '').replace('None', '').replace('NaT', '')
-        
-        sheet_name = 'Sheet1'
-        
-        result = sheets_service.spreadsheets().values().get(
-            spreadsheetId=file_id, range=f'{sheet_name}!1:1'
-        ).execute()
-        
-        existing_headers = result.get('values', [[]])[0] if result.get('values') else []
-        new_headers = df.columns.tolist()
-        
-        print(f"   📋 Existing columns: {len(existing_headers)} | New columns: {len(new_headers)}")
-        
-        if not existing_headers:
-            values = [new_headers] + df.values.tolist()
-            print(f"   ℹ️ Empty table, adding {len(new_headers)} columns")
-        else:
-            new_columns = [col for col in new_headers if col not in existing_headers]
-            def append_excel_data_to_sheets(excel_path, folder_id=None):
     """
     Read Excel data and append to Google Sheets (variable row count).
     ✅ FIXED: Compatible with Streamlit Cloud UploadedFile
@@ -459,6 +410,35 @@ def append_excel_data_to_sheets(excel_path, folder_id=None):
                 pass
         
         return False, str(e), None, 0
+
+
+def get_or_create_folder(folder_name="Exhibition_Data"):
+    """پیدا/ساخت پوشه در Drive"""
+    try:
+        drive_service, _ = get_google_services()
+        if not drive_service:
+            return None
+        
+        query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        results = drive_service.files().list(
+            q=query, spaces='drive', fields='files(id, name)', pageSize=1
+        ).execute()
+        files = results.get('files', [])
+        
+        if files:
+            print(f"   ✅ پوشه موجود: {files[0]['name']}")
+            return files[0]['id']
+        
+        folder = drive_service.files().create(
+            body={'name': folder_name, 'mimeType': 'application/vnd.google-apps.folder'},
+            fields='id'
+        ).execute()
+        print(f"   ✅ پوشه جدید: {folder_name}")
+        return folder.get('id')
+        
+    except Exception as e:
+        print(f"   ❌ خطا: {e}")
+        return None
 
 # =========================================================
 # 📅 Quota Management
