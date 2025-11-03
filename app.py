@@ -224,96 +224,145 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         print(f"   ❌ خطا: {e}")
         return None, None, False
 
-import pandas as pd
-import numpy as np
-import streamlit as st
-import gspread
-from google.oauth2.service_account import Credentials
-
-# Helper function
-def _col_index_to_letter(idx):
-    """Convert 0-based column index to Excel letter"""
-    result = ""
-    while idx >= 0:
-        result = chr(idx % 26 + ord("A")) + result
-        idx = idx // 26 - 1
-    return result
-
 def append_excel_data_to_sheets(excel_path, folder_id=None):
-    """
-    Append Excel data to Google Sheets (Streamlit Cloud compatible)
-    Uses st.secrets for Service Account credentials.
-    """
+    """Read Excel data and append to Google Sheets (variable row count)"""
     try:
-        # --- 1. Load credentials from Streamlit secrets
-        scopes = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=scopes)
-        client = gspread.authorize(creds)
+        drive_service, sheets_service = get_google_services()
+        if not drive_service or not sheets_service:
+            return False, "Google connection failed", None, 0
 
-        # --- 2. Open existing Google Sheet
-        sheet_id = "1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE"  # ✅ شیت خودت
-        sheet = client.open_by_key(sheet_id).sheet1
-        file_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/edit"
-        print(f"✅ Using existing Google Sheet: {file_url}")
+        print(f"\n☁️ Starting data save to Google Drive...")
 
-        # --- 3. Read Excel
-        if hasattr(excel_path, "read"):
-            import tempfile
-            with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-                tmp.write(excel_path.read())
-                excel_path = tmp.name
+        # ✅ Use existing Google Sheet instead of creating a new one
+        file_id = "1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE"
+        file_url = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
+        exists = True
+        print(f"   ✅ Using existing Google Sheet: {file_url}")
 
+        # file_id, file_url, exists = find_or_create_data_table(drive_service, sheets_service, folder_id)
+        if not file_id:
+            return False, "Error creating table", None, 0
+        
+        print(f"📖 Reading Excel data: {excel_path.name}")
         df = pd.read_excel(excel_path)
         if df.empty:
             return False, "Excel file is empty", None, 0
-
+        
+        print(f"   ✅ {len(df)} rows × {len(df.columns)} columns read")
+        
+        # ✅ Clean DataFrame from NaN and None values
         df = df.replace({np.nan: "", None: ""})
+        
         for col in df.columns:
             if df[col].dtype == 'object':
-                df[col] = df[col].astype(str).replace('nan','').replace('None','').replace('NaT','')
-
-        # --- 4. Update headers if needed
-        existing_headers = sheet.row_values(1)
+                df[col] = df[col].astype(str).replace('nan', '').replace('None', '').replace('NaT', '')
+        
+        sheet_name = 'Sheet1'
+        
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=file_id, range=f'{sheet_name}!1:1'
+        ).execute()
+        
+        existing_headers = result.get('values', [[]])[0] if result.get('values') else []
         new_headers = df.columns.tolist()
-
+        
+        print(f"   📋 Existing columns: {len(existing_headers)} | New columns: {len(new_headers)}")
+        
         if not existing_headers:
-            sheet.insert_row(new_headers, 1)
-            start_row = 2
+            values = [new_headers] + df.values.tolist()
+            print(f"   ℹ️ Empty table, adding {len(new_headers)} columns")
         else:
-            # Merge existing and new columns
+            new_columns = [col for col in new_headers if col not in existing_headers]
+            
             all_columns = existing_headers.copy()
-            new_cols = [c for c in new_headers if c not in all_columns]
-            if new_cols:
-                all_columns += new_cols
-                sheet.update('A1:' + _col_index_to_letter(len(all_columns)-1) + '1', [all_columns])
-
-            # Add missing columns to df
+            for col in new_columns:
+                if col not in all_columns:
+                    all_columns.append(col)
+            
+            print(f"   📊 Final order: {len(all_columns)} columns")
+            
+            if new_columns:
+                print(f"   🆕 New columns: {new_columns}")
+                print(f"   🔄 Updating headers...")
+                sheets_service.spreadsheets().values().update(
+                    spreadsheetId=file_id,
+                    range=f'{sheet_name}!1:1',
+                    valueInputOption='USER_ENTERED',
+                    body={'values': [all_columns]}
+                ).execute()
+                
+                result = sheets_service.spreadsheets().values().get(
+                    spreadsheetId=file_id, range=f'{sheet_name}!A:A'
+                ).execute()
+                existing_rows_count = len(result.get('values', [])) - 1
+                
+                if existing_rows_count > 0:
+                    print(f"   📝 Filling {existing_rows_count} old rows...")
+                    empty_values = [[''] * len(new_columns) for _ in range(existing_rows_count)]
+                    start_col_index = len(existing_headers)
+                    start_col_letter = _col_index_to_letter(start_col_index)
+                    end_col_letter = _col_index_to_letter(start_col_index + len(new_columns) - 1)
+                    
+                    sheets_service.spreadsheets().values().update(
+                        spreadsheetId=file_id,
+                        range=f'{sheet_name}!{start_col_letter}2:{end_col_letter}{existing_rows_count+1}',
+                        valueInputOption='USER_ENTERED',
+                        body={'values': empty_values}
+                    ).execute()
+                    print(f"   ✅ Old rows updated")
+            
             for col in all_columns:
                 if col not in df.columns:
-                    df[col] = ""
+                    df[col] = ''
+            
             df = df[all_columns]
-            start_row = len(sheet.get_all_values()) + 1
+            print(f"   ✅ DataFrame sorted: {len(df)} rows × {len(all_columns)} columns")
+            values = df.values.tolist()
 
-        # --- 5. Append data rows
-        values = df.values.tolist()
+        # ✅ Convert all NaN or None to string before sending to Sheets
         values = [[("" if (pd.isna(cell) or cell is None) else str(cell)) for cell in row] for row in values]
-
-        sheet.insert_rows(values, row=start_row)
-        total_rows = len(sheet.get_all_values())
-        total_columns = len(sheet.row_values(1))
-
-        message = f"✅ {len(values)} new rows added | Total: {total_rows} rows × {total_columns} columns"
-        print(message)
+        
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=file_id, range=f'{sheet_name}!A:A'
+        ).execute()
+        existing_rows = len(result.get('values', []))
+        
+        print(f"   📊 Current rows: {existing_rows}")
+        print(f"   📤 Adding {len(values)} rows...")
+        
+        body = {'values': values}
+        result = sheets_service.spreadsheets().values().append(
+            spreadsheetId=file_id,
+            range=f'{sheet_name}!A:A',
+            valueInputOption='USER_ENTERED',
+            insertDataOption='INSERT_ROWS',
+            body=body
+        ).execute()
+        
+        updated_rows = result.get('updates', {}).get('updatedRows', 0)
+        total_rows = existing_rows + updated_rows
+        
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=file_id, range=f'{sheet_name}!1:1'
+        ).execute()
+        total_columns = len(result.get('values', [[]])[0])
+        
+        total_cells = total_rows * total_columns
+        capacity = (total_cells / 10_000_000) * 100
+        
+        print(f"   ✅ {updated_rows} new rows added")
+        print(f"   📊 Total: {total_rows} rows × {total_columns} columns")
+        print(f"   📊 Total cells: {total_cells:,} ({capacity:.1f}%)")
+        print(f"   🔗 {file_url}")
+        
+        message = f"✅ {updated_rows} new rows | Total: {total_rows} rows | {total_columns} columns"
         return True, message, file_url, total_rows
-
+        
     except Exception as e:
+        print(f"   ❌ Error: {e}")
         import traceback
         traceback.print_exc()
         return False, str(e), None, 0
-
 
 
 def get_or_create_folder(folder_name="Exhibition_Data"):
@@ -869,30 +918,50 @@ if uploaded_files:
         help="در ستون Exhibition ثبت می‌شود"
     )
 
-    session_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    session_dir = Path(f"session_{session_timestamp}")
+    import os
+    from pathlib import Path
+    import streamlit as st
+    import datetime
+
+    # =========================================================
+     🔹 مسیر ثابت برای session
+    # =========================================================
+    session_dir = Path("session_current")
     uploads_dir = session_dir / "uploads"
     logs_dir = session_dir / "logs"
+
+# ساخت پوشه‌ها
     uploads_dir.mkdir(parents=True, exist_ok=True)
     logs_dir.mkdir(parents=True, exist_ok=True)
 
+# ذخیره فایل‌های آپلود شده
     for f in uploaded_files:
-        (uploads_dir / f.name).write_bytes(f.getbuffer())
+        dest = uploads_dir / f.name
+        dest.write_bytes(f.getbuffer())
+        if not dest.exists():
+            st.error(f"❌ فایل ذخیره نشد: {dest}")
 
+# تعریف مسیرهای داینامیک ثابت برای pipeline
     os.environ["SESSION_DIR"] = str(session_dir)
     os.environ["SOURCE_FOLDER"] = str(uploads_dir)
     os.environ["EXHIBITION_NAME"] = exhibition_name
 
+# اگر pipeline نوع Excel دارد
     if pipeline_type == 'excel':
         excel_files = list(uploads_dir.glob("*.xlsx")) + list(uploads_dir.glob("*.xls"))
         if excel_files:
             os.environ["INPUT_EXCEL"] = str(excel_files[0])
+        else:
+            st.warning("⚠️ هیچ فایل Excel پیدا نشد!")
 
+# پردازش فایل‌ها به Batch
     batches, batch_size = process_files_in_batches(uploads_dir, pipeline_type)
     total_batches = len(batches)
-    
+
     if total_batches > 0:
         st.info(f"📦 تعداد Batch‌ها: {total_batches} | اندازه هر Batch: {batch_size}")
+
+
 
     st.markdown("---")
 
