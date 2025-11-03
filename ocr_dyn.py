@@ -244,11 +244,38 @@ def main():
 
 
 
-def run_ocr_extraction():
-    """اجرای OCR extraction"""
-    print("🔍 Starting OCR extraction...")
+def run_ocr_extraction(session_dir_path):
+    """
+    تابع اصلی برای اجرای OCR
+    Args:
+        session_dir_path: مسیر session_current
+    Returns:
+        str: مسیر فایل خروجی JSON
+    """
+    global SESSION_DIR, BASE_DIR, INPUT_DIR, OUTPUT_DIR, OUT_JSON
+    
+    # ✅ تنظیم مسیرها
+    BASE_DIR = Path(session_dir_path)
+    INPUT_DIR = BASE_DIR / "uploads"
+    OUTPUT_DIR = BASE_DIR
+    OUT_JSON = OUTPUT_DIR / "gemini_output.json"
+    
+    INPUT_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    
+    print(f"📂 OCR Session: {BASE_DIR}")
+    print(f"📂 Input: {INPUT_DIR}")
+    print(f"📂 Output: {OUT_JSON}")
+    
+    # اجرای پردازش
     main()
-    return str(OUTPUT_DIR / "gemini_output.json")
+    
+    # بررسی خروجی
+    if OUT_JSON.exists():
+        print(f"✅ OCR output created: {OUT_JSON}")
+        return str(OUT_JSON)
+    else:
+        raise FileNotFoundError(f"OCR output not found: {OUT_JSON}")
 
 if __name__ == "__main__":
     main()

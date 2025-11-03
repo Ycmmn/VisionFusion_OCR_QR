@@ -630,11 +630,33 @@ def main():
     if DEBUG_MODE:
         print(f"🐛 Debug images saved in: {DEBUG_DIR}")
 
-def run_qr_detection():
-    """اجرای QR detection"""
-    print("📷 Starting QR detection...")
+
+def run_qr_detection(session_dir_path):
+    """اجرای QR Detection"""
+    global SESSION_DIR, BASE_DIR, INPUT_DIR, OUTPUT_DIR, OUTPUT_JSON_CLEAN
+    
+    BASE_DIR = Path(session_dir_path)
+    INPUT_DIR = BASE_DIR / "uploads"
+    OUTPUT_DIR = BASE_DIR
+    OUTPUT_JSON_CLEAN = OUTPUT_DIR / "final_superqr_v6_clean.json"
+    DEBUG_DIR = OUTPUT_DIR / "_debug"
+    
+    INPUT_DIR.mkdir(parents=True, exist_ok=True)
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    DEBUG_DIR.mkdir(parents=True, exist_ok=True)
+    
+    print(f"📂 QR Session: {BASE_DIR}")
+    
     main()
-    return str(OUTPUT_DIR / "final_superqr_v6_clean.json")
+    
+    if OUTPUT_JSON_CLEAN.exists():
+        print(f"✅ QR output created: {OUTPUT_JSON_CLEAN}")
+        return str(OUTPUT_JSON_CLEAN)
+    else:
+        raise FileNotFoundError(f"QR output not found: {OUTPUT_JSON_CLEAN}")
+
+
+
 # ----------------------------------------------------------
 if __name__ == "__main__":
     main()

@@ -135,11 +135,25 @@ def main():
     print(f"📊 Total merged records: {len(merged_results)}\n")
 
 
-def run_mix_ocr_qr():
-    """اجرای ادغام OCR + QR"""
-    print("🔗 Starting OCR+QR merge...")
+def run_mix_ocr_qr(session_dir_path):
+    """ادغام OCR + QR"""
+    global SESSION_DIR, BASE_DIR, OUTPUT_DIR, OCR_FILE, QR_FILE, OUTPUT_FILE
+    
+    BASE_DIR = Path(session_dir_path)
+    OUTPUT_DIR = BASE_DIR
+    OCR_FILE = OUTPUT_DIR / "gemini_output.json"
+    QR_FILE = OUTPUT_DIR / "final_superqr_v6_clean.json"
+    OUTPUT_FILE = OUTPUT_DIR / "mix_ocr_qr.json"
+    
+    print(f"📂 Mix Session: {BASE_DIR}")
+    
     main()
-    return str(OUTPUT_FILE)
+    
+    if OUTPUT_FILE.exists():
+        print(f"✅ Mix output created: {OUTPUT_FILE}")
+        return str(OUTPUT_FILE)
+    else:
+        raise FileNotFoundError(f"Mix output not found: {OUTPUT_FILE}")
 
 
 if __name__ == "__main__":

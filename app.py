@@ -672,81 +672,80 @@ def process_files_in_batches(uploads_dir, pipeline_type):
 # =========================================================
 # 🔄 اجرای اسکریپت با Fast Mode + Log File
 # =========================================================
-def run_script(script_name, session_dir, log_area, status_text, script_display_name="", fast_mode=True):
-    script_path = Path(script_name)
-    if not script_display_name:
-        script_display_name = script_name
-    if not script_path.exists():
-        script_path = Path.cwd() / script_name
-        if not script_path.exists():
-            status_text.markdown(f"""
-            <div class="status-box status-error">❌ فایل {script_name} یافت نشد!</div>
-            """, unsafe_allow_html=True)
-            return False
-
+def run_script_as_function(script_name, session_dir, log_area, status_text, script_display_name=""):
+    """
+    اجرای اسکریپت به صورت تابع (بدون subprocess)
+    """
     status_text.markdown(f"""
     <div class="status-box status-info">
         <div class="loading-spinner"></div> در حال اجرای {script_display_name}...
     </div>
     """, unsafe_allow_html=True)
-
+    
     logs_dir = session_dir / "logs"
     logs_dir.mkdir(exist_ok=True)
     timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    log_file = logs_dir / f"log_{script_path.stem}_{timestamp}.txt"
-
-    env = os.environ.copy()
-    env["SESSION_DIR"] = str(session_dir)
-    env["SOURCE_FOLDER"] = str(session_dir / "uploads")
-
+    log_file = logs_dir / f"log_{script_name}_{timestamp}.txt"
+    
+    # ✅ Import و اجرای مستقیم
+    import sys
+    from io import StringIO
+    
+    # Redirect stdout to capture logs
+    old_stdout = sys.stdout
+    sys.stdout = captured_output = StringIO()
+    
     try:
-        with subprocess.Popen(
-            [sys.executable, str(script_path)],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-            cwd=Path.cwd(),
-            env=env,
-            text=True,
-            bufsize=1
-        ) as process:
-            all_output = ""
-            line_count = 0
-            with open(log_file, "w", encoding="utf-8") as log_f:
-                for line in process.stdout:
-                    all_output += line
-                    log_f.write(line)
-                    log_f.flush()
-                    line_count += 1
-                    if fast_mode:
-                        if line_count % 10 == 0:
-                            log_area.code(all_output[-2000:], language="bash")
-                    else:
-                        log_area.code(all_output[-3000:], language="bash")
-                        time.sleep(0.05)
-            process.wait()
-
-        if process.returncode == 0:
-            status_text.markdown(f"""
-            <div class="status-box status-success">✅ {script_display_name} موفقیت‌آمیز بود!</div>
-            """, unsafe_allow_html=True)
-            return True
+        if script_name == "ocr_dyn.py":
+            from ocr_dyn import run_ocr_extraction
+            result = run_ocr_extraction(str(session_dir))
+            
+        elif script_name == "qr_dyn.py":
+            from qr_dyn import run_qr_detection
+            result = run_qr_detection(str(session_dir))
+            
+        elif script_name == "mix_ocr_qr_dyn.py":
+            from mix_ocr_qr_dyn import run_mix_ocr_qr
+            result = run_mix_ocr_qr(str(session_dir))
+            
+        elif script_name == "scrap.py":
+            from scrap import run_web_scraping
+            result = run_web_scraping(str(session_dir))
+            
+        elif script_name == "final_mix.py":
+            from final_mix import run_final_merge
+            result = run_final_merge(str(session_dir))
+            
         else:
-            status_text.markdown(f"""
-            <div class="status-box status-warning">⚠️ {script_display_name} با مشکل مواجه شد (exit code: {process.returncode})</div>
-            """, unsafe_allow_html=True)
-            try:
-                with open(log_file, 'r', encoding='utf-8') as f:
-                    lines = f.readlines()
-                    if lines:
-                        st.code(''.join(lines[-50:]), language='bash')
-            except:
-                pass
-            return False
-
-    except Exception as e:
+            raise ValueError(f"Unknown script: {script_name}")
+        
+        # Get captured logs
+        log_content = captured_output.getvalue()
+        sys.stdout = old_stdout
+        
+        # Save logs
+        log_file.write_text(log_content, encoding='utf-8')
+        
+        # Display logs
+        log_area.code(log_content[-2000:], language="bash")
+        
         status_text.markdown(f"""
-        <div class="status-box status-error">❌ خطای اجرا: {str(e)}</div>
+        <div class="status-box status-success">✅ {script_display_name} موفقیت‌آمیز بود!</div>
         """, unsafe_allow_html=True)
+        
+        return True
+        
+    except Exception as e:
+        sys.stdout = old_stdout
+        log_content = captured_output.getvalue()
+        log_file.write_text(log_content + f"\n\nERROR: {str(e)}", encoding='utf-8')
+        
+        status_text.markdown(f"""
+        <div class="status-box status-error">❌ خطا: {str(e)}</div>
+        """, unsafe_allow_html=True)
+        
+        log_area.code(log_content[-2000:] + f"\n\nERROR: {str(e)}", language="bash")
+        
         return False
 
 # =========================================================
@@ -1074,7 +1073,9 @@ if uploaded_files:
 
                 all_success = True
                 for stage_name, script, progress_val in stages:
-                    current_quota = load_quota()
+                    stage_success = run_script_as_function(
+                        script, session_dir, log_area, status_text, stage_name
+                    )
                     quota_display.info(f"🔋 سهمیه باقیمانده: {current_quota['remaining']}/{DAILY_LIMIT}")
 
                     if total_batches > 0:

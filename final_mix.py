@@ -430,5 +430,26 @@ def main():
         return 0
     return 1
 
+
+def run_final_merge(session_dir_path):
+    """ادغام نهایی"""
+    global SESSION_DIR, INPUT_JSON, INPUT_EXCEL, OUTPUT_EXCEL
+    
+    SESSION_DIR = Path(session_dir_path)
+    INPUT_JSON = SESSION_DIR / "mix_ocr_qr.json"
+    INPUT_EXCEL = SESSION_DIR / "web_analysis.xlsx"
+    timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+    OUTPUT_EXCEL = SESSION_DIR / f"merged_final_{timestamp}.xlsx"
+    
+    print(f"📂 Final Mix Session: {SESSION_DIR}")
+    
+    main()
+    
+    if OUTPUT_EXCEL.exists():
+        print(f"✅ Final output created: {OUTPUT_EXCEL}")
+        return str(OUTPUT_EXCEL)
+    else:
+        raise FileNotFoundError(f"Final output not found: {OUTPUT_EXCEL}")
+
 if __name__ == "__main__":
     exit(main())

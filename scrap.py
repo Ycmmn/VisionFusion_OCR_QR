@@ -518,5 +518,30 @@ def main():
     print(f"❌ Failed: {failed}/{len(results)}")
     print("="*60 + "\n")
 
+
+def run_web_scraping(session_dir_path):
+    """اجرای Web Scraping"""
+    global SESSION_DIR, OUTPUT_EXCEL, OUTPUT_JSON
+    
+    SESSION_DIR = Path(session_dir_path)
+    SESSION_DIR.mkdir(parents=True, exist_ok=True)
+    
+    # تنظیم مسیرها
+    global SOURCE_FOLDER, MIX_OCR_QR_JSON, WEB_ANALYSIS_XLSX
+    SOURCE_FOLDER = SESSION_DIR / "uploads"
+    MIX_OCR_QR_JSON = SESSION_DIR / "mix_ocr_qr.json"
+    WEB_ANALYSIS_XLSX = SESSION_DIR / "web_analysis.xlsx"
+    
+    print(f"📂 Scraping Session: {SESSION_DIR}")
+    
+    main()
+    
+    if WEB_ANALYSIS_XLSX.exists():
+        print(f"✅ Scraping output created: {WEB_ANALYSIS_XLSX}")
+        return str(WEB_ANALYSIS_XLSX)
+    else:
+        raise FileNotFoundError(f"Scraping output not found: {WEB_ANALYSIS_XLSX}")
+
+
 if __name__ == "__main__":
     main()
