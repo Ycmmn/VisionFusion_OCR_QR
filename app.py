@@ -902,7 +902,7 @@ if uploaded_files:
     exhibition_name = extract_exhibition_name(uploaded_files)
 
     col1, col2, col3 = st.columns(3)
-    with col_qc1:
+with col_qc1:
     qc_user_name = st.text_input(
         "🧑‍💼 نام و نام خانوادگی",
         placeholder="مثال: علی احمدی",
