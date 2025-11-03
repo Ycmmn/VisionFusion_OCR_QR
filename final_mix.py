@@ -11,14 +11,20 @@ import pandas as pd
 # =========================================================
 # 🧩 مسیرهای داینامیک برای Streamlit Cloud
 # =========================================================
-SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
-INPUT_JSON = Path(os.getenv("INPUT_JSON", SESSION_DIR / "mix_ocr_qr.json"))
-INPUT_EXCEL = Path(os.getenv("INPUT_EXCEL", SESSION_DIR / "web_analysis.xlsx"))
-timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
-OUTPUT_EXCEL = Path(os.getenv("OUTPUT_EXCEL", SESSION_DIR / f"merged_final_{timestamp}.xlsx"))
+SESSION_DIR_ENV = os.getenv("SESSION_DIR")
+if SESSION_DIR_ENV:
+    SESSION_DIR = Path(SESSION_DIR_ENV)
+else:
+    SESSION_DIR = Path.cwd() / "session_current"
 
-# ساخت پوشه‌ها در صورت عدم وجود
 SESSION_DIR.mkdir(parents=True, exist_ok=True)
+
+INPUT_JSON = SESSION_DIR / "mix_ocr_qr.json"
+INPUT_EXCEL = SESSION_DIR / "web_analysis.xlsx"
+timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+OUTPUT_EXCEL = SESSION_DIR / f"merged_final_{timestamp}.xlsx"
+
+
 
 # نمایش مسیرها
 print("\n" + "="*70)

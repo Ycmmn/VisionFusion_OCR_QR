@@ -21,41 +21,21 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 # 📁 Dynamic Path Resolution (Compatible with Streamlit Cloud / Render / Local)
 # =========================================================
 # Try to read SESSION_DIR env var (set by Streamlit Cloud). If set, use it.
-SESSION_DIR_ENV = os.getenv("SESSION_DIR")  # may be None
-
+# ✅ مسیر ثابت
+SESSION_DIR_ENV = os.getenv("SESSION_DIR")
 if SESSION_DIR_ENV:
     BASE_DIR = Path(SESSION_DIR_ENV)
 else:
-    # default to folder where this script lives
-    try:
-        BASE_DIR = Path(__file__).resolve().parent
-    except NameError:
-        # __file__ may not exist in some interactive environments
-        BASE_DIR = Path.cwd()
+    BASE_DIR = Path.cwd() / "session_current"
+
+BASE_DIR.mkdir(parents=True, exist_ok=True)
 
 UPLOADS_DIR = BASE_DIR / "uploads"
-OUTPUT_DIR = BASE_DIR / "output"
+OUTPUT_DIR = BASE_DIR
 JSON_DIR = BASE_DIR / "json_data"
 
-# ensure folders exist
 for d in (UPLOADS_DIR, OUTPUT_DIR, JSON_DIR):
-    try:
-        d.mkdir(parents=True, exist_ok=True)
-    except Exception:
-        pass
-
-# prefer /tmp when available and writable (common on cloud platforms)
-TMP_DIR = Path("/tmp")
-if TMP_DIR.exists() and os.access(str(TMP_DIR), os.W_OK):
-    ACTIVE_OUTPUT_DIR = TMP_DIR
-else:
-    ACTIVE_OUTPUT_DIR = OUTPUT_DIR
-
-def path_str(p: Path):
-    try:
-        return str(p)
-    except:
-        return p.as_posix()
+    d.mkdir(parents=True, exist_ok=True)
 
 print(f"\n✅ Path system initialized")
 print(f" BASE_DIR: {path_str(BASE_DIR)}")

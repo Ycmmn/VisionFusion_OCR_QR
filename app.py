@@ -225,13 +225,15 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         return None, None, False
 
 def append_excel_data_to_sheets(excel_path, folder_id=None):
-    """Read Excel data and append to Google Sheets (variable row count)"""
+    """Read Excel data and append to Google Sheets"""
     try:
-        drive_service, sheets_service = get_google_services()
-        if not drive_service or not sheets_service:
-            return False, "Google connection failed", None, 0
-
-        print(f"\n☁️ Starting data save to Google Drive...")
+        # ✅ چک کردن فایل
+        if not excel_path.exists():
+            print(f"❌ File not found: {excel_path}")
+            return False, "File not found", None, 0
+        
+        print(f"✅ File exists: {excel_path} ({excel_path.stat().st_size} bytes)")
+        
 
         # ✅ Use existing Google Sheet instead of creating a new one
         file_id = "1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE"
@@ -930,6 +932,13 @@ if uploaded_files:
     uploads_dir = session_dir / "uploads"
     logs_dir = session_dir / "logs"
 
+    # ✅ تنظیم مسیر برای همه اسکریپت‌ها
+    os.environ["SESSION_DIR"] = str(session_dir.resolve())
+    os.environ["SOURCE_FOLDER"] = str(uploads_dir.resolve())
+    os.environ["OUTPUT_DIR"] = str(session_dir.resolve())
+
+    print(f"✅ SESSION_DIR set to: {os.environ['SESSION_DIR']}")
+
 # ساخت پوشه‌ها
     uploads_dir.mkdir(parents=True, exist_ok=True)
     logs_dir.mkdir(parents=True, exist_ok=True)
@@ -1114,6 +1123,19 @@ if uploaded_files:
                 sheets_status = st.empty()
                 sheets_status.info("📤 در حال آپلود داده‌ها...")
                 
+                # ✅ بررسی وجود فایل
+                if not output_file.exists():
+                    st.error(f"❌ فایل پیدا نشد: {output_file}")
+                    continue
+
+                if output_file.stat().st_size == 0:
+                    st.warning(f"⚠️ فایل خالی است: {output_file}")
+                    continue
+
+                st.info(f"📤 آپلود {output_file.name} ({output_file.stat().st_size / 1024:.1f} KB)...")
+
+
+
                 try:
                     folder_id = get_or_create_folder("Exhibition_Data")
                     
