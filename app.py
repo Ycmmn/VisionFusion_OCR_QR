@@ -232,82 +232,183 @@ def upload_excel_to_google_services(excel_path, folder_id=None):
     """
     print("\n" + "🟢"*50)
     print("🚀 ENTERED upload_excel_to_google_services")
-    print(f"excel_path = {excel_path}")
+    print(f"excel_path type = {type(excel_path)}")
     
-    # --- 1. هندل حالت فایل آپلودی استریم لایت یا مسیر محلی
-    if hasattr(excel_path, "read"):  
-        import tempfile
-        with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
-            tmp.write(excel_path.read())
-            excel_path = Path(tmp.name)
-            print(f"📁 Saved Streamlit upload to temp: {excel_path}")
-    else:
-        excel_path = Path(excel_path)
+    try:
+        # --- 1. هندل حالت فایل آپلودی استریم‌لایت
+        if hasattr(excel_path, "read"):  
+            print("📤 Processing Streamlit UploadedFile...")
+            import tempfile
+            
+            # ✅ CRITICAL: باید seek(0) کنی قبل از read
+            excel_path.seek(0)
+            
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".xlsx") as tmp:
+                tmp.write(excel_path.read())
+                temp_path = Path(tmp.name)
+            
+            file_name = excel_path.name  # ✅ اسم فایل اصلی رو نگه دار
+            excel_path = temp_path
+            print(f"📁 Saved to temp: {excel_path}")
+        else:
+            excel_path = Path(excel_path)
+            file_name = excel_path.name
 
-    if not excel_path.exists():
-        raise FileNotFoundError(f"Excel file not found: {excel_path}")
+        if not excel_path.exists():
+            raise FileNotFoundError(f"Excel file not found: {excel_path}")
 
-    # --- 2. اتصال به سرویس‌های گوگل
-    from your_google_auth_module import get_google_services  # ✅ تغییر بده به ماژول خودت
-    drive_service, sheets_service = get_google_services()
-    
-    if not drive_service or not sheets_service:
-        raise RuntimeError("Failed to connect to Google services.")
-    
-    print("✅ Google services connected")
+        # --- 2. اتصال به سرویس‌های گوگل
+        drive_service, sheets_service = get_google_services()
+        
+        if not drive_service or not sheets_service:
+            raise RuntimeError("Failed to connect to Google services.")
+        
+        print("✅ Google services connected")
 
-    # --- 3. آپلود فایل در Google Drive
-    file_metadata = {
-        "name": excel_path.name,
-        "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    }
-    if folder_id:
-        file_metadata["parents"] = [folder_id]
+        # --- 3. آپلود فایل در Google Drive
+        print(f"\n☁️ Uploading to Google Drive...")
+        file_metadata = {
+            "name": file_name,  # ✅ اسم اصلی فایل
+            "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        }
+        if folder_id:
+            file_metadata["parents"] = [folder_id]
 
-    media = MediaFileUpload(
-        str(excel_path),
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        resumable=True
-    )
+        media = MediaFileUpload(
+            str(excel_path),
+            mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+            resumable=True
+        )
 
-    drive_file = drive_service.files().create(
-        body=file_metadata,
-        media_body=media,
-        fields="id, webViewLink"
-    ).execute()
+        drive_file = drive_service.files().create(
+            body=file_metadata,
+            media_body=media,
+            fields="id, webViewLink"
+        ).execute()
 
-    drive_file_id = drive_file.get("id")
-    drive_link = drive_file.get("webViewLink")
-    print(f"✅ Uploaded to Google Drive: {drive_link}")
+        drive_file_id = drive_file.get("id")
+        drive_link = drive_file.get("webViewLink")
+        print(f"   ✅ Uploaded to Drive: {drive_link}")
 
-    # --- 4. تبدیل داده اکسل به DataFrame
-    df = pd.read_excel(excel_path)
-    if df.empty:
-        raise ValueError("Excel file is empty.")
-    df = df.replace({np.nan: "", None: ""})
+        # --- 4. خواندن و تمیز کردن DataFrame
+        print(f"\n📖 Reading Excel data...")
+        df = pd.read_excel(excel_path)
+        
+        if df.empty:
+            raise ValueError("Excel file is empty.")
+        
+        print(f"   ✅ {len(df)} rows × {len(df.columns)} columns read")
+        
+        # ✅ تمیز کردن کامل (مثل کد اول)
+        df = df.replace({np.nan: "", None: ""})
+        
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                df[col] = df[col].astype(str).replace('nan', '').replace('None', '').replace('NaT', '')
 
-    # --- 5. ارسال به Google Sheets (به شیت خاص)
-    sheet_name = "Sheet1"
-    file_id = "1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE"  # ✅ آیدی شیت خودت
-    file_url = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
-
-    sheets_service.spreadsheets().values().append(
-        spreadsheetId=file_id,
-        range=f"{sheet_name}!A:A",
-        valueInputOption="USER_ENTERED",
-        insertDataOption="INSERT_ROWS",
-        body={"values": df.values.tolist()}
-    ).execute()
-
-    print(f"✅ Data appended to Google Sheets: {file_url}")
-
-    print("🟢"*50)
-    
-    return {
-        "drive_link": drive_link,
-        "sheet_link": file_url,
-        "rows_uploaded": len(df)
-    }
+        # --- 5. مدیریت Google Sheets
+        sheet_name = "Sheet1"
+        file_id = "1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE"
+        file_url = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
+        
+        print(f"\n📊 Processing Google Sheets...")
+        
+        # ✅ دریافت هدرهای موجود
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=file_id, 
+            range=f'{sheet_name}!1:1'
+        ).execute()
+        
+        existing_headers = result.get('values', [[]])[0] if result.get('values') else []
+        new_headers = df.columns.tolist()
+        
+        print(f"   📋 Existing columns: {len(existing_headers)} | New columns: {len(new_headers)}")
+        
+        # ✅ مدیریت هدرها (مثل کد اول)
+        if not existing_headers:
+            # شیت خالیه - اول هدر بعد دیتا
+            values = [new_headers] + df.values.tolist()
+            print(f"   ℹ️ Empty sheet, adding headers + data")
+        else:
+            # چک کردن ستون‌های جدید
+            new_columns = [col for col in new_headers if col not in existing_headers]
+            
+            all_columns = existing_headers.copy()
+            for col in new_columns:
+                if col not in all_columns:
+                    all_columns.append(col)
+            
+            if new_columns:
+                print(f"   🆕 New columns detected: {new_columns}")
+                print(f"   🔄 Updating headers...")
+                
+                # آپدیت هدرها
+                sheets_service.spreadsheets().values().update(
+                    spreadsheetId=file_id,
+                    range=f'{sheet_name}!1:1',
+                    valueInputOption='USER_ENTERED',
+                    body={'values': [all_columns]}
+                ).execute()
+            
+            # مرتب کردن DataFrame با ترتیب ستون‌های نهایی
+            for col in all_columns:
+                if col not in df.columns:
+                    df[col] = ''
+            
+            df = df[all_columns]
+            values = df.values.tolist()
+        
+        # ✅ تبدیل همه مقادیر به string (جلوگیری از NaN)
+        values = [[("" if (pd.isna(cell) or cell is None) else str(cell)) 
+                   for cell in row] for row in values]
+        
+        # دریافت تعداد ردیف‌های فعلی
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=file_id, 
+            range=f'{sheet_name}!A:A'
+        ).execute()
+        existing_rows = len(result.get('values', []))
+        
+        print(f"   📊 Current rows: {existing_rows}")
+        print(f"   📤 Adding {len(values)} rows...")
+        
+        # ✅ ارسال داده به شیت
+        result = sheets_service.spreadsheets().values().append(
+            spreadsheetId=file_id,
+            range=f'{sheet_name}!A:A',
+            valueInputOption='USER_ENTERED',
+            insertDataOption='INSERT_ROWS',
+            body={'values': values}
+        ).execute()
+        
+        updated_rows = result.get('updates', {}).get('updatedRows', 0)
+        total_rows = existing_rows + updated_rows
+        
+        print(f"   ✅ {updated_rows} new rows added")
+        print(f"   📊 Total: {total_rows} rows")
+        print(f"   🔗 {file_url}")
+        print("🟢"*50 + "\n")
+        
+        # ✅ پاک کردن فایل موقت
+        if temp_path := locals().get('temp_path'):
+            try:
+                temp_path.unlink()
+                print("🗑️ Temp file cleaned")
+            except:
+                pass
+        
+        return {
+            "drive_link": drive_link,
+            "sheet_link": file_url,
+            "rows_uploaded": updated_rows,
+            "total_rows": total_rows
+        }
+        
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        raise
 
 
 def get_or_create_folder(folder_name="Exhibition_Data"):
