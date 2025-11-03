@@ -872,13 +872,15 @@ with col_qc1:
     qc_user_name = st.text_input(
         "🧑‍💼 نام و نام خانوادگی",
         placeholder="مثال: علی احمدی",
-        help="نام کامل ناظر کیفیت داده‌ها"
+        help="نام کامل ناظر کیفیت داده‌ها",
+        key="qc_user_name"
     )
 with col_qc2:
     qc_user_role = st.text_input(
         "💼 سمت/نقش",
         placeholder="مثال: کارشناس کنترل کیفیت",
-        help="سمت یا نقش شما در سازمان"
+        help="سمت یا نقش شما در سازمان",
+        key="qc_user_role"
     )
 
 if qc_user_name and qc_user_role:
@@ -900,20 +902,20 @@ if uploaded_files:
     exhibition_name = extract_exhibition_name(uploaded_files)
 
     col1, col2, col3 = st.columns(3)
-    with col1:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3>🔍 نوع Pipeline</h3>
-            <h2>{'📊 Excel' if pipeline_type == 'excel' else '🖼 OCR/QR'}</h2>
-        </div>
-        """, unsafe_allow_html=True)
-    with col2:
-        st.markdown(f"""
-        <div class="metric-card">
-            <h3>📁 تعداد فایل</h3>
-            <h2>{len(uploaded_files)}</h2>
-        </div>
-        """, unsafe_allow_html=True)
+    with col_qc1:
+    qc_user_name = st.text_input(
+        "🧑‍💼 نام و نام خانوادگی",
+        placeholder="مثال: علی احمدی",
+        help="نام کامل ناظر کیفیت داده‌ها",
+        key="qc_user_name"  # ✅ اضافه کن
+    )
+with col_qc2:
+    qc_user_role = st.text_input(
+        "💼 سمت/نقش",
+        placeholder="مثال: کارشناس کنترل کیفیت",
+        help="سمت یا نقش شما در سازمان",
+        key="qc_user_role"  # ✅ اضافه کن
+    )
     with col3:
         st.markdown(f"""
         <div class="metric-card">
@@ -960,10 +962,11 @@ if uploaded_files:
         """, unsafe_allow_html=True)
 
     exhibition_name = st.text_input(
-        "📝 ویرایش نام نمایشگاه",
-        value=exhibition_name,
-        help="در ستون Exhibition ثبت می‌شود"
-    )
+    "📝 ویرایش نام نمایشگاه",
+    value=exhibition_name,
+    help="در ستون Exhibition ثبت می‌شود",
+    key="exhibition_name_input"  # ✅ اضافه کن
+)
 
     # =========================================================
     # 📂 تنظیم مسیرها با config (بدون تکرار!)
