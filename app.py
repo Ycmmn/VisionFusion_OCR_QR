@@ -1131,7 +1131,7 @@ if uploaded_files:
 
             if output_file.stat().st_size == 0:
                 st.warning(f"⚠️ فایل خالی است: {output_file}")
-                continue
+                
                 
 
             st.info(f"📤 آپلود {output_file.name} ({output_file.stat().st_size / 1024:.1f} KB)...")
