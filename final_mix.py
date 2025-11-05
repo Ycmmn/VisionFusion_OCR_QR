@@ -15,7 +15,8 @@ import time
 SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
 INPUT_JSON = Path(os.getenv("INPUT_JSON", SESSION_DIR / "mix_ocr_qr.json"))
 INPUT_EXCEL = Path(os.getenv("INPUT_EXCEL", SESSION_DIR / "web_analysis.xlsx"))
-OUTPUT_EXCEL = Path(os.getenv("OUTPUT_EXCEL", SESSION_DIR / "final_mix.xlsx"))
+timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
+OUTPUT_EXCEL = Path(os.getenv("OUTPUT_EXCEL", SESSION_DIR / f"merged_final_{timestamp}.xlsx"))
 
 print("\n" + "="*70)
 print("🚀 Complete JSON + Excel Merger (Optimized)")
@@ -25,17 +26,6 @@ print(f"📥 JSON: {INPUT_JSON}")
 print(f"📥 Excel: {INPUT_EXCEL}")
 print(f"📤 Output: {OUTPUT_EXCEL}")
 print("="*70 + "\n")
-
-
-import os, tempfile, shutil
-import subprocess  # اگر هر اسکریپت جداست
-
-# ساخت پوشه موقت
-temp_dir = tempfile.mkdtemp(prefix="pipeline_")
-
-    # مسیرهای خروجی موقت
-step5_out = os.path.join(temp_dir, "final_mix.xlsx")
-
 
 # =========================================================
 # 🧠 توابع کمکی

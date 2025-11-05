@@ -10,7 +10,6 @@ import pandas as pd
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-
 # =========================================================
 # 🔹 Gemini SDK Import (Fixed)
 # =========================================================
@@ -39,18 +38,6 @@ QR_RAW_JSON = Path(os.getenv("QR_RAW_JSON", SESSION_DIR / "final_superqr_v6_raw.
 QR_CLEAN_JSON = Path(os.getenv("QR_CLEAN_JSON", SESSION_DIR / "final_superqr_v6_clean.json"))
 MIX_OCR_QR_JSON = Path(os.getenv("MIX_OCR_QR_JSON", SESSION_DIR / "mix_ocr_qr.json"))
 WEB_ANALYSIS_XLSX = Path(os.getenv("WEB_ANALYSIS_XLSX", SESSION_DIR / "web_analysis.xlsx"))
-
-
-
-
-import os, tempfile, shutil
-import subprocess  # اگر هر اسکریپت جداست
-
-# ساخت پوشه موقت
-temp_dir = tempfile.mkdtemp(prefix="pipeline_")
-
-    # مسیرهای خروجی موقت
-step4_out = os.path.join(temp_dir, "web_analysis.xlsx")
 
 
 # 🔧 Configuration

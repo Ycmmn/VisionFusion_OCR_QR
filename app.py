@@ -27,38 +27,7 @@ import numpy as np
 import re
 import shutil
 
-#from supabase import create_client, Client
-
-
-import os, tempfile, shutil
-import subprocess  # اگر هر اسکریپت جداست
-
-# ساخت پوشه موقت
-temp_dir = tempfile.mkdtemp(prefix="pipeline_")
-
-try:
-    # مسیرهای خروجی موقت
-    step1_out = os.path.join(temp_dir, "gemini_output.json")
-    step2_out = os.path.join(temp_dir, "final_superqr_v6_clean.json")
-    step3_out = os.path.join(temp_dir, "mix_ocr_qr.json")
-    step4_out = os.path.join(temp_dir, "web_analysis.xlsx")
-    step5_out = os.path.join(temp_dir, "final_mix.xlsx")
-
-    # اجرای اسکریپت‌ها (مثلاً با subprocess)
-    subprocess.run(["python", "ocr_dyn.py", "--out", step1_out], check=True)
-    subprocess.run(["python", "qr_dyn.py", "--in", step2_out, "--out", step2_out], check=True)
-    subprocess.run(["python", "mix_ocr_qr_dyn.py", "--in", step3_out, "--out", step2_out], check=True)
-    subprocess.run(["python", "scrap,py", "--in", step4_out, "--out", step2_out], check=True)
-    subprocess.run(["python", "final_mix", "--in", step5_out], check=True)
-
-    # در نهایت فایل نهایی مثلاً برمی‌گرده به Streamlit یا دیتابیس
-    print("✅ Pipeline finished successfully!")
-
-finally:
-    # پاکسازی پوشه
-    shutil.rmtree(temp_dir)
-    print("🧹 Temporary files cleaned up.")
-
+from supabase import create_client, Client
 
 # =========================================================
 # ⚙️ تنظیمات صفحه

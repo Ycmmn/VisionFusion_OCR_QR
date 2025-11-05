@@ -35,18 +35,6 @@ DEBUG_DIR = SESSION_DIR / "_debug"
 os.makedirs(IMAGES_FOLDER, exist_ok=True)
 os.makedirs(DEBUG_DIR, exist_ok=True)
 
-
-import os, tempfile, shutil
-import subprocess  # اگر هر اسکریپت جداست
-
-# ساخت پوشه موقت
-temp_dir = tempfile.mkdtemp(prefix="pipeline_")
-
-    # مسیرهای خروجی موقت
-step2_out = os.path.join(temp_dir, "final_superqr_v6_clean.json")
-
-
-
 # DPI برای PDF
 PDF_IMG_DPI = int(os.getenv("PDF_IMG_DPI", "200"))
 

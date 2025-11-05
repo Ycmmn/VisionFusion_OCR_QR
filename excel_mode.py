@@ -634,6 +634,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-#import excel_web_scraper_module
-#excel_web_scraper_module.main()
