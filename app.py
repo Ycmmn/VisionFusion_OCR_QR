@@ -172,3 +172,46 @@ def _col_index_to_letter(col_index):
         result = chr(col_index % 26 + 65) + result
         col_index = col_index // 26 - 1
     return result
+
+
+def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
+    """find or create table in drive"""
+    try:
+        table_name = "Exhibition_Data_Table"
+        query = f"name='{table_name}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false"
+        if folder_id:
+            query += f" and '{folder_id}' in parents"
+        
+        results = drive_service.files().list(
+            q=query, spaces='drive', fields='files(id, name, webViewLink)', pageSize=1
+        ).execute()
+        
+        files = results.get('files', [])
+        
+        if files:
+            file_id = files[0]['id']
+            file_url = files[0].get('webViewLink', f"https://docs.google.com/spreadsheets/d/{file_id}/edit")
+            print(f"   ✅ existing table: {file_id}")
+            return file_id, file_url, True
+        
+        print(f"   📝 creating new table...")
+        spreadsheet = sheets_service.spreadsheets().create(
+            body={
+                'properties': {'title': table_name},
+                'sheets': [{'properties': {'title': 'Data', 'gridProperties': {'frozenRowCount': 1}}}]
+            },
+            fields='spreadsheetId'
+        ).execute()
+        
+        file_id = spreadsheet.get('spreadsheetId')
+        file_url = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
+        
+        if folder_id:
+            drive_service.files().update(fileId=file_id, addParents=folder_id, fields='id, parents').execute()
+        
+        print(f"   ✅ new table created: {file_id}")
+        return file_id, file_url, False
+        
+    except Exception as e:
+        print(f"   ❌ error: {e}")
+        return None, None, False
