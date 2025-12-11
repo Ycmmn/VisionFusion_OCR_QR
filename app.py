@@ -149,7 +149,7 @@ for key_name, key_value in API_KEYS.items():
 
 
 
-#------------------------------- google sheets integration
+#---------------------------------------- google sheets integration
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -161,7 +161,7 @@ GOOGLE_SCOPES = [
 
 @st.cache_resource
 def get_google_services():
-    """اتصال به Google Drive و Sheets"""
+    """  Google Drive & Sheets"""
     try:
         SERVICE_ACCOUNT_FILE = Path("service-account.json")
         if SERVICE_ACCOUNT_FILE.exists():
@@ -179,7 +179,7 @@ def get_google_services():
         sheets_service = build('sheets', 'v4', credentials=creds)
         return drive_service, sheets_service
     except Exception as e:
-        st.error(f"❌ خطا در اتصال به Google: {e}")
+        st.error(f"❌ connection error to Google: {e}")
         return None, None
 
 def _col_index_to_letter(col_index):
