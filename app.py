@@ -225,7 +225,7 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         if folder_id:
             drive_service.files().update(fileId=file_id, addParents=folder_id, fields='id, parents').execute()
         
-        print(f"   ✅ جدول جدید ساخته شد: {file_id}")
+        print(f"   ✅ new table created: {file_id}")
         return file_id, file_url, False
         
     except Exception as e:
