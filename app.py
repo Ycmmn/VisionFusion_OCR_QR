@@ -668,13 +668,13 @@ def merge_all_data_sources(session_dir, pipeline_type):
             df_mix.to_excel(output_path, index=False, engine='openpyxl')
             return output_path
         
-        # ========== 4. ادغام OCR/QR + Scraping (بدون ادغام سطرها) ==========
+        # 4. merge ocr/qr + scraping (without merging rows)
         print(f"\n   Concatenating OCR/QR + Web Scraping (separate rows)...")
         
-        # فقط concat کن، بدون ادغام
+        # just concat, without merging
         df_final = pd.concat([df_mix, df_scrap], ignore_index=True)
         
-        # تمیزکاری
+        # cleaning
         df_final = df_final.fillna("")
         for col in df_final.columns:
             if df_final[col].dtype == 'object':
@@ -683,18 +683,18 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     'nan': '', 'None': '', 'NaT': '', '<NA>': '', 'null': '', 'NULL': ''
                 })
         
-        # ========== 🆔 تولید CompanyID منحصر به فرد برای هر file_name ==========
+        # generate unique companyid for each file_name
         print(f"\n🆔 Generating unique CompanyID for each file_name...")
         
         if 'file_name' in df_final.columns:
-            # ساخت دیکشنری: file_name → CompanyID
+            # create dictionary: file_name → companyid
             file_to_company_id = {}
             
             for idx, row in df_final.iterrows():
                 fname = row.get('file_name', '')
                 
                 if not fname or pd.isna(fname) or str(fname).strip() in ['', 'Unknown', 'web_only']:
-                    # اگه file_name نداره، ID منحصر به فرد بده
+                    # if doesn't have file_name, give unique id
                     company_id = generate_company_id(
                         row.get('CompanyNameFA'),
                         row.get('CompanyNameEN')
