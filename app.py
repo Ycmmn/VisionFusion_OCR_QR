@@ -630,7 +630,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     
                     print(f"      ✅ Matched {matched_count}/{len(df_scrap)} scraping records with file_name")
                     
-                    # حذف سطرهای تکراری scraping
+                    # remove duplicate scraping rows
                     print(f"\n   🧹 Removing duplicate scraping records...")
                     
                     initial_count = len(df_scrap)
@@ -638,13 +638,13 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     if 'Website' in df_scrap.columns or 'urls' in df_scrap.columns:
                         url_col = 'Website' if 'Website' in df_scrap.columns else 'urls'
                         
-                        # نرمالسازی URL
+                        # normalize url 
                         df_scrap['_normalized_url'] = df_scrap[url_col].apply(normalize_url)
                         
-                        # حذف تکراری‌ها (نگه‌داشتن اولین)
+                        # remove duplicates (keep first)
                         df_scrap = df_scrap.drop_duplicates(subset=['_normalized_url'], keep='first')
                         
-                        # حذف ستون کمکی
+                        # remove helper column
                         df_scrap.drop(columns=['_normalized_url'], inplace=True)
                         
                         removed_count = initial_count - len(df_scrap)
