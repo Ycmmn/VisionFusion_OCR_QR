@@ -163,3 +163,12 @@ def get_google_services():
     except Exception as e:
         st.error(f"❌ error connecting to google: {e}")
         return None, None
+
+
+def _col_index_to_letter(col_index):
+    """convert index to excel letter (0->a, 25->z, 26->aa)"""
+    result = ""
+    while col_index >= 0:
+        result = chr(col_index % 26 + 65) + result
+        col_index = col_index // 26 - 1
+    return result
