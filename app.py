@@ -399,16 +399,16 @@ def merge_all_data_sources(session_dir, pipeline_type):
     web_excel = Path(session_dir) / "web_analysis.xlsx"
     output_enriched = list(Path(session_dir).glob("output_enriched_*.xlsx"))
     
-    # ========== EXCEL MODE ==========
+    # excel mode
     if pipeline_type == 'excel':
         print("   Excel Mode detected")
         
-        # 1. اول output_enriched رو چک کن
+        # 1. first check output_enriched
         if output_enriched:
             excel_file = output_enriched[0]
             print(f"   Using output_enriched: {excel_file.name}")
         
-        # 2. اگه نبود، web_analysis رو چک کن
+        # 2. if not found, check web_analysis
         elif web_excel.exists():
             excel_file = web_excel
             print(f"   Using web_analysis: {excel_file.name}")
@@ -417,7 +417,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
             print(f"   No Excel output found!")
             return None
         
-        # خواندن و تمیزکاری
+        # read and clean
         df = pd.read_excel(excel_file)
         
         # تمیزکاری
