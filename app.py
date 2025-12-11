@@ -700,11 +700,11 @@ def merge_all_data_sources(session_dir, pipeline_type):
                         row.get('CompanyNameEN')
                     )
                 else:
-                    # اگه file_name داره، چک کن قبلاً ساخته شده یا نه
+                    # if has file_name, check if created before
                     fname_str = str(fname).strip()
                     
                     if fname_str not in file_to_company_id:
-                        # اولین باری که این file_name رو میبینیم
+                        # first time seeing this file_name
                         company_id = generate_company_id(
                             row.get('CompanyNameFA'),
                             row.get('CompanyNameEN')
@@ -712,10 +712,10 @@ def merge_all_data_sources(session_dir, pipeline_type):
                         file_to_company_id[fname_str] = company_id
                         print(f"      {fname_str} → {company_id}")
                     else:
-                        # قبلاً دیدیم، از همون ID استفاده کن
+                        # seen before, use same id
                         company_id = file_to_company_id[fname_str]
                 
-                # اضافه کردن CompanyID
+                # add companyid
                 df_final.at[idx, 'CompanyID'] = company_id
             
             # جابجایی CompanyID به اول
