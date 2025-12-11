@@ -289,7 +289,7 @@ def add_company_id_to_dataframe(df, log_details=True):
     
     for idx, row in df.iterrows():
 
-        # ✅ extract company name from row
+        # extract company name from row
         company_name_fa = None
         company_name_en = None
 
@@ -300,7 +300,7 @@ def add_company_id_to_dataframe(df, log_details=True):
                 else:
                     company_name_en = row[col]
 
-        # ✅ generate company id
+        # generate company id
         company_id = generate_company_id(company_name_fa, company_name_en)
         
         company_ids.append(company_id)
