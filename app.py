@@ -258,7 +258,7 @@ def generate_company_id(company_name_fa=None, company_name_en=None):
    # normalize company name (remove extra words)
     normalized = company_name.lower()
     
-    # حذف کلمات رایج
+    # remove common words
     for word in ['شرکت', 'company', 'co.', 'co', 'ltd', 'inc', 'group', 'گروه', 
                  'corporation', 'corp', '.', ',', '-', '_']:
         normalized = normalized.replace(word, ' ')
