@@ -281,17 +281,21 @@ def generate_company_id(company_name_fa=None, company_name_en=None):
     return company_id
 
 
+
+
+
 def add_company_id_to_dataframe(df, log_details=True):
     """
-    اضافه کردن ستون CompanyID به DataFrame
+    add companyid column to dataframe
     
-    Args:
-        df: DataFrame ورودی
-        log_details: نمایش جزئیات در Console
+    args:
+        df: input dataframe
+        log_details: show details in console
     
-    Returns:
-        DataFrame با ستون CompanyID
+    returns:
+        dataframe with companyid column
     """
+    
     import pandas as pd
     
     if df.empty:
