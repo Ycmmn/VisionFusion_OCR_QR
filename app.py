@@ -207,7 +207,7 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         if files:
             file_id = files[0]['id']
             file_url = files[0].get('webViewLink', f"https://docs.google.com/spreadsheets/d/{file_id}/edit")
-            print(f"   ✅ جدول موجود: {file_id}")
+            print(f"   ✅ existing table: {file_id}")
             return file_id, file_url, True
         
         print(f"   📝 ساخت جدول جدید...")
