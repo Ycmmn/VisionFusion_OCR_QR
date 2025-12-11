@@ -255,7 +255,7 @@ def generate_company_id(company_name_fa=None, company_name_en=None):
         random_hash = hashlib.md5(str(random.random()).encode()).hexdigest()[:12].upper()
         return f"COMP_UNKNOWN_{random_hash}"
     
-    # نرمالسازی نام شرکت (حذف کلمات اضافی)
+   # normalize company name (remove extra words)
     normalized = company_name.lower()
     
     # حذف کلمات رایج
