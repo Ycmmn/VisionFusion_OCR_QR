@@ -235,13 +235,13 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
 
 
 
-# ---------------------------- generate permanent company id 
+# ---------------------------------------- generate permanent company id 
 import hashlib
 import re
 
 def generate_company_id(company_name_fa=None, company_name_en=None):
     
-    # انتخاب نام شرکت
+    # select company name
     company_name = None
     
     if company_name_fa and str(company_name_fa).strip() not in ['', 'nan', 'None']:
@@ -250,7 +250,7 @@ def generate_company_id(company_name_fa=None, company_name_en=None):
         company_name = str(company_name_en).strip()
     
     if not company_name:
-        # اگه اسم شرکت نبود، ID تصادفی بده
+        # if company name doesn't exist, give random id
         import random
         random_hash = hashlib.md5(str(random.random()).encode()).hexdigest()[:12].upper()
         return f"COMP_UNKNOWN_{random_hash}"
