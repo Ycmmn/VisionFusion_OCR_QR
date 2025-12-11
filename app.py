@@ -264,3 +264,82 @@ def generate_company_id(company_name_fa=None, company_name_en=None):
     
     return company_id
 
+def add_company_id_to_dataframe(df, log_details=True):
+    """
+    add companyid column to dataframe
+    
+    args:
+        df: input dataframe
+        log_details: show details in console
+    
+    returns:
+        dataframe with companyid column
+    """
+    import pandas as pd
+    
+    if df.empty:
+        print("   ⚠️ dataframe is empty, skipping companyid")
+        return df
+    
+    print(f"\n🆔 generating hash-based company ids...")
+    print(f"   📊 processing {len(df)} rows...")
+    
+    company_ids = []
+    id_mapping = {}  # for tracking duplicates
+    
+    for idx, row in df.iterrows():
+
+        # ✅ extract company name from row
+        company_name_fa = None
+        company_name_en = None
+
+        for col in ['CompanyNameFA', 'CompanyNameEN', 'company_name_fa', 'company_name_en']:
+            if col in row and row[col]:
+                if 'FA' in col or 'fa' in col:
+                    company_name_fa = row[col]
+                else:
+                    company_name_en = row[col]
+
+        # ✅ generate company id
+        company_id = generate_company_id(company_name_fa, company_name_en)
+        
+        company_ids.append(company_id)
+        
+        # track duplicates
+        if company_id not in id_mapping:
+            id_mapping[company_id] = []
+        id_mapping[company_id].append(idx + 1)
+        
+        # show first 5 samples
+        if log_details and idx < 5:
+            company_name = ""
+            for col in ['CompanyNameFA', 'CompanyNameEN', 'company_name_fa', 'company_name_en']:
+                if col in row and row[col]:
+                    company_name = str(row[col])[:20]
+                    break
+            
+            print(f"      row {idx + 1}: {company_id} → {company_name}")
+    
+    # add to dataframe (first column)
+    df.insert(0, 'CompanyID', company_ids)
+    
+    # statistics
+    unique_count = len(set(company_ids))
+    duplicate_count = len(company_ids) - unique_count
+    
+    print(f"\n   ✅ companyid statistics:")
+    print(f"      • total records: {len(company_ids)}")
+    print(f"      • unique ids: {unique_count}")
+    print(f"      • duplicate ids: {duplicate_count}")
+    
+    if duplicate_count > 0:
+        print(f"\n   📋 companies with multiple records:")
+        duplicate_ids = {k: v for k, v in id_mapping.items() if len(v) > 1}
+        
+        for comp_id, row_indices in list(duplicate_ids.items())[:5]:
+            print(f"      • {comp_id}: appears in rows {row_indices}")
+        
+        if len(duplicate_ids) > 5:
+            print(f"      ... and {len(duplicate_ids) - 5} more")
+    
+    return df
