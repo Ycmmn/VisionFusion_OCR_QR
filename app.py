@@ -267,15 +267,15 @@ def generate_company_id(company_name_fa=None, company_name_en=None):
     normalized = ' '.join(normalized.split())
     normalized = normalized.strip()
     
-    # اگه بعد از نرمالسازی خالی شد
+    # if empty after normalization
     if not normalized or len(normalized) < 2:
         normalized = company_name.lower()
     
-    # ساخت hash دائمی
+    # hash 
     hash_object = hashlib.sha256(normalized.encode('utf-8'))
     hash_hex = hash_object.hexdigest()[:12].upper()
     
-    # فرمت نهایی
+    # final format
     company_id = f"COMP_{hash_hex}"
     
     return company_id
