@@ -575,7 +575,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
                         url = url.replace('http://', '').replace('https://', '').replace('www.', '')
                         return url.split('/')[0].split('?')[0]
                     
-                    # ساخت دیکشنری: Website → file_name
+                    # create dictionary: website → file_name
                     url_to_filename = {}
                     for idx, row in df_mix.iterrows():
                         for col in ['Website', 'Website2', 'Website3', 'urls', 'url']:
@@ -589,9 +589,9 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     
                     print(f"      📋 Found {len(url_to_filename)} URL→file_name mappings")
                     
-                    # اضافه کردن file_name به scraping
+                    # add file_name to scraping
                     matched_count = 0
-                    # ✅ اگه file_name نداره، اضافه کن
+                    # if doesn't have file_name, add it
                     if 'file_name' not in df_scrap.columns:
                         df_scrap['file_name'] = ''
 
@@ -607,10 +607,10 @@ def merge_all_data_sources(session_dir, pipeline_type):
                             matched_count += 1
 
 
-                        #
-                        print(f"      ✅ Matched {matched_count}/{len(df_scrap)} scraping records with file_name")
+                        
+                        print(f"   Matched {matched_count}/{len(df_scrap)} scraping records with file_name")
 
-                        # ========== 🔧 پر کردن file_name های خالی ==========
+                        # fill empty file_names
                         print(f"\n   🔧 Filling empty file_names for Web rows...")
 
                         if 'file_name' in df_scrap.columns:
