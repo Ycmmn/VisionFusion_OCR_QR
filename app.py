@@ -13,3 +13,13 @@ complete merge of two apps: «ultimate smart exhibition pipeline» + «smart dat
 run:
     streamlit run smart_exhibition_pipeline_final.py
 """
+
+
+
+#^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ page configuration ^^^^^^^^^^^^^^^^^^^^
+st.set_page_config(
+    page_title="Smart Exhibition Pipeline",
+    page_icon="🎯",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
