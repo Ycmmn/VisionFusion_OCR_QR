@@ -736,14 +736,14 @@ def merge_all_data_sources(session_dir, pipeline_type):
             
             print(f"   ✅ Sorted {len(df_final)} rows by file_name")
             
-            # نمایش آمار
+            # show statistics
             file_counts = df_final['file_name'].value_counts()
             print(f"\n   📊 File Distribution:")
             for fname, count in list(file_counts.items())[:5]:
                 if fname and str(fname) not in ['', 'nan', 'Unknown']:
                     print(f"      • {fname}: {count} rows")
         
-        # ذخیره
+        # save
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = Path(session_dir) / f"merged_complete_{timestamp}.xlsx"
         df_final.to_excel(output_path, index=False, engine='openpyxl')
