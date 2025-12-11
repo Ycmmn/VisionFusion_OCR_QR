@@ -386,14 +386,14 @@ def merge_all_data_sources(session_dir, pipeline_type):
     returns:
         path: final excel file path
     """
-    
+
     import pandas as pd
     import numpy as np
     from datetime import datetime
     
     print(f"\nStarting data merge for {pipeline_type.upper()} mode...")
     
-    # مسیرها
+    # paths
     mix_json = Path(session_dir) / "mix_ocr_qr.json"
     scrap_json = Path(session_dir) / "gemini_scrap_output.json"
     web_excel = Path(session_dir) / "web_analysis.xlsx"
