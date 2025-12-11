@@ -115,3 +115,18 @@ st.markdown("""
     .qc-card p { color: #666; margin: 0.25rem 0; font-size: 0.9rem; }
 </style>
 """, unsafe_allow_html=True)
+
+
+
+# ^^^^^^^^^^^^^^^^^^^^^^^^^^^ api keys ^^^^^^^^^^^^^^^^^^^^^^^^^
+API_KEYS = {
+    "excel": "AIzaSyA***bxJWI",
+    "ocr": "AIzaSy***a4gxY",
+    "scrap": "AIzaSy***IKNNPzB70"
+}
+for key_name, key_value in API_KEYS.items():
+    os.environ[f"GOOGLE_API_KEY_{key_name.upper()}"] = key_value
+    os.environ["GOOGLE_API_KEY"] = key_value
+    os.environ["GEMINI_API_KEY"] = key_value
+
+    
