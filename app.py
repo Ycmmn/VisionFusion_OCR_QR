@@ -13,3 +13,20 @@ complete merge of two apps: «ultimate smart exhibition pipeline» + «smart dat
 run:
     streamlit run smart_exhibition_pipeline_final.py
 """
+
+
+
+import streamlit as st
+import subprocess
+import os
+import sys
+import json
+import time
+import datetime
+from pathlib import Path
+import pandas as pd
+import numpy as np
+import re
+import shutil
+
+from supabase import create_client, Client
