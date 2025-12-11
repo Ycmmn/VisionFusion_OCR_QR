@@ -215,3 +215,52 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
     except Exception as e:
         print(f"   ❌ error: {e}")
         return None, None, False
+
+
+
+
+# ^^^^^^^^^^^^^^^^^^^^ generate permanent company id^^^^^^^^^^^^^^^^^
+import hashlib
+import re
+
+def generate_company_id(company_name_fa=None, company_name_en=None):
+    
+    # select company name
+    company_name = None
+    
+    if company_name_fa and str(company_name_fa).strip() not in ['', 'nan', 'None']:
+        company_name = str(company_name_fa).strip()
+    elif company_name_en and str(company_name_en).strip() not in ['', 'nan', 'None']:
+        company_name = str(company_name_en).strip()
+    
+    if not company_name:
+        # if no company name, give random id
+        import random
+        random_hash = hashlib.md5(str(random.random()).encode()).hexdigest()[:12].upper()
+        return f"COMP_UNKNOWN_{random_hash}"
+    
+    # normalize company name (remove extra words)
+    normalized = company_name.lower()
+    
+    # remove common words
+    for word in ['company', 'co.', 'co', 'ltd', 'inc', 'group', 
+                 'corporation', 'corp', '.', ',', '-', '_']:
+        normalized = normalized.replace(word, ' ')
+    
+    # remove extra spaces
+    normalized = ' '.join(normalized.split())
+    normalized = normalized.strip()
+    
+    # if empty after normalization
+    if not normalized or len(normalized) < 2:
+        normalized = company_name.lower()
+    
+    # create permanent hash
+    hash_object = hashlib.sha256(normalized.encode('utf-8'))
+    hash_hex = hash_object.hexdigest()[:12].upper()
+    
+    # final format
+    company_id = f"COMP_{hash_hex}"
+    
+    return company_id
+
