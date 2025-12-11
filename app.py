@@ -263,7 +263,7 @@ def generate_company_id(company_name_fa=None, company_name_en=None):
                  'corporation', 'corp', '.', ',', '-', '_']:
         normalized = normalized.replace(word, ' ')
     
-    # حذف فاصله‌های اضافی
+    # remove extra spaces
     normalized = ' '.join(normalized.split())
     normalized = normalized.strip()
     
