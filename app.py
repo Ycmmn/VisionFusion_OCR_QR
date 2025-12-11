@@ -347,7 +347,7 @@ def add_company_id_to_dataframe(df, log_details=True):
     # add to dataframe (first column)
     df.insert(0, 'CompanyID', company_ids)
     
-    # آمار
+    # statistics
     unique_count = len(set(company_ids))
     duplicate_count = len(company_ids) - unique_count
     
@@ -367,3 +367,395 @@ def add_company_id_to_dataframe(df, log_details=True):
             print(f"      ... and {len(duplicate_ids) - 5} more")
     
     return df
+
+
+
+
+
+def merge_all_data_sources(session_dir, pipeline_type):
+    """
+    merge all data sources (for both modes):
+    
+    ocr/qr mode:
+        - mix_ocr_qr.json (always)
+        - gemini_scrap_output.json (if available)
+    
+    excel mode:
+        - web_analysis.xlsx (always)
+    
+    returns:
+        path: final excel file path
+    """
+    
+    import pandas as pd
+    import numpy as np
+    from datetime import datetime
+    
+    print(f"\nStarting data merge for {pipeline_type.upper()} mode...")
+    
+    # مسیرها
+    mix_json = Path(session_dir) / "mix_ocr_qr.json"
+    scrap_json = Path(session_dir) / "gemini_scrap_output.json"
+    web_excel = Path(session_dir) / "web_analysis.xlsx"
+    output_enriched = list(Path(session_dir).glob("output_enriched_*.xlsx"))
+    
+    # ========== EXCEL MODE ==========
+    if pipeline_type == 'excel':
+        print("   Excel Mode detected")
+        
+        # 1. اول output_enriched رو چک کن
+        if output_enriched:
+            excel_file = output_enriched[0]
+            print(f"   Using output_enriched: {excel_file.name}")
+        
+        # 2. اگه نبود، web_analysis رو چک کن
+        elif web_excel.exists():
+            excel_file = web_excel
+            print(f"   Using web_analysis: {excel_file.name}")
+        
+        else:
+            print(f"   No Excel output found!")
+            return None
+        
+        # خواندن و تمیزکاری
+        df = pd.read_excel(excel_file)
+        
+        # تمیزکاری
+        df = df.fillna("")
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                df[col] = df[col].astype(str).str.strip()
+                df[col] = df[col].replace({
+                    'nan': '', 'None': '', 'NaT': '', '<NA>': '', 'null': '', 'NULL': ''
+                })
+
+        # ========== 🌐 TRANSLATION (جدید!) ==========
+        print(f"\n🌐 Starting automatic translation...")
+        df = translate_all_columns(df)
+        # ============================================
+
+        # ذخیره
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = Path(session_dir) / f"merged_complete_{timestamp}.xlsx"
+        df.to_excel(output_path, index=False, engine='openpyxl')
+        
+        print(f"\n   Excel Mode completed!")
+        print(f"      Rows: {len(df)}")
+        print(f"      Columns: {len(df.columns)}")
+        print(f"      Saved to: {output_path.name}")
+        
+        return output_path
+    
+    # ========== OCR/QR MODE ==========
+    elif pipeline_type == 'ocr_qr':
+        print("   OCR/QR Mode detected")
+        
+        # 1. خواندن mix_ocr_qr.json (الزامی)
+        if not mix_json.exists():
+            print(f"   {mix_json.name} not found!")
+            return None
+        
+        print(f"   Reading {mix_json.name}...")
+        try:
+            with open(mix_json, 'r', encoding='utf-8') as f:
+                mix_data = json.load(f)
+            
+            # تبدیل به DataFrame
+            records = []
+            for file_item in mix_data:
+                if not isinstance(file_item, dict):
+                    continue
+                
+                result_data = file_item.get("result")
+                
+                if isinstance(result_data, dict):
+                    page_results = [result_data]
+                elif isinstance(result_data, list):
+                    page_results = []
+                    for page_data in result_data:
+                        if isinstance(page_data, dict):
+                            page_results.append(page_data.get("result", {}))
+                else:
+                    continue
+                
+                for page_result in page_results:
+                    if not isinstance(page_result, dict) or not page_result:
+                        continue
+                    
+                    record = {}
+                    
+                    for key, value in page_result.items():
+                        if key in ['ocr_text']:
+                            continue
+                        
+                        if isinstance(value, list):
+                            if not value:
+                                continue
+                            
+                            for idx, item in enumerate(value, 1):
+                                if item is not None:
+                                    col_name = key if idx == 1 else f"{key}{idx}"
+                                    record[col_name] = str(item)
+                        
+                        elif value is not None and str(value).strip():
+                            record[key] = str(value)
+                
+                    
+                    # ✅ مطمئن شو file_name از file_item گرفته میشه
+                    if 'file_name' not in record or not record.get('file_name'):
+                        record['file_name'] = file_item.get('file_name', 'Unknown')
+
+                    if record:
+                        records.append(record)
+            
+            if not records:
+                print(f"   mix_ocr_qr: No valid records")
+                return None
+            
+            df_mix = pd.DataFrame(records)
+            print(f"   mix_ocr_qr: {len(df_mix)} rows x {len(df_mix.columns)} columns")
+        
+        except Exception as e:
+            print(f"   Error reading mix_ocr_qr.json: {e}")
+            return None
+        
+        # 2. خواندن gemini_scrap_output.json (اختیاری)
+        if not scrap_json.exists():
+            print(f"   {scrap_json.name} not found - using only OCR/QR data")
+            
+            # فقط mix_ocr_qr
+            df_mix = df_mix.fillna("")
+            for col in df_mix.columns:
+                if df_mix[col].dtype == 'object':
+                    df_mix[col] = df_mix[col].astype(str).str.strip()
+                    df_mix[col] = df_mix[col].replace({
+                        'nan': '', 'None': '', 'NaT': '', '<NA>': '', 'null': '', 'NULL': ''
+                    })
+            
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_path = Path(session_dir) / f"merged_complete_{timestamp}.xlsx"
+            df_mix.to_excel(output_path, index=False, engine='openpyxl')
+            
+            print(f"\n   Saved (OCR/QR only): {output_path.name}")
+            print(f"      Total rows: {len(df_mix)}")
+            
+            return output_path
+        
+        # ========== 3. خواندن و پردازش scraping data ==========
+        # ========== 3. خواندن و پردازش scraping data ==========
+        print(f"   Reading {scrap_json.name}...")
+        try:
+            with open(scrap_json, 'r', encoding='utf-8') as f:
+                scrap_data = json.load(f)
+            
+            if not isinstance(scrap_data, list):
+                print(f"   Invalid scrap data format")
+                df_scrap = pd.DataFrame()
+            else:
+                df_scrap = pd.DataFrame(scrap_data)
+                
+                # فقط موفق‌ها
+                if 'status' in df_scrap.columns:
+                    df_scrap = df_scrap[df_scrap['status'] == 'SUCCESS'].copy()
+                
+                # حذف ستون‌های اضافی
+                for col in ['status', 'error']:
+                    if col in df_scrap.columns:
+                        df_scrap.drop(columns=[col], inplace=True)
+                
+                # ✅ اضافه کردن file_name از OCR/QR به scraping
+                if not df_scrap.empty:
+                    print(f"   🔗 Matching file_names from OCR/QR to Scraping...")
+                    
+                    # تابع normalize_url
+                    def normalize_url(url):
+                        if not url or pd.isna(url):
+                            return ""
+                        url = str(url).strip().lower()
+                        url = url.replace('http://', '').replace('https://', '').replace('www.', '')
+                        return url.split('/')[0].split('?')[0]
+                    
+                    # ساخت دیکشنری: Website → file_name
+                    url_to_filename = {}
+                    for idx, row in df_mix.iterrows():
+                        for col in ['Website', 'Website2', 'Website3', 'urls', 'url']:
+                            if col in row and row[col] and not pd.isna(row[col]):
+                                url = normalize_url(row[col])
+                                if url:
+                                    filename = row.get('file_name', '')
+                                    if filename:
+                                        url_to_filename[url] = filename
+                                        break
+                    
+                    print(f"      📋 Found {len(url_to_filename)} URL→file_name mappings")
+                    
+                    # اضافه کردن file_name به scraping
+                    matched_count = 0
+                    # ✅ اگه file_name نداره، اضافه کن
+                    if 'file_name' not in df_scrap.columns:
+                        df_scrap['file_name'] = ''
+
+                    for idx in df_scrap.index:
+                        scrap_url = None
+                        for col in ['Website', 'urls', 'url']:
+                            if col in df_scrap.columns and df_scrap.at[idx, col]:
+                                scrap_url = normalize_url(df_scrap.at[idx, col])
+                                break
+                        
+                        if scrap_url and scrap_url in url_to_filename:
+                            df_scrap.at[idx, 'file_name'] = url_to_filename[scrap_url]
+                            matched_count += 1
+
+
+                        #
+                        print(f"      ✅ Matched {matched_count}/{len(df_scrap)} scraping records with file_name")
+
+                        # ========== 🔧 پر کردن file_name های خالی ==========
+                        print(f"\n   🔧 Filling empty file_names for Web rows...")
+
+                        if 'file_name' in df_scrap.columns:
+                            # اگه بعضی سطرها file_name ندارن، از اولین file_name موجود استفاده کن
+                            if url_to_filename:
+                                # گرفتن اولین file_name از دیکشنری
+                                default_filename = list(url_to_filename.values())[0]
+                                
+                                empty_count = 0
+                                for idx in df_scrap.index:
+                                    fname = df_scrap.at[idx, 'file_name']
+                                    if not fname or pd.isna(fname) or str(fname).strip() in ['', 'Unknown']:
+                                        df_scrap.at[idx, 'file_name'] = default_filename
+                                        empty_count += 1
+        
+                                print(f"      ✅ Filled {empty_count} empty file_names with: {default_filename}")
+                    
+                    print(f"      ✅ Matched {matched_count}/{len(df_scrap)} scraping records with file_name")
+                    
+                    # ✅ حذف سطرهای تکراری scraping
+                    print(f"\n   🧹 Removing duplicate scraping records...")
+                    
+                    initial_count = len(df_scrap)
+                    
+                    if 'Website' in df_scrap.columns or 'urls' in df_scrap.columns:
+                        url_col = 'Website' if 'Website' in df_scrap.columns else 'urls'
+                        
+                        # نرمالسازی URL
+                        df_scrap['_normalized_url'] = df_scrap[url_col].apply(normalize_url)
+                        
+                        # حذف تکراری‌ها (نگه‌داشتن اولین)
+                        df_scrap = df_scrap.drop_duplicates(subset=['_normalized_url'], keep='first')
+                        
+                        # حذف ستون کمکی
+                        df_scrap.drop(columns=['_normalized_url'], inplace=True)
+                        
+                        removed_count = initial_count - len(df_scrap)
+                        print(f"      ✅ Removed {removed_count} duplicate scraping records")
+                        print(f"      📊 Remaining: {len(df_scrap)} unique scraping records")
+            
+            if df_scrap.empty:
+                print(f"   No successful scraping data - using only OCR/QR")
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                output_path = Path(session_dir) / f"merged_complete_{timestamp}.xlsx"
+                df_mix.to_excel(output_path, index=False, engine='openpyxl')
+                return output_path
+            
+            print(f"   gemini_scrap: {len(df_scrap)} rows x {len(df_scrap.columns)} columns")
+
+        
+        except Exception as e:
+            print(f"   Error reading scrap data: {e} - using only OCR/QR")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            output_path = Path(session_dir) / f"merged_complete_{timestamp}.xlsx"
+            df_mix.to_excel(output_path, index=False, engine='openpyxl')
+            return output_path
+        
+        # ========== 4. ادغام OCR/QR + Scraping (بدون ادغام سطرها) ==========
+        print(f"\n   Concatenating OCR/QR + Web Scraping (separate rows)...")
+        
+        # فقط concat کن، بدون ادغام
+        df_final = pd.concat([df_mix, df_scrap], ignore_index=True)
+        
+        # تمیزکاری
+        df_final = df_final.fillna("")
+        for col in df_final.columns:
+            if df_final[col].dtype == 'object':
+                df_final[col] = df_final[col].astype(str).str.strip()
+                df_final[col] = df_final[col].replace({
+                    'nan': '', 'None': '', 'NaT': '', '<NA>': '', 'null': '', 'NULL': ''
+                })
+        
+        # ========== 🆔 تولید CompanyID منحصر به فرد برای هر file_name ==========
+        print(f"\n🆔 Generating unique CompanyID for each file_name...")
+        
+        if 'file_name' in df_final.columns:
+            # ساخت دیکشنری: file_name → CompanyID
+            file_to_company_id = {}
+            
+            for idx, row in df_final.iterrows():
+                fname = row.get('file_name', '')
+                
+                if not fname or pd.isna(fname) or str(fname).strip() in ['', 'Unknown', 'web_only']:
+                    # اگه file_name نداره، ID منحصر به فرد بده
+                    company_id = generate_company_id(
+                        row.get('CompanyNameFA'),
+                        row.get('CompanyNameEN')
+                    )
+                else:
+                    # اگه file_name داره، چک کن قبلاً ساخته شده یا نه
+                    fname_str = str(fname).strip()
+                    
+                    if fname_str not in file_to_company_id:
+                        # اولین باری که این file_name رو میبینیم
+                        company_id = generate_company_id(
+                            row.get('CompanyNameFA'),
+                            row.get('CompanyNameEN')
+                        )
+                        file_to_company_id[fname_str] = company_id
+                        print(f"      {fname_str} → {company_id}")
+                    else:
+                        # قبلاً دیدیم، از همون ID استفاده کن
+                        company_id = file_to_company_id[fname_str]
+                
+                # اضافه کردن CompanyID
+                df_final.at[idx, 'CompanyID'] = company_id
+            
+            # جابجایی CompanyID به اول
+            cols = ['CompanyID'] + [col for col in df_final.columns if col != 'CompanyID']
+            df_final = df_final[cols]
+            
+            print(f"   ✅ Generated {len(file_to_company_id)} unique CompanyIDs for {len(df_final)} rows")
+        
+        # ========== 📑 مرتب‌سازی بر اساس file_name ==========
+        print(f"\n📑 Sorting by file_name...")
+        
+        if 'file_name' in df_final.columns:
+            # مرتب‌سازی: اول file_name، بعد CompanyID
+            df_final = df_final.sort_values(
+                by=['file_name', 'CompanyID'], 
+                ascending=[True, True]
+            ).reset_index(drop=True)
+            
+            print(f"   ✅ Sorted {len(df_final)} rows by file_name")
+            
+            # نمایش آمار
+            file_counts = df_final['file_name'].value_counts()
+            print(f"\n   📊 File Distribution:")
+            for fname, count in list(file_counts.items())[:5]:
+                if fname and str(fname) not in ['', 'nan', 'Unknown']:
+                    print(f"      • {fname}: {count} rows")
+        
+        # ذخیره
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_path = Path(session_dir) / f"merged_complete_{timestamp}.xlsx"
+        df_final.to_excel(output_path, index=False, engine='openpyxl')
+        
+        print(f"\n   Concatenated successfully!")
+        print(f"      OCR/QR: {len(df_mix)} rows")
+        print(f"      Web Scraping: {len(df_scrap)} rows")
+        print(f"      Final (separate rows): {len(df_final)} rows")
+        print(f"      Saved to: {output_path.name}")
+        
+        return output_path
+        
+    else:
+        print(f"   Unknown pipeline type: {pipeline_type}")
+        return None
