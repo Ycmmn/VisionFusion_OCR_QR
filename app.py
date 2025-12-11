@@ -129,4 +129,37 @@ for key_name, key_value in API_KEYS.items():
     os.environ["GOOGLE_API_KEY"] = key_value
     os.environ["GEMINI_API_KEY"] = key_value
 
-    
+
+
+# ^^^^^^^^^^^^^^^^^^^^^^^ google sheets integration ^^^^^^^^^^^^^^^^^
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+GOOGLE_SCOPES = [
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/spreadsheets'
+]
+
+@st.cache_resource
+def get_google_services():
+    """connect to google drive and sheets"""
+    try:
+        SERVICE_ACCOUNT_FILE = Path("service-account.json")
+        if SERVICE_ACCOUNT_FILE.exists():
+            creds = service_account.Credentials.from_service_account_file(
+                str(SERVICE_ACCOUNT_FILE),
+                scopes=GOOGLE_SCOPES
+            )
+            
+        else:
+            creds = service_account.Credentials.from_service_account_info(
+                st.secrets["gcp_service_account"],
+                scopes=GOOGLE_SCOPES
+            )
+        drive_service = build('drive', 'v3', credentials=creds)
+        sheets_service = build('sheets', 'v4', credentials=creds)
+        return drive_service, sheets_service
+    except Exception as e:
+        st.error(f"❌ error connecting to google: {e}")
+        return None, None
