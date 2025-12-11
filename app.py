@@ -210,7 +210,7 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
             print(f"   ✅ existing table: {file_id}")
             return file_id, file_url, True
         
-        print(f"   📝 ساخت جدول جدید...")
+        print(f"   📝 creating new table...")
         spreadsheet = sheets_service.spreadsheets().create(
             body={
                 'properties': {'title': table_name},
