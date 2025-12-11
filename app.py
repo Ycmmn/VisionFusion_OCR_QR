@@ -334,7 +334,7 @@ def add_company_id_to_dataframe(df, log_details=True):
             id_mapping[company_id] = []
         id_mapping[company_id].append(idx + 1)
         
-        # نمایش 5 نمونه اول
+        # show first 5 samples
         if log_details and idx < 5:
             company_name = ""
             for col in ['CompanyNameFA', 'CompanyNameEN', 'company_name_fa', 'company_name_en']:
@@ -344,7 +344,7 @@ def add_company_id_to_dataframe(df, log_details=True):
             
             print(f"      Row {idx + 1}: {company_id} → {company_name}")
     
-    # اضافه کردن به DataFrame (ستون اول)
+    # add to dataframe (first column)
     df.insert(0, 'CompanyID', company_ids)
     
     # آمار
