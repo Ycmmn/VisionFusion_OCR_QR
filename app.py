@@ -146,3 +146,88 @@ for key_name, key_value in API_KEYS.items():
     os.environ[f"GOOGLE_API_KEY_{key_name.upper()}"] = key_value
     os.environ["GOOGLE_API_KEY"] = key_value
     os.environ["GEMINI_API_KEY"] = key_value
+
+
+
+#------------------------------- google sheets integration
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+
+GOOGLE_SCOPES = [
+    'https://www.googleapis.com/auth/drive.file',
+    'https://www.googleapis.com/auth/spreadsheets'
+]
+
+@st.cache_resource
+def get_google_services():
+    """اتصال به Google Drive و Sheets"""
+    try:
+        SERVICE_ACCOUNT_FILE = Path("service-account.json")
+        if SERVICE_ACCOUNT_FILE.exists():
+            creds = service_account.Credentials.from_service_account_file(
+                str(SERVICE_ACCOUNT_FILE),
+                scopes=GOOGLE_SCOPES
+            )
+            
+        else:
+            creds = service_account.Credentials.from_service_account_info(
+                st.secrets["gcp_service_account"],
+                scopes=GOOGLE_SCOPES
+            )
+        drive_service = build('drive', 'v3', credentials=creds)
+        sheets_service = build('sheets', 'v4', credentials=creds)
+        return drive_service, sheets_service
+    except Exception as e:
+        st.error(f"❌ خطا در اتصال به Google: {e}")
+        return None, None
+
+def _col_index_to_letter(col_index):
+    """تبدیل index به حرف Excel (0->A, 25->Z, 26->AA)"""
+    result = ""
+    while col_index >= 0:
+        result = chr(col_index % 26 + 65) + result
+        col_index = col_index // 26 - 1
+    return result
+
+def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
+    """پیدا کردن یا ساخت جدول در Drive"""
+    try:
+        table_name = "Exhibition_Data_Table"
+        query = f"name='{table_name}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false"
+        if folder_id:
+            query += f" and '{folder_id}' in parents"
+        
+        results = drive_service.files().list(
+            q=query, spaces='drive', fields='files(id, name, webViewLink)', pageSize=1
+        ).execute()
+        
+        files = results.get('files', [])
+        
+        if files:
+            file_id = files[0]['id']
+            file_url = files[0].get('webViewLink', f"https://docs.google.com/spreadsheets/d/{file_id}/edit")
+            print(f"   ✅ جدول موجود: {file_id}")
+            return file_id, file_url, True
+        
+        print(f"   📝 ساخت جدول جدید...")
+        spreadsheet = sheets_service.spreadsheets().create(
+            body={
+                'properties': {'title': table_name},
+                'sheets': [{'properties': {'title': 'Data', 'gridProperties': {'frozenRowCount': 1}}}]
+            },
+            fields='spreadsheetId'
+        ).execute()
+        
+        file_id = spreadsheet.get('spreadsheetId')
+        file_url = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
+        
+        if folder_id:
+            drive_service.files().update(fileId=file_id, addParents=folder_id, fields='id, parents').execute()
+        
+        print(f"   ✅ جدول جدید ساخته شد: {file_id}")
+        return file_id, file_url, False
+        
+    except Exception as e:
+        print(f"   ❌ خطا: {e}")
+        return None, None, False
