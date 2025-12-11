@@ -420,7 +420,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
         # read and clean
         df = pd.read_excel(excel_file)
         
-        # تمیزکاری
+        # clean
         df = df.fillna("")
         for col in df.columns:
             if df[col].dtype == 'object':
@@ -429,12 +429,12 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     'nan': '', 'None': '', 'NaT': '', '<NA>': '', 'null': '', 'NULL': ''
                 })
 
-        # ========== 🌐 TRANSLATION (جدید!) ==========
+        # ------------------------ translation (new )
         print(f"\n🌐 Starting automatic translation...")
         df = translate_all_columns(df)
-        # ============================================
+        #--------------------------------------------------------
 
-        # ذخیره
+        # save
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = Path(session_dir) / f"merged_complete_{timestamp}.xlsx"
         df.to_excel(output_path, index=False, engine='openpyxl')
@@ -446,11 +446,11 @@ def merge_all_data_sources(session_dir, pipeline_type):
         
         return output_path
     
-    # ========== OCR/QR MODE ==========
+    #---------------------------------- ocr/qr mode 
     elif pipeline_type == 'ocr_qr':
         print("   OCR/QR Mode detected")
         
-        # 1. خواندن mix_ocr_qr.json (الزامی)
+        # 1. read mix_ocr_qr.json (mandatory)
         if not mix_json.exists():
             print(f"   {mix_json.name} not found!")
             return None
@@ -460,7 +460,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
             with open(mix_json, 'r', encoding='utf-8') as f:
                 mix_data = json.load(f)
             
-            # تبدیل به DataFrame
+            # convert to dataframe
             records = []
             for file_item in mix_data:
                 if not isinstance(file_item, dict):
