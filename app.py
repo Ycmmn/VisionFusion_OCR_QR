@@ -1,18 +1,17 @@
 # -*- coding: utf-8 -*-
 """
 🎯 Smart Exhibition Pipeline — Final Unified Edition + Google Sheets «Ultimate Smart Exhibition Pipeline» + «Smart Data Pipeline»
-- UI خفن نسخه ۱ + منطق و لاگ‌نویسی و مدیریت سهمیه نسخه ۲
-- Excel Mode و OCR/QR Mode با تشخیص خودکار
+- Awesome UI Version 1 + Logic, Logging & Quota Management Version 2
+- Excel Mode and OCR/QR Mode with Automatic Detection
 - Smart Metadata Injection (Exhibition + Source + Smart Position)
 - Fast Mode, Debug Mode, Rate Limiting, Daily Quota
 - ✨ Batch Processing: Images(5), PDFs(4), Excel(1)
 - ✨ Quality Control Tracking: User Name, Role, Date, Time
-- ☁️ Google Sheets Integration: ذخیره خودکار داده‌ها در Google Drive
+- ☁️ Google Sheets Integration: Automatic Data Storage in Google Drive
 
-run :
+run:
     streamlit run app.py
 """
-
 import streamlit as st
 import subprocess
 import os
