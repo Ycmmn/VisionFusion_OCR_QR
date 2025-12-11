@@ -161,7 +161,7 @@ GOOGLE_SCOPES = [
 
 @st.cache_resource
 def get_google_services():
-    """  Google Drive & Sheets"""
+    # Google Drive & Sheets
     try:
         SERVICE_ACCOUNT_FILE = Path("service-account.json")
         if SERVICE_ACCOUNT_FILE.exists():
@@ -183,7 +183,7 @@ def get_google_services():
         return None, None
 
 def _col_index_to_letter(col_index):
-    """تبدیل index به حرف Excel (0->A, 25->Z, 26->AA)"""
+    # convert index to excel letter (0->a, 25->z, 26->aa)
     result = ""
     while col_index >= 0:
         result = chr(col_index % 26 + 65) + result
