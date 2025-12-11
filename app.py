@@ -718,17 +718,17 @@ def merge_all_data_sources(session_dir, pipeline_type):
                 # add companyid
                 df_final.at[idx, 'CompanyID'] = company_id
             
-            # جابجایی CompanyID به اول
+            # move companyid to first
             cols = ['CompanyID'] + [col for col in df_final.columns if col != 'CompanyID']
             df_final = df_final[cols]
             
             print(f"   ✅ Generated {len(file_to_company_id)} unique CompanyIDs for {len(df_final)} rows")
         
-        # ========== 📑 مرتب‌سازی بر اساس file_name ==========
+        # sort based on file_name
         print(f"\n📑 Sorting by file_name...")
         
         if 'file_name' in df_final.columns:
-            # مرتب‌سازی: اول file_name، بعد CompanyID
+            # sort: first file_name, then companyid
             df_final = df_final.sort_values(
                 by=['file_name', 'CompanyID'], 
                 ascending=[True, True]
