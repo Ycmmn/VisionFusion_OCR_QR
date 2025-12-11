@@ -554,20 +554,20 @@ def merge_all_data_sources(session_dir, pipeline_type):
             else:
                 df_scrap = pd.DataFrame(scrap_data)
                 
-                # فقط موفق‌ها
+                # only successful ones
                 if 'status' in df_scrap.columns:
                     df_scrap = df_scrap[df_scrap['status'] == 'SUCCESS'].copy()
                 
-                # حذف ستون‌های اضافی
+                # remove extra columns
                 for col in ['status', 'error']:
                     if col in df_scrap.columns:
                         df_scrap.drop(columns=[col], inplace=True)
                 
-                # ✅ اضافه کردن file_name از OCR/QR به scraping
+                # add file_name from ocr/qr to scraping
                 if not df_scrap.empty:
                     print(f"   🔗 Matching file_names from OCR/QR to Scraping...")
                     
-                    # تابع normalize_url
+                    # normalize_url function
                     def normalize_url(url):
                         if not url or pd.isna(url):
                             return ""
