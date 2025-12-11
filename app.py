@@ -501,7 +501,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
                             record[key] = str(value)
                 
                     
-                    # ✅ مطمئن شو file_name از file_item گرفته میشه
+                    # make sure file_name is taken from file_item
                     if 'file_name' not in record or not record.get('file_name'):
                         record['file_name'] = file_item.get('file_name', 'Unknown')
 
@@ -519,11 +519,11 @@ def merge_all_data_sources(session_dir, pipeline_type):
             print(f"   Error reading mix_ocr_qr.json: {e}")
             return None
         
-        # 2. خواندن gemini_scrap_output.json (اختیاری)
+        # 2. read gemini_scrap_output.json (optional)
         if not scrap_json.exists():
             print(f"   {scrap_json.name} not found - using only OCR/QR data")
             
-            # فقط mix_ocr_qr
+            # just mix_ocr_qr
             df_mix = df_mix.fillna("")
             for col in df_mix.columns:
                 if df_mix[col].dtype == 'object':
@@ -541,8 +541,8 @@ def merge_all_data_sources(session_dir, pipeline_type):
             
             return output_path
         
-        # ========== 3. خواندن و پردازش scraping data ==========
-        # ========== 3. خواندن و پردازش scraping data ==========
+        # 3. read and process scraping data
+        
         print(f"   Reading {scrap_json.name}...")
         try:
             with open(scrap_json, 'r', encoding='utf-8') as f:
