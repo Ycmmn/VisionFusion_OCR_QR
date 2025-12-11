@@ -191,7 +191,7 @@ def _col_index_to_letter(col_index):
     return result
 
 def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
-    """پیدا کردن یا ساخت جدول در Drive"""
+    # find or create table in drive
     try:
         table_name = "Exhibition_Data_Table"
         query = f"name='{table_name}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false"
