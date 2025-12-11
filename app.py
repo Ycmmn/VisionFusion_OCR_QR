@@ -321,7 +321,7 @@ def add_company_id_to_dataframe(df, log_details=True):
                 else:
                     company_name_en = row[col]
 
-        # تولید Company ID
+        # generate Company ID
         company_id = generate_company_id(company_name_fa, company_name_en)
 
 
@@ -329,7 +329,7 @@ def add_company_id_to_dataframe(df, log_details=True):
         
         company_ids.append(company_id)
         
-        # ردیابی تکراری‌ها
+        # track duplicates
         if company_id not in id_mapping:
             id_mapping[company_id] = []
         id_mapping[company_id].append(idx + 1)
