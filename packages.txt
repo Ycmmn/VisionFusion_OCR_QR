@@ -1,4 +1,0 @@
-poppler-utils
-libzbar0
-zbar-tools
-libgl1-mesa-glx

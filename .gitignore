@@ -1,7 +1,0 @@
-# .gitignore
-.streamlit/secrets.toml
-*.json
-__pycache__/
-*.pyc
-quota.json
-session_*/
