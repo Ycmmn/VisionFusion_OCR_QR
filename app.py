@@ -1017,7 +1017,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
 
         
-        # ========== 🧹 حذف ستون‌های اضافی ==========
+        #  remove extra columns
         print(f"\n🧹 Removing unnecessary columns...")
 
         columns_to_remove = []
@@ -1028,12 +1028,12 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 columns_to_remove.append(col)
                 print(f"   ❌ Removing: {col}")
 
-        # 2. حذف Logo
+        # 2. remove Logo
         if 'Logo' in df.columns:
             columns_to_remove.append('Logo')
             print(f"   ❌ Removing: Logo")
 
-        # حذف ستون‌ها
+        # remove columns
         if columns_to_remove:
             df.drop(columns=columns_to_remove, inplace=True)
             print(f"   ✅ Removed {len(columns_to_remove)} columns")
