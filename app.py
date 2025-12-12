@@ -1074,7 +1074,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             
             text = str(person_col_value).strip()
             
-            # تلاش برای جدا کردن با separator های مختلف
+            # try to separate with different separators
             separators = [' - ', ' – ', ' | ', ' / ', '\n', '،', ',']
             
             name = ""
@@ -1088,27 +1088,27 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                         position = parts[1].strip()
                         break
             
-            # اگر جدا نشد، کل متن رو به عنوان اسم در نظر بگیر
+            # if not separated, consider entire text as name
             if not name:
                 name = text
             
-            # ترجمه به فارسی
+            
             name_fa = translate_to_persian(name)
             position_fa = translate_to_persian(position)
             
             return name_fa, position_fa
 
-        # پیدا کردن ستون‌های PersonX
+        # find personx columns
         person_columns = [col for col in df.columns if col.lower().startswith('person')]
 
         if person_columns:
             print(f"   📋 Found {len(person_columns)} Person columns: {person_columns}")
             
-            # لیست اسامی و پوزیشن‌ها
+            # list of names and positions
             names_list = []
             positions_list = []
             
-            # پردازش هر سطر
+            # process each row
             for idx in df.index:
                 row_names = []
                 row_positions = []
