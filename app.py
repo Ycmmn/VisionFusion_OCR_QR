@@ -862,14 +862,14 @@ def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
             lang = detect_language(cell_value)
             
             if lang != 'en':
-                # فقط متن‌های انگلیسی رو پردازش می‌کنیم
+                
                 continue
             
-            # ترجمه انگلیسی → فارسی
+            
             translated = translate_text(cell_value)
             
             if translated:
-                # ذخیره در ستون جدید
+                # save in new column
                 new_col = f"{col}FA" if not col.endswith('EN') else col.replace('EN', 'FA')
                 df.at[idx, new_col] = translated
                 translated_count += 1
