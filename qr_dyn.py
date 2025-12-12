@@ -68,7 +68,7 @@ except ImportError:
     HAS_ZXING = False
     print("pyzxing not available")
 
-# ----------------------------------------------------------
+
 def clean_url(url):
     """clean url and remove extra parts"""
     if not url or not isinstance(url, str):
@@ -470,3 +470,134 @@ def is_domain_alive(url, timeout=5):
         return False
 
 
+
+def clean_qr_json(input_file, output_file):
+    """clean and validate urls"""
+    print("\ncleaning and validating extracted qr urls...")
+    
+    if not Path(input_file).exists():
+        print(f"    input file not found: {input_file}")
+        return
+    
+    data = json.loads(Path(input_file).read_text(encoding="utf-8"))
+    final_results = []
+    
+    for entry in data:
+        if "error" in entry:
+            final_results.append(entry)
+            continue
+            
+        urls = extract_urls(entry)
+        valid_urls = []
+        
+        if urls:
+            print(f"    validating {len(urls)} url(s) from {entry.get('file_name')}...")
+            with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+                futures = {executor.submit(is_domain_alive, u): u for u in urls}
+                for f in concurrent.futures.as_completed(futures):
+                    u = futures[f]
+                    try:
+                        if f.result():
+                            valid_urls.append(u)
+                            print(f"       {u}")
+                        else:
+                            print(f"       {u} (domain unreachable)")
+                    except Exception as e:
+                        print(f"        {u} (check failed: {e})")
+        
+        result_pages = []
+        for item in entry.get("result", []):
+            page = item.get("page", 1)
+            link = item.get("qr_link")
+            
+            if link and link in valid_urls:
+                result_pages.append({"page": page, "qr_link": link})
+            else:
+                result_pages.append({"page": page, "qr_link": None})
+        
+        final_results.append({
+            "file_id": entry.get("file_id"),
+            "file_name": entry.get("file_name"),
+            "result": result_pages
+        })
+    
+    save_json(output_file, final_results)
+    print(f"\n cleaned results saved -> {output_file}")
+
+
+def main():
+    """main function"""
+    print("=" * 60)
+    print("starting superqr v6.1 processing")
+    print("=" * 60)
+    
+    results = []
+    files = sorted([
+        f for f in Path(IMAGES_FOLDER).rglob("*")
+        if f.suffix.lower() in [".jpg", ".jpeg", ".png", ".pdf"]
+        and "_pdf_pages" not in str(f)
+        and "_debug" not in str(f)
+    ])
+    
+    if not files:
+        print(f"\n  no image/pdf files found in {IMAGES_FOLDER}")
+        print("   supported formats: .jpg, .jpeg, .png, .pdf")
+        return
+    
+    print(f"\n found {len(files)} file(s) to process\n")
+
+    for idx, f in enumerate(files, 1):
+        print("=" * 60)
+        print(f" [{idx}/{len(files)}] processing: {f.name}")
+        print("=" * 60)
+        start_time = time.time()
+        
+        try:
+            if f.suffix.lower() == ".pdf":
+                res = process_pdf_for_qr(f)
+            else:
+                res = process_image_file(f)
+            
+            results.append(res)
+            elapsed = time.time() - start_time
+            print(f"\n completed {f.name} in {elapsed:.1f}s")
+            
+        except Exception as e:
+            print(f"\n error processing {f.name}: {e}")
+            import traceback
+            if DEBUG_MODE:
+                traceback.print_exc()
+            results.append({
+                "file_id": f.stem,
+                "file_name": f.name,
+                "error": str(e),
+                "result": []
+            })
+    
+    # save raw results
+    print("\n" + "=" * 60)
+    save_json(OUTPUT_JSON_RAW, results)
+    print(f" raw results saved {OUTPUT_JSON_RAW}")
+    
+    # clean and validate
+    clean_qr_json(OUTPUT_JSON_RAW, OUTPUT_JSON_CLEAN)
+    
+    print("\n" + "=" * 60)
+    print(f" processing completed!")
+    print(f" final output {OUTPUT_JSON_CLEAN}")
+    print("=" * 60)
+    
+    # results summary
+    total_qr = sum(
+        1 for entry in results 
+        for item in entry.get("result", []) 
+        if item.get("qr_link")
+    )
+    print(f"\n summary: found {total_qr} qr code(s) in {len(files)} file(s)")
+    
+    if DEBUG_MODE:
+        print(f" debug images saved in: {DEBUG_DIR}")
+
+
+if __name__ == "__main__":
+    main()
