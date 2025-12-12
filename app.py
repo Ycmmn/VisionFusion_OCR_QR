@@ -764,11 +764,12 @@ def merge_all_data_sources(session_dir, pipeline_type):
 
 
 
-def translate_all_columns(df, api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70"):
+def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
     """
-    ترجمه تمام ستون‌ها در DataFrame
-    - فقط انگلیسی → فارسی
+    translate all columns in dataframe
+    - only english → persian
     """
+    
     import google.generativeai as genai
     import time
     
