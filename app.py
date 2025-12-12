@@ -931,17 +931,17 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             
             for idx, col in enumerate(qc_columns_order, start=start_pos):
                 if col in qc_metadata and col not in df.columns:
-                    # ✅ تبدیل به string برای جلوگیری از تبدیل به عدد
+                    # convert to string to prevent conversion to number
                     value = str(qc_metadata[col])
                     
-                    # ✅ اضافه کردن apostrophe برای تاریخ و ساعت (مثل شماره تلفن)
+                    # add apostrophe for date and time (like phone number)
                     if col in ['QC_Date', 'QC_Time', 'QC_Timestamp']:
                         value = f"'{value}"
                     
                     df.insert(idx, col, value)
                     print(f"   ✅ {col}: {qc_metadata[col]}")
         
-        # ========== 📋 اضافه کردن Source ==========
+        # add Source  
         print(f"\n📋 Detecting Source (Image/PDF/Excel/Web)...")
         
         if 'file_name' in df.columns and 'Source' not in df.columns:
