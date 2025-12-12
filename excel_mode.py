@@ -22,9 +22,8 @@ if sys.platform == 'win32':
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
 
-# =========================================================
+
 # gemini sdk import
-# =========================================================
 try:
     import google.genai as genai
     from google.genai import types
@@ -34,9 +33,8 @@ except Exception as e:
     import sys
     sys.exit(1)
 
-# =========================================================
+
 # dynamic paths
-# =========================================================
 SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
 SOURCE_FOLDER = Path(os.getenv("SOURCE_FOLDER", SESSION_DIR / "uploads"))
 RENAMED_DIR = Path(os.getenv("RENAMED_DIR", SESSION_DIR / "renamed"))
@@ -68,11 +66,10 @@ OUTPUT_EXCEL = Path(os.getenv(
 TEMP_EXCEL = Path(os.getenv("TEMP_EXCEL", SESSION_DIR / "temp_output.xlsx"))
 OUTPUT_JSON = Path(os.getenv("OUTPUT_JSON", SESSION_DIR / "scraped_data.json"))
 
-# =========================================================
-# settings
-# =========================================================
+
+# ^^^^^^^^^^^^^^^^^^^^^ settings
 # api key - single key only
-GOOGLE_API_KEY = "AIzaSyAvWIK68YWRguI3FSW44ACQqa8IAdbxJWI"
+GOOGLE_API_KEY = "AIza***WI"
 
 MODEL_NAME = "gemini-2.0-flash-exp"
 THREAD_COUNT = 5
@@ -127,9 +124,8 @@ print(f"input: {INPUT_EXCEL}")
 print(f"output: {OUTPUT_EXCEL}")
 print(f"{'='*70}\n")
 
-# =========================================================
+
 # helper functions
-# =========================================================
 def normalize_url(url):
     """url normalization"""
     if not url or pd.isna(url) or str(url).lower() in ['nan', 'none', '']:
@@ -174,9 +170,9 @@ def are_values_same(v1, v2):
         return False
     return str(v1).strip().lower() == str(v2).strip().lower()
 
-# =========================================================
+
+
 # web scraping with smart ssl
-# =========================================================
 def fetch(url):
     """fetch page content with smart ssl management"""
     verify_ssl = not is_iranian_domain(url)
@@ -275,9 +271,8 @@ def crawl_site(root):
     print(f"      total: {len(combined)} chars from {len(texts)} pages")
     return (combined, "")
 
-# =========================================================
+
 # gemini extraction & translation
-# =========================================================
 PROMPT_EXTRACT = """
 you are a bilingual (persian-english) company information extractor.
 extract the following json fields from the provided website text.
@@ -353,9 +348,8 @@ def translate_fields(data):
     
     return data
 
-# =========================================================
+
 # smart merge with cleanup
-# =========================================================
 def clean_duplicate_columns(df):
     """remove and merge duplicate columns"""
     print("\ncleaning duplicate columns...")
@@ -477,9 +471,8 @@ def smart_merge(original_df, scraped_data):
     print(f"    merged: {len(result_df)} rows x {len(result_df.columns)} columns")
     return result_df
 
-# =========================================================
+
 # worker thread
-# =========================================================
 def worker(q, results):
     while True:
         try:
@@ -539,9 +532,8 @@ def worker(q, results):
         q.task_done()
         time.sleep(random.uniform(*SLEEP_BETWEEN))
 
-# =========================================================
+
 # main
-# =========================================================
 def main():
     print("loading excel file...")
     if not INPUT_EXCEL.exists():
