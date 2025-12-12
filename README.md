@@ -13,23 +13,17 @@
 ```
 dynamic_ocr_qr/
 │
-├── app/
-│   ├── __init__.py
-│   ├── ocr_dyn.py          # OCR + Gemini JSON extractor (AI-based text & info extraction)
-│   ├── qr_dyn.py           # Advanced QR detection & cleaning (multi-engine)
-│   ├── mix_ocr_qr.py       # Merge OCR and QR data dynamically into unified JSON
-│   ├── scrap.py            # Intelligent web scraper + Gemini web analyzer + translation
-│   ├── excel_mode.py       # Excel-based enrichment, merging & deduplication
-│   ├── final_mix.py        # Final integration: JSON + Excel into clean master dataset
-│
-├── streamlit_app/
-│   └── app2.py             # Streamlit-based web interface for interactive use
-│
-│
-├── requirements.txt        # All Python dependencies
-├── .gitignore              # Ignore caches, outputs, and private keys
-├── LICENSE                 # Proprietary License
-└── README.md               # (This file)
+├── ocr_dyn.py          # OCR + Gemini JSON extractor (AI-based text & info extraction)
+├── qr_dyn.py           # Advanced QR detection & cleaning (multi-engine)
+├── mix_ocr_qr.py       # Merge OCR and QR data dynamically into unified JSON
+├── scrap.py            # Intelligent web scraper + Gemini web analyzer + translation
+├── excel_mode.py       # Excel-based enrichment, merging & deduplication
+├── final_mix.py        # Final integration: JSON + Excel into clean master dataset
+├── app.py              # Streamlit-based web interface for interactive use
+├── script2.py          # It makes final excel clearly         
+├── requirements.txt    # All Python dependencies
+├── LICENSE             # Proprietary License
+└── README.md           # (This file)
 ```
 
 ---
