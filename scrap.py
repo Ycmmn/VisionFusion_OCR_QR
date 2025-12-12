@@ -387,3 +387,278 @@ def clean_text(html: str) -> str:
     return re.sub(r"\s+", " ", text).strip()
 
 
+
+def crawl_site(root: str, max_depth=MAX_DEPTH, max_pages=MAX_PAGES_PER_SITE) -> tuple[str, str]:
+    print(f"\nstarting crawl: {root}")
+    seen = set()
+    q = [(root, 0)]
+    texts = []
+    errors = []
+    
+    while q and len(seen) < max_pages:
+        url, d = q.pop(0)
+        if url in seen or d > max_depth: continue
+        seen.add(url)
+        
+        html, error = fetch(url)
+        
+        if error:
+            errors.append(f"{url}: {error}")
+            continue
+            
+        txt = clean_text(html)
+        if txt:
+            texts.append(txt[:40000])
+            print(f"  extracted {len(txt)} chars from {url}")
+        else:
+            errors.append(f"{url}: EMPTY_CONTENT")
+        
+        if html:
+            soup = BeautifulSoup(html, "html.parser")
+            for a in soup.find_all("a", href=True):
+                nxt = urljoin(root, a["href"])
+                if nxt.startswith(root) and nxt not in seen and len(seen) < max_pages:
+                    q.append((nxt, d+1))
+        
+        time.sleep(random.uniform(*SLEEP_BETWEEN))
+    
+    combined = "\n".join(texts)[:180000]
+    
+    if not combined:
+        error_summary = "; ".join(errors[:3])
+        print(f"  no content extracted from {root}")
+        return ("", error_summary or "NO_CONTENT")
+    
+    print(f"  total extracted: {len(combined)} chars from {len(texts)} pages")
+    return (combined, "")
+
+
+# gemini + translation
+def gemini_json(prompt: str, schema: dict):
+    schema = types.Schema(type=types.Type.OBJECT, properties=schema, required=[])
+    for i in range(MAX_RETRIES_GEMINI):
+        try:
+            resp = client.models.generate_content(
+                model=MODEL_NAME,
+                contents=[types.Part(text=prompt)],
+                config=types.GenerateContentConfig(
+                    temperature=0.1,
+                    response_mime_type="application/json",
+                    response_schema=schema
+                )
+            )
+            return json.loads(resp.text)
+        except Exception as e:
+            print(f"gemini error (attempt {i+1}): {str(e)[:100]}")
+            if i == MAX_RETRIES_GEMINI-1: 
+                return {}
+            time.sleep(1.5*(i+1))
+    return {}
+
+def extract_with_gemini(text: str):
+    fields = "\n".join([f"- {f}" for f in FIELDS])
+    prompt = PROMPT_EXTRACT.format(fields=fields, text=text)
+    schema = {f: types.Schema(type=types.Type.STRING, nullable=True) for f in FIELDS}
+    data = gemini_json(prompt, schema)
+    return {f: (data.get(f) or "") for f in FIELDS}
+
+def translate_fields(data):
+    SUMMARIZE_FIELDS = ["Description", "Applications", "History"]
+    
+    to_translate = {}
+    
+    for en, fa_col in TRANSLATABLE_FIELDS:
+        if fa_col not in data:
+            data[fa_col] = ""
+        
+        val = data.get(en)
+        if val and str(val).strip():
+            if en in SUMMARIZE_FIELDS and len(str(val)) > 500:
+                print(f"      summarizing {en} ({len(str(val))} chars)...")
+                
+                if en == "History":
+                    prompt = f"""summarize this company history in 2-3 concise sentences (max 150 words), then translate to formal persian.
+
+english text:
+{val}
+
+format:
+english summary: [your summary]
+persian translation: [ترجمه فارسی]"""
+                
+                elif en == "Description":
+                    prompt = f"""summarize this company description in 2-3 concise sentences (max 150 words), then translate to formal persian.
+
+english text:
+{val}
+
+format:
+english summary: [your summary]
+persian translation: [ترجمه فارسی]"""
+                
+                elif en == "Applications":
+                    prompt = f"""list main applications in bullet points (max 100 words), then translate to formal persian.
+
+english text:
+{val}
+
+format:
+english summary: [your summary]
+persian translation: [ترجمه فارسی]"""
+                
+                try:
+                    resp = client.models.generate_content(
+                        model=MODEL_NAME,
+                        contents=[types.Part(text=prompt)],
+                        config=types.GenerateContentConfig(temperature=0.1)
+                    )
+                    result = resp.text.strip()
+                    
+                    if "Persian Translation:" in result:
+                        fa_text = result.split("Persian Translation:")[1].strip()
+                        data[fa_col] = fa_text
+                        print(f"      {en} summarized & translated")
+                    else:
+                        data[fa_col] = result
+                        print(f"      {en} processed")
+                    
+                    time.sleep(1.5)
+                    
+                except Exception as e:
+                    print(f"      error summarizing {en}: {str(e)[:100]}")
+                    data[fa_col] = ""
+            else:
+                to_translate[en] = str(val)
+    
+    if to_translate:
+        prompt = PROMPT_TRANSLATE_EN2FA.format(json_chunk=json.dumps(to_translate, ensure_ascii=False))
+        schema = {k: types.Schema(type=types.Type.STRING, nullable=True) for k in to_translate.keys()}
+        tr = gemini_json(prompt, schema)
+        
+        for en, fa_col in TRANSLATABLE_FIELDS:
+            if en in tr and tr[en]:
+                data[fa_col] = tr[en]
+    
+    return data
+
+
+# worker & main (fixed)
+def worker(q: Queue, results: list):
+    while True:
+        try:
+            root = q.get_nowait()
+        except:
+            break
+        
+        try:
+            print(f"\n{'='*60}")
+            print(f"processing: {root}")
+            print(f"{'='*60}")
+            
+            text, error = crawl_site(root)
+            
+            if error or not text:
+                data = {
+                    "url": root, 
+                    "error": error or "NO_CONTENT",
+                    "status": "FAILED"
+                }
+                print(f"failed: {root} - {error or 'NO_CONTENT'}")
+            else:
+                print(f"analyzing with gemini: {root}")
+                data = extract_with_gemini(text)
+                data = translate_fields(data)
+                data["url"] = root
+                data["status"] = "SUCCESS"
+                data["error"] = ""
+                print(f"success: {root}")
+                
+        except Exception as e:
+            data = {
+                "url": root, 
+                "error": f"EXCEPTION: {str(e)[:100]}",
+                "status": "EXCEPTION"
+            }
+            print(f"exception for {root}: {str(e)[:100]}")
+        
+        with lock:
+            results.append(data)
+            try:
+                Path(OUTPUT_JSON).write_text(
+                    json.dumps(results, ensure_ascii=False, indent=2), 
+                    encoding="utf-8"
+                )
+            except Exception as e:
+                print(f"failed to save json: {e}")
+        
+        q.task_done()
+        time.sleep(random.uniform(*SLEEP_BETWEEN))
+
+def main():
+    print("\n" + "="*60)
+    print("starting web scraping process")
+    print("="*60 + "\n")
+    
+    roots = extract_urls_from_mix(RAW_INPUT, CLEAN_URLS)
+    if not roots:
+        print("no urls found.")
+        return
+
+    results = []
+    q = Queue()
+    for r in roots: q.put(r)
+
+    threads = []
+    for _ in range(min(THREAD_COUNT, len(roots))):
+        t = threading.Thread(target=worker, args=(q, results), daemon=True)
+        t.start()
+        threads.append(t)
+    
+    for t in threads: t.join()
+
+    print("\n" + "="*60)
+    print("creating excel report")
+    print("="*60 + "\n")
+
+    df = pd.DataFrame(results)
+    
+    ordered_cols = ["url", "status", "error"]
+    
+    for field in FIELDS:
+        ordered_cols.append(field)
+        for en_field, fa_field in TRANSLATABLE_FIELDS:
+            if en_field == field:
+                ordered_cols.append(fa_field)
+                break
+    
+    for en_field, fa_field in TRANSLATABLE_FIELDS:
+        if en_field not in FIELDS and en_field not in ordered_cols:
+            ordered_cols.append(en_field)
+            ordered_cols.append(fa_field)
+    
+    for col in ordered_cols:
+        if col not in df.columns:
+            df[col] = ""
+    
+    df = df[ordered_cols]
+    
+    try:
+        tmp = TEMP_EXCEL
+        df.to_excel(tmp, index=False)
+        shutil.move(tmp, OUTPUT_EXCEL)
+        print(f"excel saved: {OUTPUT_EXCEL}")
+    except Exception as e:
+        print(f"failed to save excel: {e}")
+    
+    success = len([r for r in results if r.get("status") == "SUCCESS"])
+    failed = len([r for r in results if r.get("status") != "SUCCESS"])
+    
+    print("\n" + "="*60)
+    print(f"success: {success}/{len(results)}")
+    print(f"failed: {failed}/{len(results)}")
+    print("="*60 + "\n")
+
+if __name__ == "__main__":
+    main()
+
+    
