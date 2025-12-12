@@ -1,4 +1,4 @@
-🌟 If you like this project, give it a ⭐ on GitHub — it helps more developers discover VisionFusion!
+ If you like this project, give it a ⭐ on GitHub — it helps more developers discover VisionFusion!
 
 # 🧠 Dynamic OCR + QR Intelligence Suite
 
