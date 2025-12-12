@@ -2325,11 +2325,8 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-
-# Sidebar
-# =========================================================
-
-# ========== quick link to google sheets ==========
+# Sidebar^^^^^^^^^^^^^^^^^^^^^^^^^^^
+# quick link to google sheets 
 if 'sheet_url' in st.session_state:
     st.sidebar.markdown(f"""
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
@@ -2366,8 +2363,7 @@ elif Path("google_sheet_link.txt").exists():
             """, unsafe_allow_html=True)
     except:
         pass
-# ========== end quick link ==========
-
+# end quick link 
 quota = load_quota()
 st.sidebar.markdown(f"""
 <div class="quota-card">
@@ -2408,9 +2404,8 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("### 📦 batch processing")
 st.sidebar.info("📸 images: 30\n📄 pdf: 10\n📊 excel: 5")
 
-# =========================================================
-# 📂 file upload with limits
-# =========================================================
+
+#  file upload with limits
 MAX_IMAGES = 30
 MAX_PDF = 10
 MAX_EXCEL = 5
@@ -2424,9 +2419,9 @@ uploaded_files = st.file_uploader(
     help=f"max: {MAX_IMAGES} images, {MAX_PDF} pdf, {MAX_EXCEL} excel | per file: {MAX_FILE_SIZE_MB}mb | total: {MAX_TOTAL_SIZE_MB}mb"
 )
 
-# ✅ check limits
+#  check limits
 if uploaded_files:
-    # ============ check file sizes ============
+    #  check file sizes 
     valid_files = []
     total_size_mb = 0
     size_warnings = []
@@ -2465,7 +2460,7 @@ if uploaded_files:
     pdfs = [f for f in uploaded_files if f.type == 'application/pdf']
     excels = [f for f in uploaded_files if 'spreadsheet' in f.type or f.name.endswith(('.xlsx', '.xls'))]
     
-    # ============ check file counts ============
+    #  check file counts 
     warnings = []
     
     if len(images) > MAX_IMAGES:
@@ -2508,9 +2503,8 @@ if uploaded_files:
     # recombine allowed files
     uploaded_files = images + pdfs + excels
 
-# =========================================================
-# ✨ quality control section
-# =========================================================
+
+# quality control section
 st.markdown("## 👤 quality control supervisor information")
 st.markdown("*this information will be recorded as quality control metadata in the output*")
 
@@ -2759,7 +2753,7 @@ if uploaded_files:
                 
             
                 
-                # ========== google sheets upload ==========
+                # google sheets upload 
                 st.markdown("---")
                 st.markdown("## save data to google drive")
                 st.info("all data (ocr/qr + web scraping) will be saved together")
@@ -2772,7 +2766,7 @@ if uploaded_files:
                     if not merged_excel or not merged_excel.exists():
                         sheets_status.warning("no data found for upload")
                     else:
-                        # 🔹 cleaning only for ocr/qr mode
+                        # cleaning only for ocr/qr mode
                         if pipeline_type == 'ocr_qr':
                             sheets_status.info("🧹 cleaning data...")
                             
@@ -2842,8 +2836,8 @@ if uploaded_files:
                     import traceback
                     traceback.print_exc()
 
-                # ========== end google sheets ==========
-                # ========== end google sheets ==========
+                
+                #end google sheets^^^^^^^^^^^^^^^^^^^^^^^^^
 
             st.markdown("---")
 
@@ -2992,4 +2986,80 @@ else:
     with col1:
         st.markdown("""
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                    padding
+                    padding: 2rem; border-radius: 15px; color: white; height: 100%;">
+            <h3>📊 excel mode</h3>
+            <ul style="line-height: 2;">
+                <li>excel file with url/website</li>
+                <li>smart web scraping</li>
+                <li>complete company information extraction</li>
+                <li>output: enriched excel</li>
+                <li>📦 batch: 1 row</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+    with col2:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
+                    padding: 2rem; border-radius: 15px; color: white; height: 100%;">
+            <h3>🖼 ocr/qr mode</h3>
+            <ul style="line-height: 2;">
+                <li>images (jpg, png) or pdf</li>
+                <li>ocr extraction + qr detection</li>
+                <li>web scraping from urls</li>
+                <li>output: unified excel</li>
+                <li>📦 batch: images(5) | pdf(4)</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("---")
+    st.markdown("### ✨ key features")
+    features = [
+        ("🎯", "automatic detection", "excel or ocr/qr intelligently"),
+        ("🏢", "exhibition field", "editable exhibition name"),
+        ("📊", "source tracking", "source detection (image/pdf/excel)"),
+        ("🤖", "smart position", "50+ persian/english departments"),
+        ("🔋", "quota management", "smart api management (240/day)"),
+        ("⚡️", "fast mode", "fast processing with optimized logs"),
+        ("🔒", "rate limit", "4 seconds (safe - 15 rpm)"),
+        ("📦", "batch processing", "images(5) | pdf(4) | excel(1)"),
+        ("👤", "quality control", "record name and role of quality supervisor"),
+        ("☁️", "google sheets", "automatic save to drive")
+    ]
+    cols = st.columns(3)
+    for idx, (icon, title, desc) in enumerate(features):
+        with cols[idx % 3]:
+            st.markdown(f"""
+            <div style="text-align: center; padding: 1rem; background: white; 
+                        border-radius: 10px; margin: 0.5rem 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <div style="font-size: 2rem;">{icon}</div>
+                <h4 style="margin: 0.5rem 0; color: #667eea;">{title}</h4>
+                <p style="margin: 0; font-size: 0.85rem; color: #666;">{desc}</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+st.markdown("---")
+st.markdown("""
+<div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            border-radius: 15px; color: white; margin-top: 2rem;">
+    <h4>🚀 smart exhibition pipeline + google sheets</h4>
+    <p style="margin: 0.5rem 0;">
+        ⚡️ rate limiting: 4s (safe) | 🔒 api limit: 15 rpm, 240/day
+    </p>
+    <p style="margin: 0.5rem 0;">
+        📌 exhibition + source tracking | 🤖 smart position detection
+    </p>
+    <p style="margin: 0.5rem 0;">
+        📦 batch processing: images(5) | pdf(4) | excel(1)
+    </p>
+    <p style="margin: 0.5rem 0;">
+        👤 quality control tracking: name, role, date, time
+    </p>
+    <p style="margin: 0.5rem 0;">
+        ☁️ google sheets: automatic data save to drive
+    </p>
+    <p style="margin: 1rem 0 0 0; opacity: 0.8; font-size: 0.9rem;">
+        made with ❤️ using streamlit & gemini ai
+    </p>
+</div>
+""", unsafe_allow_html=True)
