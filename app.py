@@ -43,7 +43,7 @@ st.set_page_config(
 
 
  # ---------------------------Permanent Google Sheets Link (Always Visible)
-FIXED_SHEET_URL = "https://docs.google.com/spreadsheets/d/1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE/edit"
+FIXED_SHEET_URL = "https://docs.google.com/spreadsheets/d/1Oe***uE/edit"
 
 st.markdown(f"""
 <div style="
@@ -894,7 +894,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         print(f"\n☁️ Starting data save to Google Drive...")
 
         # use existing google sheet instead of creating a new one
-        file_id = "1OeQbiqvo***27yuE"
+        file_id = "1OeQ***27yuE"
         file_url = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
         exists = True
         print(f"    Using existing Google Sheet: {file_url}")
