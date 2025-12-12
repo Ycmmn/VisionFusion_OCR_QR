@@ -884,13 +884,8 @@ def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
 
 
 
-
-
-
-
-
 def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None, qc_metadata=None):
-    """Read Excel data and append to Google Sheets (variable row count)"""
+    """read excel data and append to google sheets (variable row count)"""
     try:
         drive_service, sheets_service = get_google_services()
         if not drive_service or not sheets_service:
@@ -898,11 +893,11 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         print(f"\n☁️ Starting data save to Google Drive...")
 
-        # Use existing Google Sheet instead of creating a new one
-        file_id = "1OeQbiq***h27yuE"
+        # use existing google sheet instead of creating a new one
+        file_id = "1OeQbiqvo***27yuE"
         file_url = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
         exists = True
-        print(f"   ✅ Using existing Google Sheet: {file_url}")
+        print(f"    Using existing Google Sheet: {file_url}")
 
         if not file_id:
             return False, "Error creating table", None, 0
@@ -913,14 +908,13 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             return False, "Excel file is empty", None, 0
         
         print(f"   ✅ {len(df)} rows × {len(df.columns)} columns read")
-        # add Exhibition Name
+        #  adding exhibition name 
         if exhibition_name:
             print(f"\n📝 Adding Exhibition to Google Sheets: {exhibition_name}")
             if 'Exhibition' not in df.columns:
                 df.insert(0, 'Exhibition', exhibition_name)
         
-        #  add QC Metadata
-       
+        # adding qc metadata 
         if qc_metadata:
             print(f"\n👤 Adding QC Metadata to Google Sheets...")
             
@@ -931,17 +925,17 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             
             for idx, col in enumerate(qc_columns_order, start=start_pos):
                 if col in qc_metadata and col not in df.columns:
-                    # convert to string to prevent conversion to number
+                    # ✅ convert to string to prevent conversion to number
                     value = str(qc_metadata[col])
                     
-                    # add apostrophe for date and time (like phone number)
+                    # ✅ add apostrophe for date and time (like phone number)
                     if col in ['QC_Date', 'QC_Time', 'QC_Timestamp']:
                         value = f"'{value}"
                     
                     df.insert(idx, col, value)
                     print(f"   ✅ {col}: {qc_metadata[col]}")
         
-        # add Source  
+        # ========== 📋 adding source ==========
         print(f"\n📋 Detecting Source (Image/PDF/Excel/Web)...")
         
         if 'file_name' in df.columns and 'Source' not in df.columns:
@@ -976,7 +970,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
 
 
-        # convert date and time to text format
+        # ========== 🕐 convert date and time to text format ==========
         print(f"\n🕐 Converting date/time columns to text format...")
         
         date_time_columns = ['QC_Date', 'QC_Time', 'QC_Timestamp']
@@ -994,14 +988,14 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         print(f"\n   📊 Final DataFrame: {len(df)} rows × {len(df.columns)} columns")
 
         
-        # add: if doesn't have companyid, add it
+        # ✅ add: if doesn't have companyid, add it
         if 'CompanyID' not in df.columns:
             print(f"   ⚠️ CompanyID not found, generating...")
             df = add_company_id_to_dataframe(df, log_details=False)
         else:
             print(f"   ✅ CompanyID column exists")
         
-        # make sure companyid is first column
+        # ✅ make sure companyid is first column
         if 'CompanyID' in df.columns:
             cols = ['CompanyID'] + [col for col in df.columns if col != 'CompanyID']
             df = df[cols]
@@ -1009,7 +1003,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         
         
 
-        # Clean DataFrame from NaN and None values
+        # ✅ clean dataframe from nan and none values
         import numpy as np
 
         # replace empty values
@@ -1017,18 +1011,18 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
 
         
-        #  remove extra columns
+        # ========== 🧹 removing unnecessary columns ==========
         print(f"\n🧹 Removing unnecessary columns...")
 
         columns_to_remove = []
 
-        # 1. remove data_source & source_type
+        # 1. remove data_source and source_type
         for col in ['data_source', 'source_type', 'Data_Source', 'Source_Type']:
             if col in df.columns:
                 columns_to_remove.append(col)
                 print(f"   ❌ Removing: {col}")
 
-        # 2. remove Logo
+        # 2. remove logo
         if 'Logo' in df.columns:
             columns_to_remove.append('Logo')
             print(f"   ❌ Removing: Logo")
@@ -1038,15 +1032,15 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             df.drop(columns=columns_to_remove, inplace=True)
             print(f"   ✅ Removed {len(columns_to_remove)} columns")
 
-        #  extract Person/Position
+        # ========== 👤 extracting person/position ==========
         print(f"\n👤 Extracting Person & Position from PersonX columns...")
 
         import google.generativeai as genai
-        genai.configure(api_key="AIzaSy***NNPzB70")
+        genai.configure(api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
         model = genai.GenerativeModel('gemini-1.5-flash')
 
         def translate_to_persian(text):
-            # translate english to persian
+            """translate english to persian"""
             if not text or pd.isna(text) or str(text).strip() == '':
                 return ""
             
@@ -1057,7 +1051,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             has_persian = any(c in persian_chars for c in text)
             
             if has_persian:
-                return text  
+                return text  # already persian
             
             try:
                 prompt = f"Translate this English text to Persian. Only return the translation:\n\n{text}"
@@ -1068,7 +1062,10 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 return text
 
         def extract_person_position(person_col_value):
-            # extract name and position from personx column
+            """
+            extract name and position from personx column
+            example: "علی احمدی - مدیر فروش" → ("علی احمدی", "مدیر فروش")
+            """
             if not person_col_value or pd.isna(person_col_value) or str(person_col_value).strip() == '':
                 return "", ""
             
@@ -1092,7 +1089,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             if not name:
                 name = text
             
-            
+            # translate to persian
             name_fa = translate_to_persian(name)
             position_fa = translate_to_persian(position)
             
@@ -1136,7 +1133,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 df['Position'] = positions_list
                 print(f"   ✅ Added 'Position' column")
             
-            
+            # remove old personx columns
             df.drop(columns=person_columns, inplace=True)
             print(f"   ✅ Removed {len(person_columns)} PersonX columns")
             
@@ -1154,18 +1151,18 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         print(f"\n   ✅ Cleanup completed!")
 
 
-        # translate english position to persian 
+        # ========== 🌐 translate english positions to persian ==========
         print(f"\n🌐 Translating English Positions to Persian...")
 
         if 'Position' in df.columns:
             import google.generativeai as genai
             import time
             
-            genai.configure(api_key="AIzaSyDM***KNNPzB70")
+            genai.configure(api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
             model = genai.GenerativeModel('gemini-1.5-flash')
             
             def detect_language_position(text):
-                #detect language: fa or en
+                """detect language: fa or en"""
                 if not text or pd.isna(text) or str(text).strip() == '':
                     return None
                 
@@ -1176,7 +1173,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 return 'fa' if has_persian else 'en'
             
             def translate_position_to_persian(text):
-                #translate english to persian
+                """translate english to persian"""
                 if not text or pd.isna(text) or str(text).strip() == '':
                     return ""
                 
@@ -1199,40 +1196,40 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 if not position_value or pd.isna(position_value) or str(position_value).strip() == '':
                     continue
                 
-                
+                # detect language
                 lang = detect_language_position(position_value)
                 
                 if lang == 'en':
-                  
+                    # translate english → persian
                     position_fa = translate_position_to_persian(position_value)
                     
                     if position_fa:
-                        
+                        # combine: english | persian
                         df.at[idx, 'Position'] = f"{position_value} | {position_fa}"
                         translated_count += 1
                         
-                        if translated_count <= 3:  
+                        if translated_count <= 3:  # show 3 samples
                             print(f"      Row {idx+1}: {position_value} → {position_fa}")
                     
-                    time.sleep(1)  # Rate limiting
+                    time.sleep(1)  # rate limiting
             
             if translated_count > 0:
                 print(f"   ✅ Translated {translated_count} English positions")
             else:
                 print(f"   ℹ️ No English positions found")
 
-        
+        # ========== 🗑️ removing positionfa and positionen ==========
         print(f"\n🗑️ Removing PositionFA and PositionEN columns...")
         for col in ['PositionFA', 'PositionEN']:
             if col in df.columns:
                 df.drop(columns=[col], inplace=True)
                 print(f"   ❌ Removed: {col}")
 
-        
-        # unify address columns
+        #
+        # ========== 📍 consolidating address columns ==========
         print(f"\n📍 Consolidating Address columns...")
         
-       
+        # find all address columns
         address_columns = []
         for col in df.columns:
             col_lower = col.lower()
@@ -1243,15 +1240,15 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         if address_columns:
             print(f"   📋 Found {len(address_columns)} Address columns: {address_columns}")
             
-            
+            # language detection function
             def detect_language_address(text):
-                """تشخیص زبان آدرس: fa یا en"""
+                """detect address language: fa or en"""
                 if not text or pd.isna(text) or str(text).strip() == '':
                     return None
                 
                 text = str(text).strip()
                 
-               
+                # check persian characters
                 persian_chars = set('آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
                 has_persian = any(c in persian_chars for c in text)
                 
@@ -1260,9 +1257,9 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 else:
                     return 'en'
             
-            
+            # english to persian translation function
             def translate_address_to_persian(text):
-                
+                """translate english address to persian"""
                 if not text or pd.isna(text) or str(text).strip() == '':
                     return ""
                 
@@ -1298,10 +1295,10 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     unified_address_fa.append("")
                     continue
                 
-                
+                # remove duplicates
                 unique_addresses = list(dict.fromkeys(all_addresses))
                 
-               
+                # separate persian and english addresses
                 fa_addresses = []
                 en_addresses = []
                 
@@ -1313,35 +1310,35 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     elif lang == 'en':
                         en_addresses.append(addr)
                 
-                # ترکیب آدرس‌های انگلیسی
+                # combine english addresses
                 final_en = " | ".join(en_addresses) if en_addresses else ""
                 
-                # ترکیب آدرس‌های فارسی
+                # combine persian addresses
                 final_fa = " | ".join(fa_addresses) if fa_addresses else ""
                 
-                # اگه آدرس انگلیسی داریم ولی فارسی نداریم → ترجمه کن
+                # if we have english address but no persian → translate it
                 if final_en and not final_fa:
                     print(f"   Row {idx+1}: Translating EN→FA...")
                     final_fa = translate_address_to_persian(final_en)
-                    time.sleep(1)  # Rate limiting
+                    time.sleep(1)  # rate limiting
                 
                 unified_address_en.append(final_en)
                 unified_address_fa.append(final_fa)
             
-            # حذف ستون‌های قدیمی
+            # remove old columns
             for col in address_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
             
             print(f"   ✅ Removed {len(address_columns)} old Address columns")
             
-            # اضافه کردن ستون‌های جدید
+            # add new columns
             df['AddressEN'] = unified_address_en
             df['AddressFA'] = unified_address_fa
             
             print(f"   ✅ Added unified 'AddressEN' and 'AddressFA' columns")
             
-            # نمایش 3 نمونه
+            # show 3 samples
             print(f"\n   📊 Sample unified addresses:")
             for i in range(min(3, len(df))):
                 if df.at[i, 'AddressEN'] or df.at[i, 'AddressFA']:
@@ -1356,28 +1353,28 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         
         print(f"\n   ✅ Address consolidation completed!")
         
-        # ========== پایان یکپارچه‌سازی Address ==========
+        # ========== end of address consolidation ==========
 
 
 
 
 
-        # ========== 🧹 تمیز کردن فرمول‌ها و ارورها ==========
+        # ========== 🧹 cleaning formulas and errors ==========
         def remove_formulas_from_df(df):
-            """حذف فرمول‌ها، ارورها و تبدیل به مقادیر ساده"""
+            """remove formulas, errors and convert to simple values"""
             for col in df.columns:
                 if df[col].dtype == 'object':
-                    # حذف فرمول‌های Excel (که با = شروع میشن)
+                    # remove excel formulas (that start with =)
                     df[col] = df[col].apply(
                         lambda x: str(x)[1:] if isinstance(x, str) and x.startswith('=') else x
                     )
                     
-                    # حذف #ERROR!, #REF!, #VALUE!, #N/A, etc.
+                    # remove #error!, #ref!, #value!, #n/a, etc.
                     df[col] = df[col].apply(
                         lambda x: "" if isinstance(x, str) and x.startswith('#') else x
                     )
                     
-                    # تبدیل اعداد فارسی به انگلیسی
+                    # convert persian digits to english
                     persian_digits = '۰۱۲۳۴۵۶۷۸۹'
                     english_digits = '0123456789'
                     trans_table = str.maketrans(persian_digits, english_digits)
@@ -1390,14 +1387,14 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         df = remove_formulas_from_df(df)
         print(f"   🧹 Cleaned formulas and errors from {len(df.columns)} columns")
         # =====================================================
-        # ========== 📞 تبدیل شماره تلفن‌ها به String ==========
+        # ========== 📞 convert phone numbers to string ==========
         phone_columns = ['phones', 'phones2', 'phones3', 'phones4', 'phones5',
                         'Phone1', 'Phone2', 'Phone3', 'Phone4', 'Phone5',
                         'Fax', 'Fax2', 'WhatsApp', 'Telegram']
         
         for col in phone_columns:
             if col in df.columns:
-                # تبدیل عدد به string با apostrophe در اول (برای Google Sheets)
+                # convert number to string with apostrophe at start (for google sheets)
                 df[col] = df[col].apply(
                     lambda x: f"'{str(x)}" if x and str(x).strip() not in ['', 'nan', 'None'] else ""
                 )
@@ -1406,7 +1403,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         #
         # ====================================================
-        # ========== 📠 تبدیل FAX ها به String (رفع #ERROR!) ==========
+        # ========== 📠 convert fax to string (fix #error!) ==========
         print(f"\n📠 Converting FAX columns to text format...")
 
         fax_columns = []
@@ -1416,7 +1413,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 fax_columns.append(col)
 
         for col in fax_columns:
-            # تبدیل به string با apostrophe برای جلوگیری از #ERROR! در Google Sheets
+            # convert to string with apostrophe to prevent #error! in google sheets
             df[col] = df[col].apply(
                 lambda x: f"'{str(x)}" if x and str(x).strip() not in ['', 'nan', 'None'] else ""
             )
@@ -1426,7 +1423,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         # ====================================================
 
-        # ========== 🧹 حذف داده‌های تکراری در هر سطر (3+ بار تکرار در یک ROW) ==========
+        # ========== 🧹 removing duplicate data in each row (3+ repetitions in one row) ==========
         print(f"\n🧹 Removing duplicate values within each row (3+ occurrences)...")
 
         total_removed = 0
@@ -1435,29 +1432,29 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         for idx in df.index:
             row = df.loc[idx]
             
-            # شمارش مقادیر در این سطر (فقط مقادیر غیرخالی)
+            # count values in this row (only non-empty values)
             values = []
             for col in df.columns:
                 val = row[col]
-                # فقط مقادیر معتبر
+                # only valid values
                 if val and str(val).strip() not in ['', 'nan', 'None', 'null', 'NULL']:
                     values.append((col, str(val).strip()))
             
             if not values:
                 continue
             
-            # شمارش تکرار هر مقدار در این سطر
+            # count repetition of each value in this row
             value_counts = {}
             for col, val in values:
                 if val not in value_counts:
                     value_counts[val] = []
                 value_counts[val].append(col)
             
-            # پیدا کردن مقادیری که 3+ بار تکرار شدن
+            # find values that repeat 3+ times
             row_modified = False
             for val, columns in value_counts.items():
                 if len(columns) >= 3:
-                    # نگه‌داشتن اولین occurrence، حذف بقیه
+                    # keep first occurrence, remove rest
                     for col in columns[1:]:
                         df.at[idx, col] = ''
                         total_removed += 1
@@ -1466,7 +1463,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     if not row_modified:
                         rows_affected += 1
                     
-                    # نمایش 5 نمونه اول
+                    # show first 5 samples
                     if rows_affected <= 5:
                         print(f"   Row {idx+1}: '{val[:30]}' appeared {len(columns)} times in columns {columns[:3]} → kept first, removed {len(columns)-1}")
 
@@ -1485,7 +1482,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         # ====================================================
 
-        # تمیز کردن ستون‌های متنی
+        # clean text columns
         for col in df.columns:
             if df[col].dtype == 'object':
                 df[col] = df[col].astype(str).str.strip()
@@ -1497,7 +1494,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     'null': '',
                     'NULL': ''
                 })
-                # حذف مقادیر case-insensitive
+                # remove case-insensitive values
                 df[col] = df[col].apply(lambda x: "" if str(x).lower() in ['nan', 'none', 'nat', 'null'] else x)
         
         sheet_name = 'Sheet1'
@@ -1562,18 +1559,18 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             print(f"   ✅ DataFrame sorted: {len(df)} rows × {len(all_columns)} columns")
             values = df.values.tolist()
 
-        # ✅ Convert all NaN or None to string before sending to Sheets
+        # ✅ convert all nan or none to string before sending to sheets
         def clean_cell(cell):
-            """تمیز کردن کامل سلول"""
+            """complete cell cleaning"""
             if pd.isna(cell) or cell is None:
                 return ""
             cell_str = str(cell).strip()
     
-            # چک کردن مقادیر ناخواسته
+            # check unwanted values
             if cell_str.lower() in ['nan', 'none', 'nat', '<na>', 'null']:
                 return ""
             
-            # حذف ارورهای Excel
+            # remove excel errors
             if cell_str.startswith('#'):
                 return ""
     
@@ -1609,29 +1606,29 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             error_msg = str(e)
     
             if error_code == 429:
-                # Rate Limit
-                print(f"   ❌ Rate Limit: Google API خیلی زیاد صدا زده شده")
-                return False, "Rate limit reached. لطفاً چند دقیقه صبر کنید", None, 0
+                # rate limit
+                print(f"   ❌ Rate Limit: google api called too many times")
+                return False, "Rate limit reached. please wait a few minutes", None, 0
     
             elif error_code == 403:
-                # Permission denied
-                print(f"   ❌ Permission Error: دسترسی به Sheet ندارید")
-                return False, "دسترسی به Google Sheet نداریم. سرویس اکانت را چک کنید", None, 0
+                # permission denied
+                print(f"   ❌ Permission Error: no access to sheet")
+                return False, "no access to google sheet. check service account", None, 0
     
             elif "exceeds grid limits" in error_msg or "GRID_LIMITS" in error_msg:
-                # Sheet full (10M cells)
-                print(f"   ❌ Sheet Full: ظرفیت 10 میلیون سلول پر شده")
-                return False, "Sheet پر شده است (10M cells limit). یک Sheet جدید بسازید", None, 0
+                # sheet full (10m cells)
+                print(f"   ❌ Sheet Full: 10 million cell capacity filled")
+                return False, "sheet is full (10m cells limit). create a new sheet", None, 0
     
             elif "Quota exceeded" in error_msg:
-                # Daily quota
-                print(f"   ❌ Quota Exceeded: سهمیه روزانه Google تمام شده")
-                return False, "سهمیه روزانه Google تمام شده. فردا دوباره تلاش کنید", None, 0
+                # daily quota
+                print(f"   ❌ Quota Exceeded: google daily quota finished")
+                return False, "google daily quota finished. try again tomorrow", None, 0
     
             else:
-                # خطای ناشناخته
+                # unknown error
                 print(f"   ❌ Google API Error: {error_msg}")
-                return False, f"خطای Google: {error_msg}", None, 0
+                return False, f"google error: {error_msg}", None, 0
 
         except Exception as e:
             print(f"   ❌ Unexpected Error: {e}")
@@ -1659,3 +1656,6 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         import traceback
         traceback.print_exc()
         return False, str(e), None, 0
+    
+
+
