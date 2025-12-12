@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-🚀 Excel Web Scraper - Professional Edition
-وب‌اسکرپ حرفه‌ای از اکسل + تحلیل هوشمند Gemini + ترجمه
+excel web scraper - professional edition
+professional web scraping from excel + smart gemini analysis + translation
 """
 
 from pathlib import Path
@@ -16,26 +16,32 @@ import pandas as pd
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+import sys
+import io
+if sys.platform == 'win32':
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
+
 # =========================================================
-# 🔹 Gemini SDK Import
+# gemini sdk import
 # =========================================================
 try:
     import google.genai as genai
     from google.genai import types
-    print("✅ Gemini SDK loaded successfully")
+    print("gemini sdk loaded successfully")
 except Exception as e:
-    print(f"❌ Gemini SDK error: {e}")
+    print(f"gemini sdk error: {e}")
     import sys
     sys.exit(1)
 
 # =========================================================
-# 🧩 مسیرهای داینامیک
+# dynamic paths
 # =========================================================
 SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
 SOURCE_FOLDER = Path(os.getenv("SOURCE_FOLDER", SESSION_DIR / "uploads"))
 RENAMED_DIR = Path(os.getenv("RENAMED_DIR", SESSION_DIR / "renamed"))
 
-# ورودی: جستجوی خودکار فایل Excel
+# input: automatic excel file search
 INPUT_EXCEL_ENV = os.getenv("INPUT_EXCEL")
 if INPUT_EXCEL_ENV:
     INPUT_EXCEL = Path(INPUT_EXCEL_ENV)
@@ -63,10 +69,10 @@ TEMP_EXCEL = Path(os.getenv("TEMP_EXCEL", SESSION_DIR / "temp_output.xlsx"))
 OUTPUT_JSON = Path(os.getenv("OUTPUT_JSON", SESSION_DIR / "scraped_data.json"))
 
 # =========================================================
-# ⚙️ تنظیمات
+# settings
 # =========================================================
-# API Key - فقط یک کلید
-GOOGLE_API_KEY = "AIzaSyBzVNw34fbQRcxCSZDouR35hoZNxqsW6pc"
+# api key - single key only
+GOOGLE_API_KEY = "AIzaSyAvWIK68YWRguI3FSW44ACQqa8IAdbxJWI"
 
 MODEL_NAME = "gemini-2.0-flash-exp"
 THREAD_COUNT = 5
@@ -78,7 +84,7 @@ MAX_RETRIES_HTTP = 3
 MAX_RETRIES_GEMINI = 3
 IRANIAN_TLDS = ['.ir', '.ac.ir', '.co.ir', '.org.ir', '.gov.ir', '.id.ir', '.net.ir']
 
-# Fields to extract
+# fields to extract
 FIELDS = [
     "CompanyNameEN", "CompanyNameFA", "Logo", "Industry", "Certifications",
     "ContactName", "PositionEN", "PositionFA", "Department",
@@ -89,7 +95,7 @@ FIELDS = [
     "Brands", "Description", "History", "Employees", "ClientsPartners", "Markets"
 ]
 
-# Fields that need translation (EN -> FA)
+# fields that need translation (en -> fa)
 TRANSLATABLE_FIELDS = [
     ("CompanyNameEN", "CompanyNameFA_translated"),
     ("AddressEN", "AddressFA_translated"),
@@ -114,18 +120,18 @@ lock = threading.Lock()
 client = genai.Client(api_key=GOOGLE_API_KEY)
 
 print(f"\n{'='*70}")
-print("🚀 Excel Web Scraper - Professional Edition")
+print("excel web scraper - professional edition")
 print(f"{'='*70}")
-print(f"🔑 API Key: {GOOGLE_API_KEY[:20]}...")
-print(f"📥 Input: {INPUT_EXCEL}")
-print(f"📤 Output: {OUTPUT_EXCEL}")
+print(f"api key: {GOOGLE_API_KEY[:20]}...")
+print(f"input: {INPUT_EXCEL}")
+print(f"output: {OUTPUT_EXCEL}")
 print(f"{'='*70}\n")
 
 # =========================================================
-# 🧠 توابع کمکی
+# helper functions
 # =========================================================
 def normalize_url(url):
-    """نرمال‌سازی URL"""
+    """url normalization"""
     if not url or pd.isna(url) or str(url).lower() in ['nan', 'none', '']:
         return None
     url = str(url).strip()
@@ -138,7 +144,7 @@ def normalize_url(url):
     return None
 
 def normalize_root(url):
-    """استخراج root domain"""
+    """extract root domain"""
     u = normalize_url(url)
     if not u:
         return None
@@ -146,7 +152,7 @@ def normalize_root(url):
     return f"{p.scheme}://{p.netloc}".lower()
 
 def is_iranian_domain(url):
-    """تشخیص دامنه ایرانی"""
+    """detect iranian domain"""
     try:
         netloc = urlparse(normalize_root(url)).netloc.lower()
         return any(netloc.endswith(tld) for tld in IRANIAN_TLDS)
@@ -154,7 +160,7 @@ def is_iranian_domain(url):
         return False
 
 def domain_exists(url):
-    """بررسی وجود دامنه"""
+    """check domain existence"""
     try:
         host = urlparse(normalize_root(url)).netloc
         socket.gethostbyname(host)
@@ -163,22 +169,22 @@ def domain_exists(url):
         return False
 
 def are_values_same(v1, v2):
-    """بررسی یکسان بودن دو مقدار"""
+    """check if two values are the same"""
     if not v1 or not v2:
         return False
     return str(v1).strip().lower() == str(v2).strip().lower()
 
 # =========================================================
-# 🌐 Web Scraping با SSL هوشمند
+# web scraping with smart ssl
 # =========================================================
 def fetch(url):
-    """دریافت محتوای صفحه با مدیریت هوشمند SSL"""
+    """fetch page content with smart ssl management"""
     verify_ssl = not is_iranian_domain(url)
-    ssl_status = "🔒 SSL ON" if verify_ssl else "🔓 SSL OFF (Iranian)"
+    ssl_status = "ssl on" if verify_ssl else "ssl off (iranian)"
     
     for i in range(MAX_RETRIES_HTTP):
         try:
-            print(f"      🔄 Attempt {i+1}/{MAX_RETRIES_HTTP} [{ssl_status}]")
+            print(f"       attempt {i+1}/{MAX_RETRIES_HTTP} [{ssl_status}]")
             r = requests.get(
                 url,
                 headers=HEADERS,
@@ -217,7 +223,7 @@ def fetch(url):
     return ("", "MAX_RETRIES")
 
 def clean_text(html):
-    """تمیز کردن HTML و استخراج متن"""
+    """clean html and extract text"""
     if not html:
         return ""
     soup = BeautifulSoup(html, "html.parser")
@@ -227,8 +233,8 @@ def clean_text(html):
     return re.sub(r"\s+", " ", text).strip()
 
 def crawl_site(root):
-    """کرال کامل سایت"""
-    print(f"   🕷️ Crawling: {root}")
+    """complete site crawl"""
+    print(f"   crawling: {root}")
     seen = set()
     q = [(root, 0)]
     texts = []
@@ -249,7 +255,7 @@ def crawl_site(root):
         txt = clean_text(html)
         if txt:
             texts.append(txt[:40000])
-            print(f"      📄 Extracted {len(txt)} chars")
+            print(f"       extracted {len(txt)} chars")
         
         if html and depth < MAX_DEPTH:
             soup = BeautifulSoup(html, "html.parser")
@@ -266,36 +272,36 @@ def crawl_site(root):
         error_summary = "; ".join(errors[:3])
         return ("", error_summary or "NO_CONTENT")
     
-    print(f"      ✅ Total: {len(combined)} chars from {len(texts)} pages")
+    print(f"      total: {len(combined)} chars from {len(texts)} pages")
     return (combined, "")
 
 # =========================================================
-# 🤖 Gemini Extraction & Translation
+# gemini extraction & translation
 # =========================================================
 PROMPT_EXTRACT = """
-You are a bilingual (Persian-English) company information extractor.
-Extract the following JSON fields from the provided website text.
-Return ONLY strict JSON object. If a field has no value, return empty string "".
+you are a bilingual (persian-english) company information extractor.
+extract the following json fields from the provided website text.
+return only strict json object. if a field has no value, return empty string "".
 
-Fields:
+fields:
 {fields}
 
-Website text (mixed FA/EN):
+website text (mixed fa/en):
 ---
 {text}
 ---
 """
 
 PROMPT_TRANSLATE_EN2FA = """
-Translate the following English fields into formal Persian.
-Return ONLY valid JSON with the same keys and Persian values.
+translate the following english fields into formal persian.
+return only valid json with the same keys and persian values.
 
-Fields JSON:
+fields json:
 {json_chunk}
 """
 
 def gemini_json(prompt, schema):
-    """درخواست به Gemini با خروجی JSON"""
+    """request to gemini with json output"""
     schema_obj = types.Schema(type=types.Type.OBJECT, properties=schema, required=[])
     
     for i in range(MAX_RETRIES_GEMINI):
@@ -311,14 +317,14 @@ def gemini_json(prompt, schema):
             )
             return json.loads(resp.text)
         except Exception as e:
-            print(f"      ⚠️ Gemini error (attempt {i+1}): {str(e)[:100]}")
+            print(f"       gemini error (attempt {i+1}): {str(e)[:100]}")
             if i == MAX_RETRIES_GEMINI - 1:
                 return {}
             time.sleep(2 * (i + 1))
     return {}
 
 def extract_with_gemini(text):
-    """استخراج اطلاعات با Gemini"""
+    """extract information with gemini"""
     fields = "\n".join([f"- {f}" for f in FIELDS])
     prompt = PROMPT_EXTRACT.format(fields=fields, text=text[:8000])
     schema = {f: types.Schema(type=types.Type.STRING, nullable=True) for f in FIELDS}
@@ -326,10 +332,10 @@ def extract_with_gemini(text):
     return {f: (data.get(f) or "") for f in FIELDS}
 
 def translate_fields(data):
-    """ترجمه فیلدهای انگلیسی به فارسی"""
+    """translate english fields to persian"""
     to_translate = {en: data.get(en) for en, _ in TRANSLATABLE_FIELDS if data.get(en)}
     
-    # اضافه کردن ستون‌های خالی FA
+    # add empty fa columns
     for en, fa_col in TRANSLATABLE_FIELDS:
         if fa_col not in data:
             data[fa_col] = ""
@@ -348,18 +354,18 @@ def translate_fields(data):
     return data
 
 # =========================================================
-# 🔗 Smart Merge با تمیزکاری
+# smart merge with cleanup
 # =========================================================
 def clean_duplicate_columns(df):
-    """حذف و ادغام ستون‌های تکراری"""
-    print("\n🧹 Cleaning duplicate columns...")
+    """remove and merge duplicate columns"""
+    print("\ncleaning duplicate columns...")
     
-    # گروه‌بندی ستون‌ها بر اساس نام اصلی
+    # group columns by base name
     base_cols = {}
-    pattern = re.compile(r'\[\d+\]$')  # الگوی [2], [3], ...
+    pattern = re.compile(r'\[\d+\]$')
     
     for col in df.columns:
-        # استخراج نام اصلی
+        # extract base name
         base = pattern.sub('', str(col))
         if base not in base_cols:
             base_cols[base] = []
@@ -367,14 +373,14 @@ def clean_duplicate_columns(df):
     
     cleaned_df = df.copy()
     
-    # برای هر گروه ستون
+    # for each column group
     for base, cols in base_cols.items():
         if len(cols) <= 1:
             continue
         
-        print(f"   🔄 Merging {len(cols)} versions of '{base}'")
+        print(f"    merging {len(cols)} versions of '{base}'")
         
-        # ادغام تمام نسخه‌ها
+        # merge all versions
         for idx in df.index:
             values = []
             for col in cols:
@@ -387,7 +393,7 @@ def clean_duplicate_columns(df):
                 except:
                     continue
             
-            # ادغام با جداکننده
+            # merge with separator
             if values:
                 if base in ['Phone1', 'Phone2', 'Email', 'OtherEmails', 'WhatsApp', 'Telegram']:
                     merged = ", ".join(values)
@@ -404,7 +410,7 @@ def clean_duplicate_columns(df):
                 except:
                     pass
         
-        # حذف ستون‌های تکراری
+        # remove duplicate columns
         for col in cols[1:]:
             if col in cleaned_df.columns:
                 try:
@@ -412,17 +418,17 @@ def clean_duplicate_columns(df):
                 except:
                     pass
     
-    print(f"   ✅ Reduced from {len(df.columns)} to {len(cleaned_df.columns)} columns")
+    print(f"   reduced from {len(df.columns)} to {len(cleaned_df.columns)} columns")
     return cleaned_df
 
 def smart_merge(original_df, scraped_data):
-    """ادغام هوشمند داده‌ها"""
-    print("\n🔗 Smart merging data...")
+    """smart data merge"""
+    print("\nsmart merging data...")
     
     scraped_df = pd.DataFrame(scraped_data)
     
     if scraped_df.empty:
-        print("   ⚠️ No scraped data to merge")
+        print("    no scraped data to merge")
         return original_df
     
     result_df = original_df.copy()
@@ -454,19 +460,25 @@ def smart_merge(original_df, scraped_data):
             
             if not old_val or pd.isna(old_val) or str(old_val).strip() == "":
                 result_df.at[idx, col] = new_val
-                print(f"   ✏️ [{idx+1}] {col} = {str(new_val)[:50]}")
+                try:
+                    print(f"    [{idx+1}] {col} = {str(new_val)[:50]}")
+                except:
+                    print(f"    [{idx+1}] {col} = [updated]")
             elif not are_values_same(old_val, new_val):
                 if col in ['Phone1', 'Phone2', 'Email', 'OtherEmails', 'ProductName', 'Brands']:
                     result_df.at[idx, col] = f"{old_val}, {new_val}"
                 else:
                     result_df.at[idx, col] = f"{old_val} | {new_val}"
-                print(f"   📝 [{idx+1}] {col} += {str(new_val)[:50]}")
+                try:
+                    print(f"    [{idx+1}] {col} += {str(new_val)[:50]}")
+                except:
+                    print(f"    [{idx+1}] {col} += [added]")
     
-    print(f"   ✅ Merged: {len(result_df)} rows × {len(result_df.columns)} columns")
+    print(f"    merged: {len(result_df)} rows x {len(result_df.columns)} columns")
     return result_df
 
 # =========================================================
-# 🔄 Worker Thread
+# worker thread
 # =========================================================
 def worker(q, results):
     while True:
@@ -479,7 +491,7 @@ def worker(q, results):
         
         try:
             print(f"\n{'='*60}")
-            print(f"[{idx+1}] Processing: {url}")
+            print(f"[{idx+1}] processing: {url}")
             print(f"{'='*60}")
             
             text, error = crawl_site(url)
@@ -490,19 +502,19 @@ def worker(q, results):
                     "error": error or "NO_CONTENT",
                     "status": "FAILED"
                 }
-                print(f"   ❌ Failed: {error or 'NO_CONTENT'}")
+                print(f"    failed: {error or 'NO_CONTENT'}")
             else:
-                print(f"   🧠 Analyzing with Gemini...")
+                print(f"    analyzing with gemini...")
                 data = extract_with_gemini(text)
                 
-                print(f"   🌐 Translating to Persian...")
+                print(f"    translating to persian...")
                 data = translate_fields(data)
                 
                 data["url"] = url
                 data["status"] = "SUCCESS"
                 data["error"] = ""
                 
-                print(f"   ✅ Success: {data.get('CompanyNameEN') or data.get('CompanyNameFA', 'Unknown')}")
+                print(f"    success: {data.get('CompanyNameEN') or data.get('CompanyNameFA', 'unknown')}")
             
             with lock:
                 results.append(data)
@@ -515,7 +527,7 @@ def worker(q, results):
                     pass
                     
         except Exception as e:
-            print(f"   ❌ Exception: {str(e)[:100]}")
+            print(f"    exception: {str(e)[:100]}")
             data = {
                 "url": url,
                 "error": f"EXCEPTION: {str(e)[:100]}",
@@ -528,16 +540,16 @@ def worker(q, results):
         time.sleep(random.uniform(*SLEEP_BETWEEN))
 
 # =========================================================
-# 🚀 Main
+# main
 # =========================================================
 def main():
-    print("📥 Loading Excel file...")
+    print("loading excel file...")
     if not INPUT_EXCEL.exists():
-        print(f"❌ File not found: {INPUT_EXCEL}")
+        print(f"file not found: {INPUT_EXCEL}")
         return
     
     df = pd.read_excel(INPUT_EXCEL)
-    print(f"   ✓ Loaded {len(df)} rows, {len(df.columns)} columns")
+    print(f"    loaded {len(df)} rows, {len(df.columns)} columns")
     
     url_col = None
     for col in df.columns:
@@ -547,10 +559,10 @@ def main():
             break
     
     if not url_col:
-        print("❌ No URL column found!")
+        print("no url column found!")
         return
     
-    print(f"   ✓ URL column: '{url_col}'")
+    print(f"    url column: '{url_col}'")
     
     urls = []
     for idx, row in df.iterrows():
@@ -558,13 +570,13 @@ def main():
         if url and domain_exists(url):
             urls.append((idx, url))
     
-    print(f"   ✓ Found {len(urls)} valid URLs")
+    print(f"    found {len(urls)} valid urls")
     
     if not urls:
-        print("❌ No valid URLs to scrape!")
+        print("no valid urls to scrape!")
         return
     
-    print(f"\n🌐 Starting web scraping ({THREAD_COUNT} threads)...")
+    print(f"\nstarting web scraping ({THREAD_COUNT} threads)...")
     
     results = []
     q = Queue()
@@ -583,7 +595,7 @@ def main():
     final_df = smart_merge(df, results)
     final_df = clean_duplicate_columns(final_df)
     
-    print("\n📊 Organizing columns...")
+    print("\norganizing columns...")
     priority_cols = []
     
     for col in df.columns:
@@ -607,29 +619,60 @@ def main():
     
     final_df = final_df[[c for c in priority_cols if c in final_df.columns]]
     
-    print(f"\n💾 Saving final Excel...")
+    print(f"\nsaving final excel...")
+    
+    # extra cleanup
+    def clean_dataframe_before_excel(df):
+        """remove formulas and errors"""
+        import numpy as np
+        
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                # 1. remove excel formulas
+                df[col] = df[col].apply(
+                    lambda x: str(x)[1:] if isinstance(x, str) and str(x).startswith('=') else x
+                )
+                
+                # 2. remove errors
+                df[col] = df[col].apply(
+                    lambda x: "" if isinstance(x, str) and str(x).startswith('#') else x
+                )
+                
+                # 3. convert persian digits
+                persian_digits = '۰۱۲۳۴۵۶۷۸۹'
+                english_digits = '0123456789'
+                trans_table = str.maketrans(persian_digits, english_digits)
+                df[col] = df[col].apply(
+                    lambda x: str(x).translate(trans_table) if isinstance(x, str) else x
+                )
+        
+        return df
+    
+    final_df = clean_dataframe_before_excel(final_df)
+    print(f"   cleaned {len(final_df.columns)} columns")
+    
     try:
         final_df.to_excel(TEMP_EXCEL, index=False)
         shutil.move(str(TEMP_EXCEL), str(OUTPUT_EXCEL))
-        print(f"   ✅ Saved: {OUTPUT_EXCEL}")
+        print(f"    saved: {OUTPUT_EXCEL}")
     except Exception as e:
-        print(f"   ❌ Save failed: {e}")
+        print(f"    save failed: {e}")
         try:
             final_df.to_excel(OUTPUT_EXCEL, index=False)
-            print(f"   ✅ Saved (direct): {OUTPUT_EXCEL}")
+            print(f"    saved (direct): {OUTPUT_EXCEL}")
         except Exception as e2:
-            print(f"   ❌ Direct save also failed: {e2}")
+            print(f"    direct save also failed: {e2}")
     
     success = sum(1 for r in results if r.get('status') == 'SUCCESS')
     failed = len(results) - success
     
     print(f"\n{'='*70}")
-    print("📊 FINAL STATISTICS")
+    print("final statistics")
     print(f"{'='*70}")
-    print(f"✅ Successfully scraped: {success}/{len(results)}")
-    print(f"❌ Failed: {failed}/{len(results)}")
-    print(f"📁 Output saved: {OUTPUT_EXCEL}")
-    print(f"📊 Final size: {len(final_df)} rows × {len(final_df.columns)} columns")
+    print(f"successfully scraped: {success}/{len(results)}")
+    print(f"failed: {failed}/{len(results)}")
+    print(f"output saved: {OUTPUT_EXCEL}")
+    print(f"final size: {len(final_df)} rows x {len(final_df.columns)} columns")
     print(f"{'='*70}\n")
 
 if __name__ == "__main__":
