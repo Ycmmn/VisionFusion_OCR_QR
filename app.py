@@ -1046,18 +1046,18 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         model = genai.GenerativeModel('gemini-1.5-flash')
 
         def translate_to_persian(text):
-            """ترجمه انگلیسی به فارسی"""
+            # translate english to persian
             if not text or pd.isna(text) or str(text).strip() == '':
                 return ""
             
             text = str(text).strip()
             
-            # چک کردن اینکه فارسی هست یا نه
+            # check if it's persian or not
             persian_chars = set('آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
             has_persian = any(c in persian_chars for c in text)
             
             if has_persian:
-                return text  # قبلاً فارسیه
+                return text  
             
             try:
                 prompt = f"Translate this English text to Persian. Only return the translation:\n\n{text}"
@@ -1068,10 +1068,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 return text
 
         def extract_person_position(person_col_value):
-            """
-            استخراج Name و Position از ستون PersonX
-            مثال: "علی احمدی - مدیر فروش" → ("علی احمدی", "مدیر فروش")
-            """
+            # extract name and position from personx column
             if not person_col_value or pd.isna(person_col_value) or str(person_col_value).strip() == '':
                 return "", ""
             
