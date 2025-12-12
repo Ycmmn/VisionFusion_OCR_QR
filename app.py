@@ -898,8 +898,8 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         print(f"\n☁️ Starting data save to Google Drive...")
 
-        # ✅ Use existing Google Sheet instead of creating a new one
-        file_id = "1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE"
+        # Use existing Google Sheet instead of creating a new one
+        file_id = "1OeQbiq***h27yuE"
         file_url = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
         exists = True
         print(f"   ✅ Using existing Google Sheet: {file_url}")
@@ -913,13 +913,13 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             return False, "Excel file is empty", None, 0
         
         print(f"   ✅ {len(df)} rows × {len(df.columns)} columns read")
-        # ========== 📝 اضافه کردن Exhibition Name ==========
+        # add Exhibition Name
         if exhibition_name:
             print(f"\n📝 Adding Exhibition to Google Sheets: {exhibition_name}")
             if 'Exhibition' not in df.columns:
                 df.insert(0, 'Exhibition', exhibition_name)
         
-        # ========== 👤 اضافه کردن QC Metadata ==========
+        #  add QC Metadata
        
         if qc_metadata:
             print(f"\n👤 Adding QC Metadata to Google Sheets...")
