@@ -769,7 +769,7 @@ def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
     translate all columns in dataframe
     - only english → persian
     """
-    
+
     import google.generativeai as genai
     import time
     
@@ -778,7 +778,7 @@ def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
     
     print(f"\n🌐 Starting translation for {len(df)} rows...")
     
-    # ستون‌هایی که نباید ترجمه بشن
+    # columns that should not be translated
     skip_columns = [
         'file_name', 'Exhibition', 'Source', 
         'QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp',
