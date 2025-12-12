@@ -994,14 +994,14 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         print(f"\n   📊 Final DataFrame: {len(df)} rows × {len(df.columns)} columns")
 
         
-        # ✅ اضافه کن: اگه CompanyID نداشت، اضافه کن
+        # add: if doesn't have companyid, add it
         if 'CompanyID' not in df.columns:
             print(f"   ⚠️ CompanyID not found, generating...")
             df = add_company_id_to_dataframe(df, log_details=False)
         else:
             print(f"   ✅ CompanyID column exists")
         
-        # ✅ مطمئن شو CompanyID ستون اول است
+        # make sure companyid is first column
         if 'CompanyID' in df.columns:
             cols = ['CompanyID'] + [col for col in df.columns if col != 'CompanyID']
             df = df[cols]
@@ -1009,10 +1009,10 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         
         
 
-        # ✅ Clean DataFrame from NaN and None values
+        # Clean DataFrame from NaN and None values
         import numpy as np
 
-        # جایگزینی مقادیر خالی
+        # replace empty values
         df = df.replace({np.nan: "", None: "", 'nan': "", 'None': "", 'NaT': ""})
 
 
@@ -1022,7 +1022,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         columns_to_remove = []
 
-        # 1. حذف data_source و source_type
+        # 1. remove data_source & source_type
         for col in ['data_source', 'source_type', 'Data_Source', 'Source_Type']:
             if col in df.columns:
                 columns_to_remove.append(col)
