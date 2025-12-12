@@ -1928,18 +1928,10 @@ def extract_country_city_from_address(address_fa, address_en):
 
 
 
-
-
-
-
-
-
-
-
 def add_country_city_columns(excel_path):
-    """
-    add country and city columns to excel
-    """
+    
+    # add country and city columns to excel
+    
     try:
         print(f"\n🌍 Adding Country & City columns...")
         df = pd.read_excel(excel_path)
@@ -2016,11 +2008,11 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
         df = pd.read_excel(excel_path)
         print(f"   ✅ Loaded: {len(df)} rows × {len(df.columns)} columns")
 
-        # ========== add exhibition ==========
+        # add exhibition
         df.insert(0, 'Exhibition', exhibition_name)
         print(f"   📋 Exhibition: '{exhibition_name}'")
         
-        # ========== add qc metadata ==========
+        # add qc metadata 
         if qc_metadata:
             # add qc columns at the beginning of dataframe
             qc_columns = ['QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp']
@@ -2034,8 +2026,8 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
             print(f"   📅 QC Date: {qc_metadata.get('QC_Date', 'N/A')}")
             print(f"   🕐 QC Time: {qc_metadata.get('QC_Time', 'N/A')}")
         
-        # ========== detect source ==========
-        # ✅ read uploaded file types
+        # detect source 
+        #  read uploaded file types
         file_types_path = Path(session_dir) / "uploaded_file_types.json"
         
         if file_types_path.exists():
@@ -2062,7 +2054,7 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
                 print(f"   ✅ Source detected from uploaded file types")
             
             else:
-                # ✅ if file_name didn't exist, use file count
+                # if file_name didn't exist, use file count
                 if len(file_types) == 1:
                     # only one file → give same source to all
                     source = list(file_types.values())[0]
@@ -2091,7 +2083,7 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
                     print(f"   ⚠️ No file types found")
         
         else:
-            # ✅ fallback: use file_name
+            # fallback: use file_name
             print(f"   ⚠️ file_types.json not found, using fallback")
             
             if 'file_name' in df.columns:
@@ -2103,7 +2095,7 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
                 df.insert(insert_position, 'Source', 'Unknown')
                 print(f"   ⚠️ No file_name column → Source set to Unknown")
 
-        # ========== smart position detection ==========
+        #  smart position detection 
         if 'Department' in df.columns and 'PositionFA' in df.columns:
             print(f"\n🤖 Smart Position Detection...")
             filled_count = 0
@@ -2119,7 +2111,7 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
             if filled_count > 0:
                 print(f"   ✅ Filled {filled_count} positions from Department")
 
-        # ========== remove extra columns ==========
+        # remove extra columns 
         columns_to_remove = ['CompanyNameFA_translated']
         removed = 0
         for col in columns_to_remove:
@@ -2131,7 +2123,7 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
         if removed:
             print(f"   ✅ Removed {removed} unnecessary columns")
 
-        # ========== clean data ==========
+        # clean data 
         for col in df.columns:
             if df[col].dtype == 'object':
                 try:
@@ -2140,25 +2132,25 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
                 except Exception as e:
                     print(f"   ⚠️ Warning: Could not convert column {col}: {e}")
 
-        # ========== save ==========
+        #  save
         df.to_excel(excel_path, index=False, engine='openpyxl')
         print(f"   💾 Updated: {excel_path.name}")
         print(f"   📊 Final: {len(df)} rows × {len(df.columns)} columns")
         
-        # ========== show source distribution ==========
+        #show source distribution 
         if 'Source' in df.columns:
             source_counts = df['Source'].value_counts()
-            print(f"\n   📊 Source Distribution:")
+            print(f"\n    Source Distribution:")
             for source, count in source_counts.items():
                 print(f"      • {source}: {count} rows")
         
-        # ========== show metadata summary ==========
-        print(f"\n   📋 Metadata Summary:")
-        print(f"      📌 Exhibition: {exhibition_name}")
+        # show metadata summary 
+        print(f"\n    Metadata Summary:")
+        print(f"      Exhibition: {exhibition_name}")
         if qc_metadata:
-            print(f"      👤 QC Supervisor: {qc_metadata.get('QC_Supervisor')}")
-            print(f"      💼 QC Role: {qc_metadata.get('QC_Role')}")
-            print(f"      📅 QC Timestamp: {qc_metadata.get('QC_Timestamp')}")
+            print(f"       QC Supervisor: {qc_metadata.get('QC_Supervisor')}")
+            print(f"       QC Role: {qc_metadata.get('QC_Role')}")
+            print(f"       QC Timestamp: {qc_metadata.get('QC_Timestamp')}")
         
         return True
     
@@ -2167,9 +2159,8 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
         import traceback
         traceback.print_exc()
         return False
-# =========================================================
-# 🔍 detect pipeline type and exhibition name
-# =========================================================
+
+# detect pipeline type and exhibition name
 def detect_pipeline_type(files):
     extensions = [f.name.split('.')[-1].lower() for f in files]
     if any(ext in ['xlsx', 'xls'] for ext in extensions):
@@ -2189,9 +2180,8 @@ def extract_exhibition_name(files):
         return " ".join(cleaned_parts[:3])
     return "Unknown_Exhibition"
 
-# =========================================================
-# ✨ batch processing logic
-# =========================================================
+
+# batch processing logic
 def get_batch_size(file_type):
     """determine batch size based on file type"""
     file_type = file_type.lower()
@@ -2246,9 +2236,8 @@ def process_files_in_batches(uploads_dir, pipeline_type):
     
     return [], 1
 
-# =========================================================
-# 🔄 run script with fast mode + log file
-# =========================================================
+
+# run script with fast mode + log file
 def run_script(script_name, session_dir, log_area, status_text, script_display_name="", fast_mode=True):
     script_path = Path(script_name)
     if not script_display_name:
@@ -2326,12 +2315,13 @@ def run_script(script_name, session_dir, log_area, status_text, script_display_n
         """, unsafe_allow_html=True)
         return False
 
-# =========================================================
-# 🎯 header
-# =========================================================
+
+#  header
 st.markdown("""
 <div class="main-header">
     <h1>🎯 Smart Exhibition Pipeline</h1>
     <p>smart detection • automatic processing • unified output • batch processing • quality control • google sheets</p>
 </div>
 """, unsafe_allow_html=True)
+
+
