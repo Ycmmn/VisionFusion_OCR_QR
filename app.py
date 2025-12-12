@@ -796,7 +796,7 @@ def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
         
         text = str(text).strip()
         
-        # چک کردن حروف فارسی
+        # check persian characters
         persian_chars = set('آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
         has_persian = any(c in persian_chars for c in text)
         
@@ -806,7 +806,7 @@ def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
             return 'en'
     
     def translate_text(text):
-        """ترجمه متن انگلیسی به فارسی با Gemini"""
+        ## translate english with gemini
         if not text or pd.isna(text) or str(text).strip() == '':
             return ""
         
