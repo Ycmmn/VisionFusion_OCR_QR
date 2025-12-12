@@ -1648,7 +1648,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
 
 def get_or_create_folder(folder_name="Exhibition_Data"):
-    """find/create folder in drive"""
+    #find/create folder in drive
     try:
         drive_service, _ = get_google_services()
         if not drive_service:
@@ -1674,3 +1674,6 @@ def get_or_create_folder(folder_name="Exhibition_Data"):
     except Exception as e:
         print(f"   ❌ error: {e}")
         return None
+
+
+        
