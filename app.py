@@ -43,7 +43,7 @@ st.set_page_config(
 
 
  # ---------------------------Permanent Google Sheets Link (Always Visible)
-FIXED_SHEET_URL = "https://docs.google.com/spreadsheets/d/1Oe***uE/edit"
+FIXED_SHEET_URL = "https://do******uE/edit"
 
 st.markdown(f"""
 <div style="
@@ -138,9 +138,9 @@ st.markdown("""
 
 # ------------------------  api keys
 API_KEYS = {
-    "excel": "AIzaSyA***xJWI",
-    "ocr": "AIza***XEEca4gxY",
-    "scrap": "AIzaSyDMU****NPzB70"
+    "excel": "AIzA****xI",
+    "ocr": "AIza***XEEcxY",
+    "scrap": "AIzaS****70"
 }
 for key_name, key_value in API_KEYS.items():
     os.environ[f"GOOGLE_API_KEY_{key_name.upper()}"] = key_value
@@ -764,7 +764,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
 
 
 
-def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
+def translate_all_columns(df, api_key="AIz***70"):
     """
     translate all columns in dataframe
     - only english → persian
