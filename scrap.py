@@ -11,9 +11,8 @@ import pandas as pd
 import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# =========================================================
-# gemini sdk import (fixed)
-# =========================================================
+ 
+# gemini sdk import 
 try:
     import google.genai as genai
     from google.genai import types
@@ -28,9 +27,8 @@ except ImportError:
         import sys
         sys.exit(1)
 
-# =========================================================
+
 # dynamic session paths
-# =========================================================
 SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
 SOURCE_FOLDER = Path(os.getenv("SOURCE_FOLDER", SESSION_DIR / "uploads"))
 RENAMED_DIR = Path(os.getenv("RENAMED_DIR", SESSION_DIR / "renamed"))
@@ -41,7 +39,7 @@ MIX_OCR_QR_JSON = Path(os.getenv("MIX_OCR_QR_JSON", SESSION_DIR / "mix_ocr_qr.js
 WEB_ANALYSIS_XLSX = Path(os.getenv("WEB_ANALYSIS_XLSX", SESSION_DIR / "web_analysis.xlsx"))
 
 # configuration
-GOOGLE_API_KEY = "AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70"
+GOOGLE_API_KEY = "AIza***B70"
 MODEL_NAME = "gemini-2.5-flash"
 
 THREAD_COUNT = 5
@@ -58,16 +56,15 @@ IRANIAN_TLDS = ['.ir', '.ac.ir', '.co.ir', '.org.ir', '.gov.ir', '.id.ir', '.net
 client = genai.Client(api_key=GOOGLE_API_KEY)
 lock = threading.Lock()
 
-# =========================================================
+
 # dynamic input and output paths
-# =========================================================
 RAW_INPUT = MIX_OCR_QR_JSON
 CLEAN_URLS = Path(os.getenv("CLEAN_URLS", SESSION_DIR / "urls_clean.json"))
 OUTPUT_JSON = Path(os.getenv("OUTPUT_JSON", OUT_JSON))
 OUTPUT_EXCEL = Path(os.getenv("OUTPUT_EXCEL", WEB_ANALYSIS_XLSX))
 TEMP_EXCEL = Path(os.getenv("TEMP_EXCEL", SESSION_DIR / "web_analysis.tmp.xlsx"))
 
-# ---------------------------------------------
+
 # fields & prompts
 FIELDS = [
     "CompanyNameEN", "CompanyNameFA", "Logo", "Industry", "Certifications",
@@ -128,9 +125,7 @@ HEADERS = {
     "Connection": "keep-alive",
 }
 
-# =============================================================
 # utility functions
-# =============================================================
 def normalize_root(url: str) -> str:
     u = url.strip()
     if not re.match(r"^https?://", u, re.I):
@@ -145,7 +140,7 @@ def is_iranian_domain(url: str) -> bool:
     except:
         return False
 
-# ===================
+
 def normalize_url_for_dedup(url: str) -> str:
     """
     normalize url for duplicate removal
@@ -169,7 +164,6 @@ def normalize_url_for_dedup(url: str) -> str:
     url = url.split('?')[0].split('#')[0]
     
     return url
-# ================================================
 
 
 def domain_exists(url: str) -> bool:
@@ -181,9 +175,8 @@ def domain_exists(url: str) -> bool:
         print(f"domain check failed for {url}: {e}")
         return False
 
-# =============================================================
+
 # extract urls (from ocr + qr + excel) - fixed
-# =============================================================
 def extract_urls_from_mix(input_path: str, output_path: str):
     print("extracting scrapable urls from mix_ocr_qr.json...")
     try:
@@ -280,8 +273,8 @@ def extract_urls_from_mix(input_path: str, output_path: str):
                     collect(v, current_source)
 
     collect(raw, source="ocr")
-    #
-    # ==========  remove duplicate urls ==========
+    
+    # remove duplicate urls 
     print(f"\nremoving duplicate urls...")
     unique_urls = {}
 
@@ -327,9 +320,8 @@ def extract_urls_from_mix(input_path: str, output_path: str):
     
     return roots
 
-# =============================================================
-# web crawling & cleaning (fixed)
-# =============================================================
+
+# web crawling & cleaning 
 def fetch(url: str) -> tuple[str, str]:
     verify_ssl = not is_iranian_domain(url)
     ssl_status = "ssl on" if verify_ssl else "ssl off (iranian)"
@@ -393,3 +385,5 @@ def clean_text(html: str) -> str:
     for t in soup(["script","style","noscript","iframe","svg"]): t.extract()
     text = soup.get_text(" ", strip=True)
     return re.sub(r"\s+", " ", text).strip()
+
+
