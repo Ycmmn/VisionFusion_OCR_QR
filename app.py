@@ -759,3 +759,124 @@ def merge_all_data_sources(session_dir, pipeline_type):
     else:
         print(f"   Unknown pipeline type: {pipeline_type}")
         return None
+
+
+
+
+
+def translate_all_columns(df, api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70"):
+    """
+    ترجمه تمام ستون‌ها در DataFrame
+    - فقط انگلیسی → فارسی
+    """
+    import google.generativeai as genai
+    import time
+    
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    
+    print(f"\n🌐 Starting translation for {len(df)} rows...")
+    
+    # ستون‌هایی که نباید ترجمه بشن
+    skip_columns = [
+        'file_name', 'Exhibition', 'Source', 
+        'QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp',
+        'Phone1', 'Phone2', 'Phone3', 'Phone4', 'Phone5',
+        'Email', 'Email2', 'Email3', 'Email4',
+        'Website', 'Website2', 'Website3',
+        'Fax', 'Fax2', 'WhatsApp', 'Telegram', 'Instagram', 'LinkedIn',
+        'PostalCode', 'CompanyCode', 'Logo', 'QRCodes',
+    ]
+    
+    def detect_language(text):
+        """تشخیص زبان: fa یا en"""
+        if not text or pd.isna(text) or str(text).strip() == '':
+            return None
+        
+        text = str(text).strip()
+        
+        # چک کردن حروف فارسی
+        persian_chars = set('آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
+        has_persian = any(c in persian_chars for c in text)
+        
+        if has_persian:
+            return 'fa'
+        else:
+            return 'en'
+    
+    def translate_text(text):
+        """ترجمه متن انگلیسی به فارسی با Gemini"""
+        if not text or pd.isna(text) or str(text).strip() == '':
+            return ""
+        
+        text = str(text).strip()
+        
+        try:
+            prompt = f"Translate this English text to Persian. Only return the translation, no explanations:\n\n{text}"
+            
+            response = model.generate_content(prompt)
+            translation = response.text.strip()
+            
+            # حذف markdown و quotes
+            translation = translation.replace('*', '').replace('`', '').strip('"').strip("'")
+            
+            return translation
+        
+        except Exception as e:
+            print(f"   ⚠️ Translation error: {e}")
+            return ""
+    
+    # پردازش هر ستون
+    for col in df.columns:
+        # Skip ستون‌های خاص
+        if col in skip_columns:
+            continue
+        
+        # چک کردن اینکه ستون قبلاً ترجمه شده یا نه
+        if col.endswith('_translated') or col.endswith('FA') or col.endswith('EN'):
+            continue
+        
+        print(f"\n   🔄 Processing column: {col}")
+        
+        # شمارش سلول‌های غیرخالی
+        non_empty = df[col].notna() & (df[col].astype(str).str.strip() != '')
+        total_cells = non_empty.sum()
+        
+        if total_cells == 0:
+            print(f"      ⏭️ Empty column, skipping")
+            continue
+        
+        print(f"      📊 {total_cells} non-empty cells")
+        
+        # پردازش هر سطر
+        translated_count = 0
+        
+        for idx in df.index:
+            cell_value = df.at[idx, col]
+            
+            if not cell_value or pd.isna(cell_value) or str(cell_value).strip() == '':
+                continue
+            
+            # تشخیص زبان
+            lang = detect_language(cell_value)
+            
+            if lang != 'en':
+                # فقط متن‌های انگلیسی رو پردازش می‌کنیم
+                continue
+            
+            # ترجمه انگلیسی → فارسی
+            translated = translate_text(cell_value)
+            
+            if translated:
+                # ذخیره در ستون جدید
+                new_col = f"{col}FA" if not col.endswith('EN') else col.replace('EN', 'FA')
+                df.at[idx, new_col] = translated
+                translated_count += 1
+            
+            # Rate limiting
+            time.sleep(1)
+        
+        print(f"      ✅ Translated {translated_count} cells")
+    
+    print(f"\n   ✅ Translation completed!")
+    return df
