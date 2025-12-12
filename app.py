@@ -2325,3 +2325,671 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+
+# Sidebar
+# =========================================================
+
+# ========== quick link to google sheets ==========
+if 'sheet_url' in st.session_state:
+    st.sidebar.markdown(f"""
+    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
+        <h4 style="color: white; margin: 0 0 0.5rem 0;">📊 data table</h4>
+        <a href="{st.session_state['sheet_url']}" target="_blank" 
+           style="color: white; background: rgba(255,255,255,0.2); 
+                  padding: 0.5rem 1rem; border-radius: 8px; 
+                  text-decoration: none; display: block; text-align: center;">
+            🔗 open table
+        </a>
+    </div>
+    """, unsafe_allow_html=True)
+elif Path("google_sheet_link.txt").exists():
+    try:
+        saved_link = Path("google_sheet_link.txt").read_text(encoding='utf-8')
+        url_line = [line for line in saved_link.split('\n') if line.startswith('https://')]
+        if url_line:
+            saved_url = url_line[0]
+            st.sidebar.markdown(f"""
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
+                <h4 style="color: white; margin: 0 0 0.5rem 0;">📊 data table</h4>
+                <a href="{saved_url}" target="_blank" 
+                   style="color: white; background: rgba(255,255,255,0.2); 
+                          padding: 0.5rem 1rem; border-radius: 8px; 
+                          text-decoration: none; display: block; text-align: center;">
+                    🔗 open table
+                </a>
+                <p style="color: rgba(255,255,255,0.8); font-size: 0.85rem; margin: 0.5rem 0 0 0;">
+                    saved link
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+    except:
+        pass
+# ========== end quick link ==========
+
+quota = load_quota()
+st.sidebar.markdown(f"""
+<div class="quota-card">
+    <h3>📊 today's api quota</h3>
+    <div class="quota-number">{quota['remaining']}</div>
+    <p>out of {DAILY_LIMIT} requests</p>
+</div>
+""", unsafe_allow_html=True)
+progress_value = quota['used'] / DAILY_LIMIT if DAILY_LIMIT > 0 else 0
+st.sidebar.progress(progress_value)
+
+if quota['remaining'] <= 0:
+    st.sidebar.markdown('<span class="badge badge-error">❌ quota finished</span>', unsafe_allow_html=True)
+elif quota['remaining'] < 20:
+    st.sidebar.markdown('<span class="badge badge-warning">⚠️ running low</span>', unsafe_allow_html=True)
+else:
+    st.sidebar.markdown('<span class="badge badge-success">✅ quota good</span>', unsafe_allow_html=True)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### ⚙️ settings")
+rate_limit = st.sidebar.slider("⏱️ delay between requests (seconds)", 0, 10, 4)
+if rate_limit < 4:
+    st.sidebar.markdown('<span class="badge badge-error">⚠️ block risk</span>', unsafe_allow_html=True)
+elif rate_limit == 4:
+    st.sidebar.markdown('<span class="badge badge-success">✅ safe (15 rpm)</span>', unsafe_allow_html=True)
+else:
+    st.sidebar.markdown('<span class="badge badge-success">🔒 very safe</span>', unsafe_allow_html=True)
+
+debug_mode = st.sidebar.checkbox("🐛 debug mode")
+fast_mode = st.sidebar.checkbox("⚡️ fast mode", value=True)
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 🔑 key status")
+for key_name, key_value in API_KEYS.items():
+    st.sidebar.text(f"{key_name.upper()}: {key_value[:20]}...")
+
+st.sidebar.markdown("---")
+st.sidebar.markdown("### 📦 batch processing")
+st.sidebar.info("📸 images: 30\n📄 pdf: 10\n📊 excel: 5")
+
+# =========================================================
+# 📂 file upload with limits
+# =========================================================
+MAX_IMAGES = 30
+MAX_PDF = 10
+MAX_EXCEL = 5
+MAX_FILE_SIZE_MB = 50
+MAX_TOTAL_SIZE_MB = 200
+
+uploaded_files = st.file_uploader(
+    "📤 upload files",
+    type=['jpg', 'jpeg', 'png', 'pdf', 'xlsx', 'xls'],
+    accept_multiple_files=True,
+    help=f"max: {MAX_IMAGES} images, {MAX_PDF} pdf, {MAX_EXCEL} excel | per file: {MAX_FILE_SIZE_MB}mb | total: {MAX_TOTAL_SIZE_MB}mb"
+)
+
+# ✅ check limits
+if uploaded_files:
+    # ============ check file sizes ============
+    valid_files = []
+    total_size_mb = 0
+    size_warnings = []
+    
+    for f in uploaded_files:
+        file_size_mb = len(f.getbuffer()) / (1024 * 1024)
+        total_size_mb += file_size_mb
+        
+        # check individual file size
+        if file_size_mb > MAX_FILE_SIZE_MB:
+            size_warnings.append(f"❌ {f.name}: {file_size_mb:.1f}mb (too large, max {MAX_FILE_SIZE_MB}mb)")
+            continue
+        
+        valid_files.append(f)
+    
+    # check total size
+    if total_size_mb > MAX_TOTAL_SIZE_MB:
+        st.error(f"❌ total file size: {total_size_mb:.1f}mb (max allowed: {MAX_TOTAL_SIZE_MB}mb)")
+        st.stop()
+    
+    # display size warnings
+    if size_warnings:
+        st.warning("⚠️ the following files were rejected due to size:")
+        for warn in size_warnings:
+            st.text(f"  {warn}")
+    
+    if not valid_files:
+        st.error("❌ no valid files uploaded!")
+        st.stop()
+    
+    # use valid files
+    uploaded_files = valid_files
+    
+    # separate files by type
+    images = [f for f in uploaded_files if f.type.startswith('image')]
+    pdfs = [f for f in uploaded_files if f.type == 'application/pdf']
+    excels = [f for f in uploaded_files if 'spreadsheet' in f.type or f.name.endswith(('.xlsx', '.xls'))]
+    
+    # ============ check file counts ============
+    warnings = []
+    
+    if len(images) > MAX_IMAGES:
+        warnings.append(f"⚠️ image count: {len(images)} → limited to {MAX_IMAGES}")
+        images = images[:MAX_IMAGES]
+    
+    if len(pdfs) > MAX_PDF:
+        warnings.append(f"⚠️ pdf count: {len(pdfs)} → limited to {MAX_PDF}")
+        pdfs = pdfs[:MAX_PDF]
+    
+    if len(excels) > MAX_EXCEL:
+        warnings.append(f"⚠️ excel count: {len(excels)} → limited to {MAX_EXCEL}")
+        excels = excels[:MAX_EXCEL]
+    
+    # display warnings
+    if warnings:
+        st.warning("count limit applied:")
+        for warn in warnings:
+            st.text(f"  {warn}")
+    
+    # display stats (with size added)
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        st.metric("🖼️ images", f"{len(images)}/{MAX_IMAGES}")
+    with col2:
+        st.metric("📄 pdf", f"{len(pdfs)}/{MAX_PDF}")
+    with col3:
+        st.metric("📊 excel", f"{len(excels)}/{MAX_EXCEL}")
+    with col4:
+        st.metric("📁 total", len(images) + len(pdfs) + len(excels))
+    with col5:
+        st.metric("💾 total size", f"{total_size_mb:.1f}mb")
+    
+    # display size progress bar
+    size_progress = min(total_size_mb / MAX_TOTAL_SIZE_MB, 1.0)
+    st.progress(size_progress)
+    if size_progress > 0.8:
+        st.warning(f"⚠️ file size is high ({total_size_mb:.1f}/{MAX_TOTAL_SIZE_MB}mb)")
+    
+    # recombine allowed files
+    uploaded_files = images + pdfs + excels
+
+# =========================================================
+# ✨ quality control section
+# =========================================================
+st.markdown("## 👤 quality control supervisor information")
+st.markdown("*this information will be recorded as quality control metadata in the output*")
+
+col_qc1, col_qc2 = st.columns(2)
+with col_qc1:
+    qc_user_name = st.text_input(
+        "🧑‍💼 full name",
+        placeholder="example: ali ahmadi",
+        help="full name of data quality supervisor"
+    )
+with col_qc2:
+    qc_user_role = st.text_input(
+        "💼 position/role",
+        placeholder="example: quality control specialist",
+        help="your position or role in the organization"
+    )
+
+if qc_user_name and qc_user_role:
+    qc_preview = get_qc_metadata(qc_user_name, qc_user_role)
+    st.markdown(f"""
+    <div class="qc-card">
+        <h4>✅ quality control information preview</h4>
+        <p><strong>👤 supervisor:</strong> {qc_preview['QC_Supervisor']}</p>
+        <p><strong>💼 role:</strong> {qc_preview['QC_Role']}</p>
+        <p><strong>📅 date:</strong> {qc_preview['QC_Date']}</p>
+        <p><strong>🕐 time:</strong> {qc_preview['QC_Time']}</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+st.markdown("---")
+
+if uploaded_files:
+    pipeline_type = detect_pipeline_type(uploaded_files)
+    exhibition_name = extract_exhibition_name(uploaded_files)
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>🔍 pipeline type</h3>
+            <h2>{'📊 excel' if pipeline_type == 'excel' else '🖼 ocr/qr'}</h2>
+        </div>
+        """, unsafe_allow_html=True)
+    with col2:
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>📁 file count</h3>
+            <h2>{len(uploaded_files)}</h2>
+        </div>
+        """, unsafe_allow_html=True)
+    with col3:
+        st.markdown(f"""
+        <div class="metric-card">
+            <h3>🏢 exhibition</h3>
+            <h2>{exhibition_name[:15]}</h2>
+        </div>
+        """, unsafe_allow_html=True)
+
+    exhibition_name = st.text_input(
+        "📝 edit exhibition name",
+        value=exhibition_name,
+        help="will be recorded in exhibition column"
+    )
+
+    session_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    session_dir = Path(f"session_{session_timestamp}")
+    uploads_dir = session_dir / "uploads"
+    logs_dir = session_dir / "logs"
+    uploads_dir.mkdir(parents=True, exist_ok=True)
+    logs_dir.mkdir(parents=True, exist_ok=True)
+
+
+    file_types = {}
+    for f in uploaded_files:
+        (uploads_dir / f.name).write_bytes(f.getbuffer())
+        file_types[f.name] = detect_source_type(f.name)
+    
+    file_types_path = session_dir / "uploaded_file_types.json"
+    file_types_path.write_text(json.dumps(file_types, ensure_ascii=False, indent=2), encoding='utf-8')
+    print(f"   saved file types: {file_types}")
+
+    os.environ["SESSION_DIR"] = str(session_dir)
+    os.environ["SOURCE_FOLDER"] = str(uploads_dir)
+    os.environ["EXHIBITION_NAME"] = exhibition_name
+
+    if pipeline_type == 'excel':
+        excel_files = list(uploads_dir.glob("*.xlsx")) + list(uploads_dir.glob("*.xls"))
+        if excel_files:
+            os.environ["INPUT_EXCEL"] = str(excel_files[0])
+
+    batches, batch_size = process_files_in_batches(uploads_dir, pipeline_type)
+    total_batches = len(batches)
+    
+    if total_batches > 0:
+        st.info(f"📦 number of batches: {total_batches} | batch size: {batch_size}")
+
+    st.markdown("---")
+
+    if st.button("🚀 start processing", type="primary"):
+        if not qc_user_name or not qc_user_role:
+            st.markdown("""
+            <div class="status-box status-warning">
+                ⚠️ please enter quality supervisor information (name and role)!
+            </div>
+            """, unsafe_allow_html=True)
+            st.stop()
+        
+        if quota['remaining'] <= 0:
+            st.markdown("""
+            <div class="status-box status-error">❌ api quota finished! try again tomorrow.</div>
+            """, unsafe_allow_html=True)
+            st.stop()
+
+        qc_metadata = get_qc_metadata(qc_user_name, qc_user_role)
+        save_qc_log(session_dir, qc_metadata, exhibition_name, pipeline_type, len(uploaded_files))
+        
+        st.markdown("## 🔄 processing in progress...")
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        log_area = st.empty()
+        quota_display = st.empty()
+
+        start_time = time.time()
+        success = False
+        output_files = []
+
+        try:
+            if pipeline_type == 'excel':
+                st.markdown("""
+                <div class="status-box status-info">📊 excel mode activated</div>
+                """, unsafe_allow_html=True)
+
+                excel_input = os.environ.get("INPUT_EXCEL")
+                if not excel_input or not Path(excel_input).exists():
+                    st.markdown("""
+                    <div class="status-box status-error">❌ excel file not found!</div>
+                    """, unsafe_allow_html=True)
+                    st.stop()
+
+                try:
+                    df_input = pd.read_excel(excel_input)
+                    total_rows = len(df_input)
+                    st.info(f"📊 number of companies: {total_rows}")
+                    current_quota = load_quota()
+                    if current_quota['remaining'] < total_rows:
+                        st.warning(f"⚠️ insufficient quota! needed: {total_rows}, available: {current_quota['remaining']}")
+                        if not st.checkbox("continue with insufficient quota?"):
+                            st.stop()
+                except Exception as e:
+                    st.warning(f"couldn't read row count: {e}")
+                    total_rows = 0
+
+                progress_bar.progress(10)
+                current_quota = load_quota()
+                quota_display.info(f"🔋 remaining quota: {current_quota['remaining']}/{DAILY_LIMIT}")
+
+                st.info(f"📦 processing {total_rows} rows in batches (size: 1)")
+                
+                success = run_script(
+                    "excel_mode.py",
+                    session_dir,
+                    log_area,
+                    status_text,
+                    "📊 excel web scraper",
+                    fast_mode
+                )
+                progress_bar.progress(100)
+
+                if total_rows > 0:
+                    quota = decrease_quota(total_rows)
+                    quota_display.success(f"✅ remaining quota: {quota['remaining']}/{DAILY_LIMIT} (used: {total_rows})")
+                else:
+                    quota = decrease_quota(1)
+                    quota_display.success(f"✅ remaining quota: {quota['remaining']}/{DAILY_LIMIT}")
+
+                output_files = list(session_dir.glob("output_enriched_*.xlsx"))
+                if not output_files:
+                    output_files = [f for f in session_dir.glob("**/*.xlsx")
+                                    if "output" in f.name.lower() or "enriched" in f.name.lower()]
+
+            else:
+                st.markdown("""
+                <div class="status-box status-info">🖼 ocr/qr pipeline activated</div>
+                """, unsafe_allow_html=True)
+
+                if total_batches > 0:
+                    st.info(f"📦 processing {total_batches} batches | each batch about {batch_size} files")
+
+                stages = [
+                    ("📘 ocr extraction", "ocr_dyn.py", 20),
+                    ("🔍 qr detection", "qr_dyn.py", 40),
+                    ("🧩 merge ocr+qr", "mix_ocr_qr_dyn.py", 60),
+                    ("🌐 web scraping", "scrap.py", 80),
+                    ("💠 final merge", "final_mix.py", 100)
+                ]
+
+                all_success = True
+                for stage_name, script, progress_val in stages:
+                    current_quota = load_quota()
+                    quota_display.info(f"🔋 remaining quota: {current_quota['remaining']}/{DAILY_LIMIT}")
+
+                    if total_batches > 0:
+                        st.markdown(f"**{stage_name}** - processing {total_batches} batches...")
+
+                    stage_success = run_script(
+                        script, session_dir, log_area, status_text,
+                        stage_name, fast_mode
+                    )
+                    if not stage_success:
+                        all_success = False
+                        st.markdown(f"""
+                        <div class="status-box status-warning">⚠️ {stage_name} encountered an issue, continuing...</div>
+                        """, unsafe_allow_html=True)
+
+                    progress_bar.progress(progress_val)
+                    time.sleep(rate_limit)
+                    
+                    quota_decrease_amount = max(1, total_batches)
+                    quota = decrease_quota(quota_decrease_amount)
+                    quota_display.success(f"✅ remaining quota: {quota['remaining']}/{DAILY_LIMIT}")
+                    
+                    if quota['remaining'] <= 0:
+                        st.markdown('<div class="status-box status-error">❌ api quota finished!</div>', unsafe_allow_html=True)
+                        break
+
+                success = all_success
+                output_files = list(session_dir.glob("merged_final_*.xlsx"))
+                if not output_files:
+                    output_files = [f for f in session_dir.glob("**/*.xlsx")
+                                    if any(kw in f.name.lower() for kw in ["merged", "final", "output"])]
+
+            elapsed = time.time() - start_time
+
+            if success and output_files:
+                st.info("📝 adding exhibition, source and qc metadata...")
+                for output_file in output_files:
+                    add_exhibition_and_source(
+                    
+                        excel_path=output_file, 
+                        exhibition_name=exhibition_name, 
+                        session_dir=session_dir,
+                        qc_metadata=qc_metadata
+                    )
+                    
+                    add_qc_metadata_to_excel(output_file, qc_metadata)
+                
+            
+                
+                # ========== google sheets upload ==========
+                st.markdown("---")
+                st.markdown("## save data to google drive")
+                st.info("all data (ocr/qr + web scraping) will be saved together")
+                sheets_status = st.empty()
+                sheets_status.info("merging and preparing data...")
+                try:
+                    # merge all data sources
+                    merged_excel = merge_all_data_sources(session_dir, pipeline_type)
+
+                    if not merged_excel or not merged_excel.exists():
+                        sheets_status.warning("no data found for upload")
+                    else:
+                        # 🔹 cleaning only for ocr/qr mode
+                        if pipeline_type == 'ocr_qr':
+                            sheets_status.info("🧹 cleaning data...")
+                            
+                            try:
+                                from script2 import script2_process_file
+                                
+                                # output file name
+                                timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                                processed_excel = session_dir / f"merged_complete_processed_{timestamp}.xlsx"
+                                
+                                # run script 2
+                                script2_process_file(
+                                    input_path=str(merged_excel),
+                                    output_path=str(processed_excel)
+                                )
+                                
+                                # check if output was created?
+                                if processed_excel.exists():
+                                    sheets_status.success("✅ data cleaned")
+                                    final_file = processed_excel  # ← use this for upload
+                                else:
+                                    sheets_status.warning("⚠️ cleaning failed, using original file")
+                                    final_file = merged_excel
+                            
+                            except Exception as e:
+                                sheets_status.warning(f"⚠️ error in cleaning: {e}")
+                                final_file = merged_excel
+                        
+                        else:
+                            # excel mode: without cleaning
+                            sheets_status.info("📊 excel mode - no cleaning")
+                            final_file = merged_excel
+                        
+                        # upload to google
+                        sheets_status.info(f"uploading {final_file.name}...")
+                        folder_id = get_or_create_folder("Exhibition_Data")
+
+                        success_gs, msg_gs, url_gs, total_rows = append_excel_data_to_sheets(
+                            excel_path=final_file,
+                            folder_id=folder_id,
+                            exhibition_name=exhibition_name,
+                            qc_metadata=qc_metadata
+                        )
+                                            
+                        if success_gs:
+                            sheets_status.markdown(f"""
+                            <div class="status-box status-success">
+                                {msg_gs}
+                            </div>
+                            """, unsafe_allow_html=True)
+                            
+                            st.markdown(f"""
+                            <div class="file-display" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                                <h4>permanent table link</h4>
+                                <p style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
+                                    <a href="{url_gs}" target="_blank" style="color: white; font-weight: bold; font-size: 1.1rem;">
+                                        open in google drive
+                                    </a>
+                                </p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        
+                        else:
+                            sheets_status.error(f"error: {msg_gs}")
+                except Exception as e:
+                    sheets_status.error(f"error merging data: {e}")
+                    import traceback
+                    traceback.print_exc()
+
+                # ========== end google sheets ==========
+                # ========== end google sheets ==========
+
+            st.markdown("---")
+
+            if success and output_files:
+                st.markdown("""
+                <div class="status-box status-success">
+                    <h2>🎉 processing completed successfully!</h2>
+                </div>
+                """, unsafe_allow_html=True)
+
+                st.markdown(f"""
+                <div class="qc-card">
+                    <h4>👤 quality supervisor information</h4>
+                    <p><strong>supervisor:</strong> {qc_metadata['QC_Supervisor']} | <strong>role:</strong> {qc_metadata['QC_Role']}</p>
+                    <p><strong>date and time:</strong> {qc_metadata['QC_Timestamp']}</p>
+                </div>
+                """, unsafe_allow_html=True)
+
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <h3>⏱️ execution time</h3>
+                        <h2>{elapsed:.1f}s</h2>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with col2:
+                    quota_now = load_quota()
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <h3>🔋 remaining quota</h3>
+                        <h2>{quota_now['remaining']}</h2>
+                    </div>
+                    """, unsafe_allow_html=True)
+                with col3:
+                    st.markdown(f"""
+                    <div class="metric-card">
+                        <h3>📊 output file</h3>
+                        <h2>{len(output_files)}</h2>
+                    </div>
+                    """, unsafe_allow_html=True)
+
+            
+                st.markdown("## download final files")
+                # add merged_complete file
+                merged_files = list(session_dir.glob("merged_complete_*.xlsx"))
+                if merged_files:
+                    all_output_files = merged_files + output_files
+                else:
+                    all_output_files = output_files
+                for output_file in all_output_files:
+
+                    with st.container():
+                        colA, colB = st.columns([3, 1])
+                        with colA:
+                            st.markdown(f"""
+                            <div class="file-display">
+                                <h4>📄 {output_file.name}</h4>
+                                <p>size: {output_file.stat().st_size / 1024:.1f} kb</p>
+                            </div>
+                            """, unsafe_allow_html=True)
+                        with colB:
+                            with open(output_file, "rb") as f:
+                                st.download_button(
+                                    label="⬇️ download",
+                                    data=f,
+                                    file_name=output_file.name,
+                                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                    key=f"download_{output_file.name}"
+                                )
+                        try:
+                            df_prev = pd.read_excel(output_file)
+                            for c in df_prev.columns:
+                                if df_prev[c].dtype == 'object':
+                                    df_prev[c] = df_prev[c].astype(str).replace('nan', '')
+                            with st.expander(f"👁 preview {output_file.name}"):
+                                st.markdown(f"""
+                                <div class="status-box status-info" style="margin-top:0;">
+                                    <p style="margin:0;">📊 <strong>{len(df_prev)}</strong> rows × 
+                                       <strong>{len(df_prev.columns)}</strong> columns</p>
+                                </div>
+                                """, unsafe_allow_html=True)
+                                cols_display = ", ".join(df_prev.columns.tolist()[:20])
+                                if len(df_prev.columns) > 20: cols_display += "..."
+                                st.info(f"🔤 columns: {cols_display}")
+                                st.dataframe(df_prev.head(10), width='stretch')
+                        except Exception as e:
+                            st.warning(f"⚠️ error displaying preview: {e}")
+
+                json_files = [f for f in session_dir.glob("*.json") if f.name != "quota.json"]
+                if json_files:
+                    with st.expander("📄 json files and logs (optional)"):
+                        for json_file in json_files:
+                            col1, col2 = st.columns([3, 1])
+                            with col1:
+                                if json_file.name == "qc_log.json":
+                                    st.write(f"**👤 {json_file.name}** (quality control log)")
+                                else:
+                                    st.write(f"**{json_file.name}**")
+                            with col2:
+                                with open(json_file, "rb") as f:
+                                    st.download_button(
+                                        label="⬇️ download",
+                                        data=f,
+                                        file_name=json_file.name,
+                                        mime="application/json",
+                                        key=f"download_json_{json_file.name}"
+                                    )
+                st.balloons()
+
+            else:
+                st.markdown("""
+                <div class="status-box status-warning">
+                    <h2>⚠️ processing incomplete</h2>
+                    <p>some data was not processed. check logs.</p>
+                </div>
+                """, unsafe_allow_html=True)
+                st.info("💡 note: if a company has no url, its information cannot be retrieved from the web.")
+                if debug_mode:
+                    with st.expander("🔍 session files list"):
+                        for f in session_dir.rglob("*"):
+                            if f.is_file():
+                                st.write(f"📄 {f.relative_to(session_dir)}")
+
+        except Exception as e:
+            st.markdown("""
+            <div class="status-box status-error">
+                <h2>❌ unexpected error</h2>
+            </div>
+            """, unsafe_allow_html=True)
+            st.error(f"error: {str(e)}")
+            if debug_mode:
+                import traceback
+                with st.expander("📋 error details"):
+                    st.code(traceback.format_exc())
+
+else:
+    st.markdown("""
+    <div class="status-box status-info">
+        <h3>👋 welcome!</h3>
+        <p>please first enter quality supervisor information, then upload your files</p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                    padding
