@@ -9,9 +9,8 @@ import os, json, re, pandas as pd
 from collections import defaultdict
 import time
 
-# =========================================================
+
 # dynamic paths
-# =========================================================
 SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
 INPUT_JSON = Path(os.getenv("INPUT_JSON", SESSION_DIR / "mix_ocr_qr.json"))
 INPUT_EXCEL = Path(os.getenv("INPUT_EXCEL", SESSION_DIR / "web_analysis.xlsx"))
@@ -27,9 +26,8 @@ print(f"excel: {INPUT_EXCEL}")
 print(f"output: {OUTPUT_EXCEL}")
 print("="*70 + "\n")
 
-# =========================================================
+
 # json to excel field mapping
-# =========================================================
 FIELD_MAPPING = {
     'addresses': 'Address',
     'phones': 'Phone1',
@@ -45,9 +43,8 @@ FIELD_MAPPING = {
     'notes': 'Notes',
 }
 
-# =========================================================
+
 # helper functions
-# =========================================================
 def is_persian(text):
     if not text or pd.isna(text):
         return False
@@ -134,9 +131,8 @@ def extract_key_identifier(record):
     
     return ("unique", str(id(record)))
 
-# =========================================================
+
 # convert json to dataframe
-# =========================================================
 def json_to_dataframe_smart(json_path):
     """convert json to dataframe - all fields"""
     print("\nconverting json to dataframe...")
@@ -271,9 +267,8 @@ def json_to_dataframe_smart(json_path):
         traceback.print_exc()
         return pd.DataFrame()
 
-# =========================================================
+
 # load excel
-# =========================================================
 def load_excel_dataframe(excel_path):
     """load excel as dataframe"""
     print("\nloading excel...")
@@ -322,9 +317,8 @@ def load_excel_dataframe(excel_path):
         print(f"    error: {e}")
         return pd.DataFrame()
 
-# =========================================================
+
 # merge two records
-# =========================================================
 def merge_two_records(r1, r2):
     """merge two records - r1 has priority"""
     merged = {}
@@ -352,9 +346,8 @@ def merge_two_records(r1, r2):
     
     return merged
 
-# =========================================================
+
 # smart dataframe merge
-# =========================================================
 def smart_merge_dataframes(json_df, excel_df):
     """smart merge of two dataframes"""
     print("\nsmart merging json + excel...")
@@ -436,9 +429,8 @@ def smart_merge_dataframes(json_df, excel_df):
     
     return result_df
 
-# =========================================================
+
 # remove junk columns
-# =========================================================
 def remove_junk_columns(df):
     """remove extra and dirty columns"""
     print("\nremoving junk columns...")
@@ -480,9 +472,8 @@ def remove_junk_columns(df):
     
     return df
 
-# =========================================================
+
 # save
-# =========================================================
 def save_excel(df, path):
     """save dataframe to excel with cleanup"""
     if df.empty:
@@ -532,9 +523,8 @@ def save_excel(df, path):
         print(f"    error: {e}")
         return False
 
-# =========================================================
-# main - flexible mode
-# =========================================================
+
+# main 
 def main():
     start = time.time()
     
