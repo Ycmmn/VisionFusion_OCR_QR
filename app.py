@@ -1645,3 +1645,32 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
     
 
 
+
+
+def get_or_create_folder(folder_name="Exhibition_Data"):
+    """find/create folder in drive"""
+    try:
+        drive_service, _ = get_google_services()
+        if not drive_service:
+            return None
+        
+        query = f"name='{folder_name}' and mimeType='application/vnd.google-apps.folder' and trashed=false"
+        results = drive_service.files().list(
+            q=query, spaces='drive', fields='files(id, name)', pageSize=1
+        ).execute()
+        files = results.get('files', [])
+        
+        if files:
+            print(f"   ✅ existing folder: {files[0]['name']}")
+            return files[0]['id']
+        
+        folder = drive_service.files().create(
+            body={'name': folder_name, 'mimeType': 'application/vnd.google-apps.folder'},
+            fields='id'
+        ).execute()
+        print(f"   ✅ new folder: {folder_name}")
+        return folder.get('id')
+        
+    except Exception as e:
+        print(f"   ❌ error: {e}")
+        return None
