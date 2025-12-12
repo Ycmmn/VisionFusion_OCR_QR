@@ -4,10 +4,8 @@ from pathlib import Path
 import re
 from datetime import datetime
 
-# ============================================================================
-# section 1: helper functions
-# ============================================================================
 
+# section 1: helper functions
 def merge_cell_values(values):
     """merge cell values with duplicate removal"""
     clean_values = [str(v).strip() for v in values if pd.notna(v) and str(v).strip() != '']
@@ -42,9 +40,8 @@ def extract_base_name(col_name):
     
     return col_name
 
-# ============================================================================
+
 # section 2: cleaning functions
-# ============================================================================
 
 def clean_company_id(company_id_str):
     """extract main companyid from merged string"""
@@ -79,7 +76,7 @@ def extract_json_fields(text):
     return name, position
 
 def remove_json_artifacts(text):
-    """remove json remnants from text"""
+    #remove json remnants from text
     if pd.isna(text) or text == '':
         return text
     
@@ -102,10 +99,8 @@ def remove_json_artifacts(text):
     
     return text.strip() if text.strip() else None
 
-# ============================================================================
-# section 3: merge numbered columns
-# ============================================================================
 
+# section 3: merge numbered columns
 def find_numbered_groups(columns):
     """find groups of columns with numbers"""
     from collections import defaultdict
@@ -120,7 +115,7 @@ def find_numbered_groups(columns):
     return result
 
 def merge_numbered_columns(df, verbose=True):
-    """merge numbered columns"""
+    #merge numbered columns
     if verbose:
         print("identifying numbered columns...")
     
@@ -164,10 +159,8 @@ def merge_numbered_columns(df, verbose=True):
     
     return df, merged_count
 
-# ============================================================================
-# section 4: merge duplicate columns
-# ============================================================================
 
+# section 4: merge duplicate columns
 def merge_duplicate_columns(df, verbose=True):
     """merge duplicate columns (case-insensitive)"""
     if verbose:
@@ -227,10 +220,8 @@ def merge_duplicate_columns(df, verbose=True):
     
     return new_df, merged_count
 
-# ============================================================================
-# section 5: merge bilingual columns
-# ============================================================================
 
+# section 5: merge bilingual columns
 def find_bilingual_pairs(columns):
     """find english/persian column pairs"""
     pairs = []
@@ -271,7 +262,7 @@ def find_bilingual_pairs(columns):
     return pairs
 
 def merge_bilingual_columns(df, verbose=True):
-    """merge english/persian columns"""
+    #merge english/persian columns
     if verbose:
         print("identifying bilingual columns...")
     
@@ -316,10 +307,8 @@ def merge_bilingual_columns(df, verbose=True):
     
     return df, merged_count
 
-# ============================================================================
-# section 6: merge specific columns
-# ============================================================================
 
+# section 6: merge specific columns
 def merge_specific_columns(df, verbose=True):
     """merge specific columns that should be combined"""
     
@@ -456,3 +445,5 @@ def merge_rows_by_company_id(df, company_id_col=None, verbose=True):
     df_merged = pd.DataFrame(merged_rows)
     
     return df_merged
+
+    
