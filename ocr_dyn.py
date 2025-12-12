@@ -6,9 +6,8 @@ from typing import Any, Dict, List, Union
 from PIL import Image
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
-# =========================================================
+
 # gemini sdk import
-# =========================================================
 try:
     import google.genai as _genai_new
     from google.genai import types as _genai_types
@@ -17,9 +16,8 @@ except Exception as e:
     print("gemini sdk failed to load:", e)
     sys.exit(1)
 
-# =========================================================
+
 # dynamic paths
-# =========================================================
 SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
 SOURCE_FOLDER = Path(os.getenv("SOURCE_FOLDER", SESSION_DIR / "uploads"))
 OUT_JSON = Path(os.getenv("OUT_JSON", SESSION_DIR / "gemini_output.json"))
@@ -28,9 +26,8 @@ OUT_JSON = Path(os.getenv("OUT_JSON", SESSION_DIR / "gemini_output.json"))
 POPPLER_PATH = os.getenv("POPPLER_PATH", r"C:\poppler\Library\bin")
 os.environ["PATH"] += os.pathsep + POPPLER_PATH
 
-# =========================================================
+
 # general settings
-# =========================================================
 MODEL_NAME = "gemini-2.5-flash"
 TEMPERATURE = 0.0
 PDF_IMG_DPI = 150
@@ -39,27 +36,25 @@ BATCH_SIZE_IMAGES = 3
 
 MAX_IMAGES = 30      # max 30 images
 MAX_PDF = 10         # max 10 pdfs
-MAX_EXCEL = 5        # max 5 excel (if you add later)
+MAX_EXCEL = 5        # max 5 excel 
 MAX_WORKERS = 3      # number of parallel threads
 
-# =========================================================
-# api key setup (single key only)
-# =========================================================
-API_KEY = "AIzaSyCv3XMTnnhEUmpJb4zE8qmptNXEEca4gxY"
+
+# api key setup 
+API_KEY = "AI***xY"
 CLIENT = _genai_new.Client(api_key=API_KEY)
 
-# =========================================================
+
 # gemini prompt
-# =========================================================
 JSON_INSTRUCTIONS = """
 you are an information extraction engine. extract ocr text and structured fields from the scanned document.
 return only valid json matching the schema. keep original persian text exactly as-is.
 if a field has no value, return null.
 """
 
-# =========================================================
+
+
 # define json output structure
-# =========================================================
 def build_newsdk_schema():
     P = _genai_types
     return P.Schema(
@@ -89,9 +84,8 @@ def build_newsdk_schema():
         required=["ocr_text"]
     )
 
-# =========================================================
+
 # helper functions
-# =========================================================
 def list_files(path: Union[str, Path]) -> List[Path]:
     exts = {".jpg", ".jpeg", ".png", ".pdf"}
     return sorted([f for f in Path(path).rglob("*") if f.suffix.lower() in exts])
@@ -112,9 +106,8 @@ def ensure_nulls(obj: Dict[str, Any]) -> Dict[str, Any]:
         obj["ocr_text"] = ""
     return obj
 
-# =========================================================
+
 # send function with single key (no rotation)
-# =========================================================
 def call_gemini_single_key(data: Image.Image, source_path: Path) -> Dict[str, Any]:
     schema = build_newsdk_schema()
     cfg = _genai_types.GenerateContentConfig(
@@ -147,9 +140,8 @@ def call_gemini_single_key(data: Image.Image, source_path: Path) -> Dict[str, An
     except Exception as e:
         raise RuntimeError(f"gemini api error: {e}")
 
-# =========================================================
+
 # process pdf to images and send
-# =========================================================
 def pdf_to_images_and_process(pdf_path: Path) -> List[Dict[str, Any]]:
     from pdf2image import convert_from_path
     print(f"converting pdf: {pdf_path.name}")
@@ -171,9 +163,8 @@ def pdf_to_images_and_process(pdf_path: Path) -> List[Dict[str, Any]]:
 
 
 
-# =========================================================
+
 # parallel image processing
-# =========================================================
 def process_images_parallel(image_files: List[Path], max_workers=3) -> List[Dict[str, Any]]:
     """
     parallel image processing with gemini
@@ -253,9 +244,8 @@ def process_images_parallel(image_files: List[Path], max_workers=3) -> List[Dict
     
     return all_results
 
-# =========================================================
-# parallel pdf processing (serial pdfs, parallel pages)
-# =========================================================
+
+# parallel pdf processing 
 def process_pdfs_parallel(pdf_files: List[Path]) -> List[Dict[str, Any]]:
     """
     process pdfs (each pdf serial, but pages inside each pdf parallel)
@@ -291,9 +281,8 @@ def process_pdfs_parallel(pdf_files: List[Path]) -> List[Dict[str, Any]]:
     return all_results
 
 
-# =========================================================
+
 # main program execution (with parallel processing)
-# =========================================================
 def main():
     print("="*70)
     print("smart ocr pipeline - parallel processing")
