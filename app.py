@@ -1038,11 +1038,11 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             df.drop(columns=columns_to_remove, inplace=True)
             print(f"   ✅ Removed {len(columns_to_remove)} columns")
 
-        # ========== 👤 استخراج Person/Position ==========
+        #  extract Person/Position
         print(f"\n👤 Extracting Person & Position from PersonX columns...")
 
         import google.generativeai as genai
-        genai.configure(api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
+        genai.configure(api_key="AIzaSy***NNPzB70")
         model = genai.GenerativeModel('gemini-1.5-flash')
 
         def translate_to_persian(text):
