@@ -1123,11 +1123,11 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                         if position:
                             row_positions.append(position)
                 
-                # ترکیب با " | "
+                # combine with " | "
                 names_list.append(" | ".join(row_names) if row_names else "")
                 positions_list.append(" | ".join(row_positions) if row_positions else "")
             
-            # اضافه کردن ستون‌های جدید
+            # add new columns
             if 'Name' not in df.columns:
                 df['Name'] = names_list
                 print(f"   ✅ Added 'Name' column")
@@ -1136,11 +1136,11 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 df['Position'] = positions_list
                 print(f"   ✅ Added 'Position' column")
             
-            # حذف ستون‌های قدیمی PersonX
+            
             df.drop(columns=person_columns, inplace=True)
             print(f"   ✅ Removed {len(person_columns)} PersonX columns")
             
-            # نمایش 3 نمونه
+            # show 3 samples
             print(f"\n   📊 Sample extractions:")
             for i in range(min(3, len(df))):
                 if df.at[i, 'Name'] or df.at[i, 'Position']:
@@ -1154,14 +1154,14 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         print(f"\n   ✅ Cleanup completed!")
 
 
-        # ========== 🌐 ترجمه Position انگلیسی به فارسی ==========
+        # translate english position to persian 
         print(f"\n🌐 Translating English Positions to Persian...")
 
         if 'Position' in df.columns:
             import google.generativeai as genai
             import time
             
-            genai.configure(api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
+            genai.configure(api_key="AIzaSyDM***KNNPzB70")
             model = genai.GenerativeModel('gemini-1.5-flash')
             
             def detect_language_position(text):
