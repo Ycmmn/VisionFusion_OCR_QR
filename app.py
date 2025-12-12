@@ -1676,4 +1676,662 @@ def get_or_create_folder(folder_name="Exhibition_Data"):
         return None
 
 
+
+
+
+
+# quota management
+DAILY_LIMIT = 240
+QUOTA_FILE = Path("quota.json")
+
+def save_quota(q):
+    QUOTA_FILE.write_text(json.dumps(q, indent=2, ensure_ascii=False), encoding="utf-8")
+
+def load_quota():
+    today = datetime.date.today().isoformat()
+    if QUOTA_FILE.exists():
+        try:
+            data = json.loads(QUOTA_FILE.read_text(encoding="utf-8"))
+            file_date = data.get("date")
+            if file_date != today:
+                q = {"date": today, "used": 0, "remaining": DAILY_LIMIT}
+                save_quota(q)
+                return q
+            used = data.get("used", 0)
+            remaining = max(0, DAILY_LIMIT - used)
+            q = {"date": today, "used": used, "remaining": remaining}
+            save_quota(q)
+            return q
+        except Exception:
+            pass
+    q = {"date": today, "used": 0, "remaining": DAILY_LIMIT}
+    save_quota(q)
+    return q
+
+def decrease_quota(amount=1):
+    quota = load_quota()
+    quota["used"] += amount
+    quota["remaining"] = max(0, DAILY_LIMIT - quota["used"])
+    save_quota(quota)
+    return quota
+
+
+# quality control tracking functions
+
+def get_qc_metadata(user_name, user_role):
+    """create quality control metadata"""
+    now = datetime.datetime.now()
+    return {
+        "QC_Supervisor": user_name,
+        "QC_Role": user_role,
+        "QC_Date": now.strftime("%Y-%m-%d"),
+        "QC_Time": now.strftime("%H:%M:%S"),
+        "QC_Timestamp": now.strftime("%Y-%m-%d %H:%M:%S")
+    }
+
+def add_qc_metadata_to_excel(excel_path, qc_metadata):
+    """add quality control metadata to excel"""
+    try:
+        df = pd.read_excel(excel_path)
+        for key in ["QC_Supervisor", "QC_Role", "QC_Date", "QC_Time", "QC_Timestamp"]:
+            if key in qc_metadata:
+                df.insert(0, key, qc_metadata[key])
+        df.to_excel(excel_path, index=False, engine='openpyxl')
+        print(f"   ✅ QC Metadata added: {qc_metadata['QC_Supervisor']} ({qc_metadata['QC_Role']})")
+        return True
+    except Exception as e:
+        print(f"   ❌ Error adding QC metadata: {e}")
+        return False
+
+def save_qc_log(session_dir, qc_metadata, exhibition_name, pipeline_type, total_files):
+    """save quality control log in json file"""
+    try:
+        qc_log_file = session_dir / "qc_log.json"
+        qc_log = {
+            **qc_metadata,
+            "Exhibition": exhibition_name,
+            "Pipeline_Type": pipeline_type,
+            "Total_Files": total_files,
+            "Session_Dir": str(session_dir)
+        }
+        qc_log_file.write_text(json.dumps(qc_log, indent=2, ensure_ascii=False), encoding="utf-8")
+        print(f"   ✅ QC Log saved: {qc_log_file}")
+        return True
+    except Exception as e:
+        print(f"   ❌ Error saving QC log: {e}")
+        return False
+
+
+# smart shared functions
+def detect_source_type(file_name):
+    """detect file type: image, pdf, excel"""
+    if not file_name or pd.isna(file_name):
+        return "Unknown"
+    
+    file_name = str(file_name).lower()
+    
+    # images
+    if file_name.endswith(('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.gif', '.tiff', '.tif', '.svg', '.heic')):
+        return "Image"
+    
+    # pdf
+    elif file_name.endswith('.pdf'):
+        return "PDF"
+    
+    # excel
+    elif file_name.endswith(('.xlsx', '.xls', '.xlsm', '.xlsb', '.csv')):
+        return "Excel"
+    
+    else:
+        return "Unknown"
+
+def smart_position_from_department(department):
+    if not department or pd.isna(department) or str(department).strip() == '':
+        return None
+    department = str(department).strip().lower()
+    department_position_map = {
+        'فروش': 'مدیر فروش', 'sales': 'مدیر فروش',
+        'بازاریابی': 'مدیر بازاریابی', 'marketing': 'مدیر بازاریابی',
+        'صادرات': 'مدیر صادرات', 'export': 'مدیر صادرات',
+        'واردات': 'مدیر واردات', 'import': 'مدیر واردات',
+        'بازرگانی': 'مدیر بازرگانی', 'commerce': 'مدیر بازرگانی',
+        'مدیریت': 'مدیرعامل', 'management': 'مدیرعامل',
+        'اجرایی': 'مدیر اجرایی', 'executive': 'مدیر اجرایی',
+        'عامل': 'مدیرعامل', 'ceo': 'مدیرعامل',
+        'تولید': 'مدیر تولید', 'production': 'مدیر تولید',
+        'کارخانه': 'مدیر کارخانه', 'factory': 'مدیر کارخانه',
+        'عملیات': 'مدیر عملیات', 'operations': 'مدیر عملیات',
+        'فنی': 'مدیر فنی', 'technical': 'مدیر فنی',
+        'مالی': 'مدیر مالی', 'finance': 'مدیر مالی',
+        'حسابداری': 'مدیر حسابداری', 'accounting': 'مدیر حسابداری',
+        'منابع انسانی': 'مدیر منابع انسانی', 'hr': 'مدیر منابع انسانی',
+        'فناوری': 'مدیر فناوری اطلاعات', 'it': 'مدیر IT',
+        'تحقیق': 'مدیر تحقیق و توسعه', 'r&d': 'مدیر R&D',
+        'کیفیت': 'مدیر کنترل کیفیت', 'qc': 'مدیر کنترل کیفیت',
+        'خدمات': 'مدیر خدمات', 'support': 'مدیر پشتیبانی',
+        'لجستیک': 'مدیر لجستیک', 'logistics': 'مدیر لجستیک',
+        'انبار': 'مدیر انبار', 'warehouse': 'مدیر انبار',
+        'خرید': 'مدیر خرید', 'purchasing': 'مدیر خرید',
+        'روابط عمومی': 'مدیر روابط عمومی', 'pr': 'مدیر روابط عمومی',
+    }
+    for key, position in department_position_map.items():
+        if key in department:
+            return position
+    if any(word in department for word in ['مدیر', 'manager', 'رئیس', 'chief']):
+        return f"مدیر {department.title()}"
+    elif any(word in department for word in ['معاون', 'deputy']):
+        return f"معاون {department.title()}"
+    elif any(word in department for word in ['کارشناس', 'expert']):
+        return f"کارشناس {department.title()}"
+    return f"مسئول {department.title()}"
+
+
+
+# extract country & city from address
+def extract_country_city_from_address(address_fa, address_en):
+    """
+    extract country and city from persian and english address
+    
+    returns:
+        tuple: (country, city)
+    """
+    
+    # list of main iranian cities (persian + english)
+    IRANIAN_CITIES = {
+        # major cities
+        'تهران': 'Tehran', 'مشهد': 'Mashhad', 'اصفهان': 'Isfahan', 
+        'شیراز': 'Shiraz', 'تبریز': 'Tabriz', 'کرج': 'Karaj',
+        'قم': 'Qom', 'اهواز': 'Ahvaz', 'کرمانشاه': 'Kermanshah',
+        'ارومیه': 'Urmia', 'رشت': 'Rasht', 'زاهدان': 'Zahedan',
+        'کرمان': 'Kerman', 'همدان': 'Hamadan', 'یزد': 'Yazd',
+        'اردبیل': 'Ardabil', 'بندرعباس': 'Bandar Abbas', 'قزوین': 'Qazvin',
+        'زنجان': 'Zanjan', 'سنندج': 'Sanandaj', 'خرم آباد': 'Khorramabad',
+        'گرگان': 'Gorgan', 'ساری': 'Sari', 'بجنورد': 'Bojnord',
+        'سمنان': 'Semnan', 'یاسوج': 'Yasuj', 'بوشهر': 'Bushehr',
+        'ایلام': 'Ilam', 'بیرجند': 'Birjand', 'شهرکرد': 'Shahrekord',
+        # english names
+        'tehran': 'Tehran', 'mashhad': 'Mashhad', 'isfahan': 'Isfahan',
+        'shiraz': 'Shiraz', 'tabriz': 'Tabriz', 'karaj': 'Karaj',
+        'qom': 'Qom', 'ahvaz': 'Ahvaz', 'kermanshah': 'Kermanshah',
+    }
+    
+    # list of countries (persian + english)
+    COUNTRIES = {
+        # persian
+        'ایران': 'Iran', 'آلمان': 'Germany', 'چین': 'China', 
+        'ترکیه': 'Turkey', 'امارات': 'UAE', 'آمریکا': 'USA',
+        'انگلستان': 'UK', 'فرانسه': 'France', 'ایتالیا': 'Italy',
+        'کره': 'South Korea', 'ژاپن': 'Japan', 'هند': 'India',
+        'عراق': 'Iraq', 'افغانستان': 'Afghanistan', 'پاکستان': 'Pakistan',
+        # english
+        'iran': 'Iran', 'germany': 'Germany', 'china': 'China',
+        'turkey': 'Turkey', 'uae': 'UAE', 'usa': 'USA',
+        'uk': 'UK', 'france': 'France', 'italy': 'Italy',
+        'korea': 'South Korea', 'japan': 'Japan', 'india': 'India',
+    }
+    
+    country = None
+    city = None
+    
+    # combine addresses
+    combined_address = ""
+    if address_fa and not pd.isna(address_fa):
+        combined_address += str(address_fa).lower() + " "
+    if address_en and not pd.isna(address_en):
+        combined_address += str(address_en).lower() + " "
+    
+    if not combined_address.strip():
+        return None, None
+    
+    # search for city
+    for city_name, city_en in IRANIAN_CITIES.items():
+        if city_name.lower() in combined_address:
+            city = city_en
+            country = "Iran"  # if iranian city found, country is iran
+            break
+    
+    # search for country (if not found yet)
+    if not country:
+        for country_name, country_en in COUNTRIES.items():
+            if country_name.lower() in combined_address:
+                country = country_en
+                break
+    
+    # if country not found but city was iranian
+    if city and not country:
+        country = "Iran"
+    
+    # if only country found (without city) and it was iran
+    if country == "Iran" and not city:
+        # try to find city with regex
+        import re
         
+        # common iranian address patterns
+        patterns = [
+            r'استان\s+(\w+)',  # استان تهران
+            r'شهر\s+(\w+)',     # شهر تهران
+            r'م\.(\w+)',        # م.تهران
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, combined_address)
+            if match:
+                potential_city = match.group(1)
+                if potential_city in IRANIAN_CITIES:
+                    city = IRANIAN_CITIES[potential_city]
+                    break
+    
+    return country, city
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def add_country_city_columns(excel_path):
+    """
+    add country and city columns to excel
+    """
+    try:
+        print(f"\n🌍 Adding Country & City columns...")
+        df = pd.read_excel(excel_path)
+        
+        # check existence of address columns
+        has_address_fa = 'AddressFA' in df.columns
+        has_address_en = 'AddressEN' in df.columns
+        
+        if not has_address_fa and not has_address_en:
+            print("   ⚠️ No AddressFA or AddressEN columns found")
+            return False
+        
+        # add columns if not exist
+        if 'Country' not in df.columns:
+            df['Country'] = None
+        if 'City' not in df.columns:
+            df['City'] = None
+        
+        # process each row
+        filled_count = 0
+        for idx in df.index:
+            address_fa = df.at[idx, 'AddressFA'] if has_address_fa else None
+            address_en = df.at[idx, 'AddressEN'] if has_address_en else None
+            
+            # only if country/city were empty
+            if pd.isna(df.at[idx, 'Country']) or str(df.at[idx, 'Country']).strip() == '':
+                country, city = extract_country_city_from_address(address_fa, address_en)
+                
+                if country:
+                    df.at[idx, 'Country'] = country
+                    filled_count += 1
+                    
+                    if city:
+                        df.at[idx, 'City'] = city
+                        print(f"   Row {idx + 1}: {city}, {country}")
+                    else:
+                        print(f"   Row {idx + 1}: {country} (no city)")
+        
+        # save
+        df.to_excel(excel_path, index=False, engine='openpyxl')
+        print(f"   ✅ Updated {filled_count} rows with Country/City")
+        
+        # show statistics
+        if 'Country' in df.columns:
+            country_counts = df['Country'].value_counts()
+            print(f"\n   📊 Country Distribution:")
+            for country, count in list(country_counts.items())[:5]:
+                if country and str(country) != 'nan':
+                    print(f"      • {country}: {count} rows")
+        
+        return True
+        
+    except Exception as e:
+        print(f"   ❌ Error: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
+def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metadata=None):
+    """
+    add complete metadata to excel:
+    - exhibition name
+    - source (image/pdf/excel)
+    - qc supervisor
+    - qc role
+    - qc date
+    - qc time
+    - qc timestamp
+    - smart position detection
+    """
+    try:
+        print(f"\n📝 Adding Exhibition, Source & QC Metadata...")
+        df = pd.read_excel(excel_path)
+        print(f"   ✅ Loaded: {len(df)} rows × {len(df.columns)} columns")
+
+        # ========== add exhibition ==========
+        df.insert(0, 'Exhibition', exhibition_name)
+        print(f"   📋 Exhibition: '{exhibition_name}'")
+        
+        # ========== add qc metadata ==========
+        if qc_metadata:
+            # add qc columns at the beginning of dataframe
+            qc_columns = ['QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp']
+            
+            for idx, col in enumerate(qc_columns, start=1):
+                if col in qc_metadata:
+                    df.insert(idx, col, qc_metadata[col])
+            
+            print(f"   👤 QC Supervisor: {qc_metadata.get('QC_Supervisor', 'N/A')}")
+            print(f"   💼 QC Role: {qc_metadata.get('QC_Role', 'N/A')}")
+            print(f"   📅 QC Date: {qc_metadata.get('QC_Date', 'N/A')}")
+            print(f"   🕐 QC Time: {qc_metadata.get('QC_Time', 'N/A')}")
+        
+        # ========== detect source ==========
+        # ✅ read uploaded file types
+        file_types_path = Path(session_dir) / "uploaded_file_types.json"
+        
+        if file_types_path.exists():
+            file_types = json.loads(file_types_path.read_text(encoding='utf-8'))
+            print(f"   📖 Loaded file types: {file_types}")
+            
+            # detect source based on file_name
+            if 'file_name' in df.columns:
+                def get_source(fname):
+                    if pd.isna(fname):
+                        return "Unknown"
+                    fname_str = str(fname)
+                    
+                    # search in file_types
+                    if fname_str in file_types:
+                        return file_types[fname_str]
+                    
+                    # if not found, use detect_source_type
+                    return detect_source_type(fname_str)
+                
+                # add source after qc columns
+                insert_position = 6 if qc_metadata else 1
+                df.insert(insert_position, 'Source', df['file_name'].apply(get_source))
+                print(f"   ✅ Source detected from uploaded file types")
+            
+            else:
+                # ✅ if file_name didn't exist, use file count
+                if len(file_types) == 1:
+                    # only one file → give same source to all
+                    source = list(file_types.values())[0]
+                    insert_position = 6 if qc_metadata else 1
+                    df.insert(insert_position, 'Source', source)
+                    print(f"   ✅ Source set to: {source} (single file)")
+                
+                elif len(file_types) > 1:
+                    # multiple files → based on order
+                    sources = list(file_types.values())
+                    
+                    # if row count equals file count
+                    if len(df) == len(sources):
+                        insert_position = 6 if qc_metadata else 1
+                        df.insert(insert_position, 'Source', sources)
+                        print(f"   ✅ Source matched by row count")
+                    else:
+                        # fill with first source
+                        insert_position = 6 if qc_metadata else 1
+                        df.insert(insert_position, 'Source', sources[0])
+                        print(f"   ⚠️ Multiple files but row count mismatch → using first source")
+                
+                else:
+                    insert_position = 6 if qc_metadata else 1
+                    df.insert(insert_position, 'Source', 'Unknown')
+                    print(f"   ⚠️ No file types found")
+        
+        else:
+            # ✅ fallback: use file_name
+            print(f"   ⚠️ file_types.json not found, using fallback")
+            
+            if 'file_name' in df.columns:
+                insert_position = 6 if qc_metadata else 1
+                df.insert(insert_position, 'Source', df['file_name'].apply(detect_source_type))
+                print(f"   ✅ Source detected from file_name column")
+            else:
+                insert_position = 6 if qc_metadata else 1
+                df.insert(insert_position, 'Source', 'Unknown')
+                print(f"   ⚠️ No file_name column → Source set to Unknown")
+
+        # ========== smart position detection ==========
+        if 'Department' in df.columns and 'PositionFA' in df.columns:
+            print(f"\n🤖 Smart Position Detection...")
+            filled_count = 0
+            for idx in df.index:
+                if pd.isna(df.loc[idx, 'PositionFA']) or str(df.loc[idx, 'PositionFA']).strip() == '':
+                    department = df.loc[idx, 'Department']
+                    smart_position = smart_position_from_department(department)
+                    if smart_position:
+                        df.loc[idx, 'PositionFA'] = smart_position
+                        filled_count += 1
+                        print(f"   Row {idx + 1}: {department} → {smart_position}")
+            
+            if filled_count > 0:
+                print(f"   ✅ Filled {filled_count} positions from Department")
+
+        # ========== remove extra columns ==========
+        columns_to_remove = ['CompanyNameFA_translated']
+        removed = 0
+        for col in columns_to_remove:
+            if col in df.columns:
+                df.drop(col, axis=1, inplace=True)
+                removed += 1
+                print(f"   🗑️ Removed column: {col}")
+        
+        if removed:
+            print(f"   ✅ Removed {removed} unnecessary columns")
+
+        # ========== clean data ==========
+        for col in df.columns:
+            if df[col].dtype == 'object':
+                try:
+                    df[col] = df[col].astype(str)
+                    df[col] = df[col].replace('nan', '').replace('None', '')
+                except Exception as e:
+                    print(f"   ⚠️ Warning: Could not convert column {col}: {e}")
+
+        # ========== save ==========
+        df.to_excel(excel_path, index=False, engine='openpyxl')
+        print(f"   💾 Updated: {excel_path.name}")
+        print(f"   📊 Final: {len(df)} rows × {len(df.columns)} columns")
+        
+        # ========== show source distribution ==========
+        if 'Source' in df.columns:
+            source_counts = df['Source'].value_counts()
+            print(f"\n   📊 Source Distribution:")
+            for source, count in source_counts.items():
+                print(f"      • {source}: {count} rows")
+        
+        # ========== show metadata summary ==========
+        print(f"\n   📋 Metadata Summary:")
+        print(f"      📌 Exhibition: {exhibition_name}")
+        if qc_metadata:
+            print(f"      👤 QC Supervisor: {qc_metadata.get('QC_Supervisor')}")
+            print(f"      💼 QC Role: {qc_metadata.get('QC_Role')}")
+            print(f"      📅 QC Timestamp: {qc_metadata.get('QC_Timestamp')}")
+        
+        return True
+    
+    except Exception as e:
+        print(f"   ❌ Error adding metadata: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
+# =========================================================
+# 🔍 detect pipeline type and exhibition name
+# =========================================================
+def detect_pipeline_type(files):
+    extensions = [f.name.split('.')[-1].lower() for f in files]
+    if any(ext in ['xlsx', 'xls'] for ext in extensions):
+        return 'excel'
+    elif any(ext in ['pdf', 'jpg', 'jpeg', 'png'] for ext in extensions):
+        return 'ocr_qr'
+    return None
+
+def extract_exhibition_name(files):
+    if not files:
+        return "Unknown_Exhibition"
+    first_file = files[0].name
+    name_without_ext = first_file.rsplit('.', 1)[0]
+    name_parts = re.split(r'[_\-\s]+', name_without_ext)
+    cleaned_parts = [p for p in name_parts if not p.isdigit() and len(p) > 2]
+    if cleaned_parts:
+        return " ".join(cleaned_parts[:3])
+    return "Unknown_Exhibition"
+
+# =========================================================
+# ✨ batch processing logic
+# =========================================================
+def get_batch_size(file_type):
+    """determine batch size based on file type"""
+    file_type = file_type.lower()
+    if file_type in ['jpg', 'jpeg', 'png', 'bmp', 'webp', 'gif']:
+        return 5
+    elif file_type == 'pdf':
+        return 4
+    elif file_type in ['xlsx', 'xls']:
+        return 1
+    else:
+        return 1
+
+def create_batches(files_list, batch_size):
+    """divide files list into smaller batches"""
+    batches = []
+    for i in range(0, len(files_list), batch_size):
+        batches.append(files_list[i:i + batch_size])
+    return batches
+
+def process_files_in_batches(uploads_dir, pipeline_type):
+    """process files in batches"""
+    if pipeline_type == 'excel':
+        excel_files = list(uploads_dir.glob("*.xlsx")) + list(uploads_dir.glob("*.xls"))
+        return [(f,) for f in excel_files], 1
+    
+    elif pipeline_type == 'ocr_qr':
+        image_files = []
+        pdf_files = []
+        
+        for f in uploads_dir.iterdir():
+            if f.is_file():
+                ext = f.suffix.lower()
+                if ext in ['.jpg', '.jpeg', '.png', '.bmp', '.webp', '.gif']:
+                    image_files.append(f)
+                elif ext == '.pdf':
+                    pdf_files.append(f)
+        
+        image_batches = create_batches(image_files, 5) if image_files else []
+        pdf_batches = create_batches(pdf_files, 4) if pdf_files else []
+        all_batches = image_batches + pdf_batches
+        
+        if image_files and pdf_files:
+            avg_batch_size = (5 + 4) / 2
+        elif image_files:
+            avg_batch_size = 5
+        elif pdf_files:
+            avg_batch_size = 4
+        else:
+            avg_batch_size = 1
+        
+        return all_batches, int(avg_batch_size)
+    
+    return [], 1
+
+# =========================================================
+# 🔄 run script with fast mode + log file
+# =========================================================
+def run_script(script_name, session_dir, log_area, status_text, script_display_name="", fast_mode=True):
+    script_path = Path(script_name)
+    if not script_display_name:
+        script_display_name = script_name
+    if not script_path.exists():
+        script_path = Path.cwd() / script_name
+        if not script_path.exists():
+            status_text.markdown(f"""
+            <div class="status-box status-error">❌ file {script_name} not found!</div>
+            """, unsafe_allow_html=True)
+            return False
+
+    status_text.markdown(f"""
+    <div class="status-box status-info">
+        <div class="loading-spinner"></div> running {script_display_name}...
+    </div>
+    """, unsafe_allow_html=True)
+
+    logs_dir = session_dir / "logs"
+    logs_dir.mkdir(exist_ok=True)
+    timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
+    log_file = logs_dir / f"log_{script_path.stem}_{timestamp}.txt"
+
+    env = os.environ.copy()
+    env["SESSION_DIR"] = str(session_dir)
+    env["SOURCE_FOLDER"] = str(session_dir / "uploads")
+
+    try:
+        with subprocess.Popen(
+            [sys.executable, str(script_path)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            cwd=Path.cwd(),
+            env=env,
+            text=True,
+            bufsize=1
+        ) as process:
+            all_output = ""
+            line_count = 0
+            with open(log_file, "w", encoding="utf-8") as log_f:
+                for line in process.stdout:
+                    all_output += line
+                    log_f.write(line)
+                    log_f.flush()
+                    line_count += 1
+                    if fast_mode:
+                        if line_count % 10 == 0:
+                            log_area.code(all_output[-2000:], language="bash")
+                    else:
+                        log_area.code(all_output[-3000:], language="bash")
+                        time.sleep(0.05)
+            process.wait()
+
+        if process.returncode == 0:
+            status_text.markdown(f"""
+            <div class="status-box status-success">✅ {script_display_name} completed successfully!</div>
+            """, unsafe_allow_html=True)
+            return True
+        else:
+            status_text.markdown(f"""
+            <div class="status-box status-warning">⚠️ {script_display_name} encountered an issue (exit code: {process.returncode})</div>
+            """, unsafe_allow_html=True)
+            try:
+                with open(log_file, 'r', encoding='utf-8') as f:
+                    lines = f.readlines()
+                    if lines:
+                        st.code(''.join(lines[-50:]), language='bash')
+            except:
+                pass
+            return False
+
+    except Exception as e:
+        status_text.markdown(f"""
+        <div class="status-box status-error">❌ execution error: {str(e)}</div>
+        """, unsafe_allow_html=True)
+        return False
+
+# =========================================================
+# 🎯 header
+# =========================================================
+st.markdown("""
+<div class="main-header">
+    <h1>🎯 Smart Exhibition Pipeline</h1>
+    <p>smart detection • automatic processing • unified output • batch processing • quality control • google sheets</p>
+</div>
+""", unsafe_allow_html=True)
