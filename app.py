@@ -827,9 +827,9 @@ def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
             print(f"   ⚠️ Translation error: {e}")
             return ""
     
-    # پردازش هر ستون
+    # process each column
     for col in df.columns:
-        # Skip ستون‌های خاص
+        # Skip specific columns
         if col in skip_columns:
             continue
         
