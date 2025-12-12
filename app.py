@@ -818,7 +818,7 @@ def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
             response = model.generate_content(prompt)
             translation = response.text.strip()
             
-            # حذف markdown و quotes
+            # remove markdown & quotes
             translation = translation.replace('*', '').replace('`', '').strip('"').strip("'")
             
             return translation
