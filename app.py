@@ -43,7 +43,7 @@ st.set_page_config(
 
 
  # ---------------------------Permanent Google Sheets Link (Always Visible)
- FIXED_SHEET_URL = "https://docs.google.com/spreadsheets/d/1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE/edit"
+FIXED_SHEET_URL = "https://docs.google.com/spreadsheets/d/1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE/edit"
 
 st.markdown(f"""
 <div style="
