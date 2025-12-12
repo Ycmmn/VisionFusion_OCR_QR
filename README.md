@@ -258,8 +258,5 @@ For commercial or enterprise licensing, please contact:
 
 ### ❤️ Developed by **Yabix**
 
-> Intelligent Document Automation | AI-Powered Data Extraction | Web Intelligence
-
 ---
 
-Would you like me to generate a **short GitHub-friendly top section** (with badges, logo, and quick demo GIF preview) that you can place at the start of this README for marketing presentation?
