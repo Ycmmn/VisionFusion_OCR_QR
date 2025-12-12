@@ -833,13 +833,13 @@ def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
         if col in skip_columns:
             continue
         
-        # چک کردن اینکه ستون قبلاً ترجمه شده یا نه
+    
         if col.endswith('_translated') or col.endswith('FA') or col.endswith('EN'):
             continue
         
         print(f"\n   🔄 Processing column: {col}")
         
-        # شمارش سلول‌های غیرخالی
+        # count non-empty cells
         non_empty = df[col].notna() & (df[col].astype(str).str.strip() != '')
         total_cells = non_empty.sum()
         
