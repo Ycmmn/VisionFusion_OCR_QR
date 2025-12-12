@@ -960,7 +960,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 else:
                     return 'Unknown'
             
-            # محاسبه موقعیت ستون Source (بعد از QC metadata)
+            # calculate source column position (after qc metadata)
             qc_count = sum(1 for col in ['QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp'] if col in df.columns)
             source_pos = (1 if 'Exhibition' in df.columns else 0) + qc_count
             
@@ -976,7 +976,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
 
 
-        # ========== 🕐 تبدیل تاریخ و ساعت به Text Format ==========
+        # convert date and time to text format
         print(f"\n🕐 Converting date/time columns to text format...")
         
         date_time_columns = ['QC_Date', 'QC_Time', 'QC_Timestamp']
