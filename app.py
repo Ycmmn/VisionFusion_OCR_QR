@@ -983,7 +983,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         
         for col in date_time_columns:
             if col in df.columns:
-                # تبدیل به string با apostrophe در اول (برای Google Sheets)
+                # convert to string with apostrophe at start (for google sheets)
                 df[col] = df[col].apply(
                     lambda x: f"'{str(x)}" if x and str(x).strip() not in ['', 'nan', 'None'] else ""
                 )
