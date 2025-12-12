@@ -849,7 +849,7 @@ def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
         
         print(f"      📊 {total_cells} non-empty cells")
         
-        # پردازش هر سطر
+        # process each row
         translated_count = 0
         
         for idx in df.index:
@@ -858,7 +858,7 @@ def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
             if not cell_value or pd.isna(cell_value) or str(cell_value).strip() == '':
                 continue
             
-            # تشخیص زبان
+            # language detection
             lang = detect_language(cell_value)
             
             if lang != 'en':
