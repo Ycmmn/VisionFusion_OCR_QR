@@ -926,7 +926,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             
             qc_columns_order = ['QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp']
             
-            # محاسبه موقعیت شروع (بعد از Exhibition اگه هست)
+            # calculate start position (after exhibition if exists)
             start_pos = 1 if 'Exhibition' in df.columns else 0
             
             for idx, col in enumerate(qc_columns_order, start=start_pos):
