@@ -446,4 +446,382 @@ def merge_rows_by_company_id(df, company_id_col=None, verbose=True):
     
     return df_merged
 
+
+# section 7: final cleaning
+def clean_data(df, verbose=True):
+    #final data cleaning
+    
+    if verbose:
+        print("cleaning companyid...")
+    
+    if 'CompanyID' in df.columns:
+        df['CompanyID'] = df['CompanyID'].apply(clean_company_id)
+        if verbose:
+            print("companyid cleaned")
+    
+    if verbose:
+        print("general cleanup...")
+    
+    skip_columns = ['Name', 'Position', 'ContactName', 'name', 'position']
+    
+    cleaned_count = 0
+    for col in df.columns:
+        if col in skip_columns or col == 'CompanyID':
+            continue
+            
+        for idx in df.index:
+            val = df.at[idx, col]
+            if pd.notna(val) and isinstance(val, str):
+                if ('{' in val or "'name':" in val or "'position':" in val) and col not in ['file_name']:
+                    cleaned = remove_json_artifacts(val)
+                    if cleaned != val and cleaned:
+                        df.at[idx, col] = cleaned
+                        cleaned_count += 1
+    
+    if verbose and cleaned_count > 0:
+        print(f"{cleaned_count} cells cleaned")
+    
+    return df
+
+
+# section 8: final cleaning and standardization
+def standardize_url(url):
+    """standardize url to https://www.domain.com format"""
+    if pd.isna(url) or str(url).strip() == '':
+        return None
+    
+    url = str(url).strip()
+    url = url.replace(' ', '')
+    
+    if not url.startswith('http://') and not url.startswith('https://'):
+        url = 'https://' + url
+    
+    if url.startswith('http://'):
+        url = url.replace('http://', 'https://', 1)
+    
+    if url.startswith('https://') and not url.startswith('https://www.'):
+        domain_part = url.replace('https://', '')
+        if domain_part.count('.') <= 1:
+            url = 'https://www.' + domain_part
+    
+    return url
+
+def find_duplicate_urls(urls_list):
+    """find duplicate urls that differ only in format"""
+    from urllib.parse import urlparse
+    
+    url_map = {}
+    
+    for url in urls_list:
+        if not url:
+            continue
+        
+        try:
+            parsed = urlparse(url)
+            domain = parsed.netloc.lower()
+            domain_without_www = domain.replace('www.', '')
+            
+            if domain_without_www in url_map:
+                existing = url_map[domain_without_www]
+                if url.startswith('https://www.') and not existing.startswith('https://www.'):
+                    url_map[domain_without_www] = url
+            else:
+                url_map[domain_without_www] = url
+        except:
+            url_map[url] = url
+    
+    return list(url_map.values())
+
+def remove_duplicates_from_cell(value, is_url=False):
+    #remove duplicate values from a cell
+    if pd.isna(value) or str(value).strip() == '':
+        return None
+    
+    items = [item.strip() for item in str(value).split('|')]
+    
+    if is_url:
+        standardized = []
+        for item in items:
+            std_url = standardize_url(item)
+            if std_url:
+                standardized.append(std_url)
+        
+        unique_urls = find_duplicate_urls(standardized)
+        
+        if not unique_urls:
+            return None
+        return ' | '.join(unique_urls)
+    
+    else:
+        normalized = []
+        seen = set()
+        
+        for item in items:
+            item_compare = item.replace(' ', '').replace('-', '').replace('(', '').replace(')', '')
+            
+            if item_compare and item_compare not in seen:
+                seen.add(item_compare)
+                normalized.append(item)
+        
+        if not normalized:
+            return None
+        
+        return ' | '.join(normalized)
+
+def clean_urls_and_phones(df, verbose=True):
+    #clean and remove duplicates from urls and phones columns
+    
+    if verbose:
+        print("cleaning urls and phones...")
+    
+    cleaned_count = 0
+    
+    if 'urls' in df.columns:
+        if verbose:
+            print("standardizing urls...")
+        
+        for idx in df.index:
+            val = df.at[idx, 'urls']
+            if pd.notna(val) and str(val).strip() != '':
+                cleaned = remove_duplicates_from_cell(val, is_url=True)
+                if cleaned != val:
+                    df.at[idx, 'urls'] = cleaned
+                    cleaned_count += 1
+        
+        if verbose:
+            print(f"{cleaned_count} urls cleaned")
+    
+    phone_count = 0
+    if 'phones' in df.columns:
+        if verbose:
+            print("removing duplicates from phones...")
+        
+        for idx in df.index:
+            val = df.at[idx, 'phones']
+            if pd.notna(val) and str(val).strip() != '':
+                cleaned = remove_duplicates_from_cell(val, is_url=False)
+                if cleaned and cleaned != val:
+                    df.at[idx, 'phones'] = cleaned
+                    phone_count += 1
+        
+        if verbose:
+            print(f"{phone_count} phone numbers cleaned")
+    
+    if verbose:
+        total = cleaned_count + phone_count
+        if total > 0:
+            print(f"total {total} cells cleaned")
+        else:
+            print("no duplicates found")
+    
+    return df
+
+def process_company_data(
+    input_file,
+    output_file=None,
+    keep_empty_columns=True,
+    company_id_col=None,
+    verbose=True
+):
+    #complete processing of company data
+    
+    if verbose:
+        print("="*60)
+        print("starting complete company data processing")
+        print("="*60)
+    
+    if verbose:
+        print(f"reading: {input_file}")
+    
+    if str(input_file).endswith('.csv'):
+        df = pd.read_csv(input_file, encoding='utf-8-sig')
+    else:
+        df = pd.read_excel(input_file)
+    
+    initial_rows = len(df)
+    initial_cols = len(df.columns)
+    
+    if verbose:
+        print(f"{initial_rows} rows, {initial_cols} columns")
+    
+    if verbose:
+        print("\n" + "="*60)
+        print("step 1: merge numbered columns")
+        print("="*60)
+    
+    df, numbered_merged = merge_numbered_columns(df, verbose=verbose)
+    
+    if verbose:
+        print("\n" + "="*60)
+        print("step 2: merge duplicate columns")
+        print("="*60)
+    
+    df, duplicate_merged = merge_duplicate_columns(df, verbose=verbose)
+    
+    if verbose:
+        print("\n" + "="*60)
+        print("step 3: merge bilingual columns")
+        print("="*60)
+    
+    df, bilingual_merged = merge_bilingual_columns(df, verbose=verbose)
+    
+    if verbose:
+        print("\n" + "="*60)
+        print("step 3.5: merge specific columns")
+        print("="*60)
+    
+    df, specific_merged = merge_specific_columns(df, verbose=verbose)
+    
+    if verbose:
+        print("\n" + "="*60)
+        print("step 4: merge rows")
+        print("="*60)
+    
+    df = merge_rows_by_company_id(df, company_id_col, verbose=verbose)
+    
+    rows_after_merge = len(df)
+    
+    if verbose:
+        print("\n" + "="*60)
+        print("step 5: final cleaning")
+        print("="*60)
+    
+    df = clean_data(df, verbose=verbose)
+    
+    if verbose:
+        print("\n" + "="*60)
+        print("step 5.5: standardize urls and phones")
+        print("="*60)
+    
+    df = clean_urls_and_phones(df, verbose=verbose)
+    
+    if verbose:
+        print("\n" + "="*60)
+        print("step 6: manage empty columns")
+        print("="*60)
+    
+    empty_cols_removed = 0
+    
+    if not keep_empty_columns:
+        empty_before = len(df.columns)
+        df = df.dropna(axis=1, how='all')
+        empty_cols_removed = empty_before - len(df.columns)
+        if verbose and empty_cols_removed > 0:
+            print(f"{empty_cols_removed} empty columns removed")
+    else:
+        if verbose:
+            print("all columns preserved")
+    
+    if output_file is None:
+        input_path = Path(input_file)
+        base_name = input_path.stem
+        extension = input_path.suffix
+        output_file = input_path.parent / f"{base_name}_processed{extension}"
+        
+        counter = 1
+        while output_file.exists():
+            try:
+                with open(output_file, 'a'):
+                    pass
+                break
+            except PermissionError:
+                output_file = input_path.parent / f"{base_name}_processed_{counter}{extension}"
+                counter += 1
+    
+    if verbose:
+        print(f"saving: {output_file}")
+    
+    try:
+        if str(output_file).endswith('.csv'):
+            df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        else:
+            df.to_excel(output_file, index=False, engine='openpyxl')
+        
+        if verbose:
+            print("file saved")
+    
+    except PermissionError:
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        input_path = Path(input_file)
+        output_file = input_path.parent / f"{input_path.stem}_processed_{timestamp}{input_path.suffix}"
+        
+        if verbose:
+            print(f"file is open, saving with name: {output_file}")
+        
+        if str(output_file).endswith('.csv'):
+            df.to_csv(output_file, index=False, encoding='utf-8-sig')
+        else:
+            df.to_excel(output_file, index=False, engine='openpyxl')
+    
+    if verbose:
+        print("\n" + "="*60)
+        print("final summary")
+        print("="*60)
+        print(f"input rows: {initial_rows}")
+        print(f"output rows: {rows_after_merge}")
+        print(f"input columns: {initial_cols}")
+        print(f"output columns: {len(df.columns)}")
+        
+        total_merged = numbered_merged + duplicate_merged + bilingual_merged + specific_merged
+        if total_merged > 0:
+            print(f"\nmerged columns:")
+            if numbered_merged > 0:
+                print(f"   - numbered: {numbered_merged}")
+            if duplicate_merged > 0:
+                print(f"   - duplicate: {duplicate_merged}")
+            if bilingual_merged > 0:
+                print(f"   - bilingual: {bilingual_merged}")
+            if specific_merged > 0:
+                print(f"   - specific: {specific_merged}")
+            print(f"   - total: {total_merged}")
+        
+        print("="*60)
+        print(f"file: {output_file}")
+        print("="*60)
+    
+    return df
+
+
+# execution
+if __name__ == "__main__":
+    
+    input_file = "Exhibition_QC_Data - Sheet1.csv"
+    
+    try:
+        df_result = process_company_data(
+            input_file=input_file,
+            keep_empty_columns=True,
+            verbose=True
+        )
+        
+        print("\nprocessing completed successfully!")
+        
+    except FileNotFoundError:
+        print(f"error: file '{input_file}' not found!")
+    except Exception as e:
+        print(f"error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+
+
+# wrapper for use in pipeline
+def script2_process_file(input_path, output_path):
+    """
+    simple wrapper function for calling from pipeline
+    
+    args:
+        input_path: input file path
+        output_path: output file path
+    
+    returns:
+        processed dataframe
+    """
+    return process_company_data(
+        input_file=input_path,
+        output_file=output_path,
+        keep_empty_columns=True,
+        company_id_col=None,
+        verbose=False
+    )
+
     
