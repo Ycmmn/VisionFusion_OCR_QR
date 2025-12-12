@@ -790,7 +790,7 @@ def translate_all_columns(df, api_key="AIzaSyD***PzB70"):
     ]
     
     def detect_language(text):
-        """تشخیص زبان: fa یا en"""
+        #detect language: fa or en
         if not text or pd.isna(text) or str(text).strip() == '':
             return None
         
