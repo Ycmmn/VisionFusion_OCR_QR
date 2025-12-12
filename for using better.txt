@@ -1,0 +1,30 @@
+For the first step ==>> open VPN
+
+
+
+1. install vs code
+2. install python3.11.9
+
+
+first open "win + r" : write cmd ====> cd Downloads + enter
+                                       cd po2       + enter
+                                       pip install streamlit 
+
+- then open start_wen.exe
+
+
+3. copy po2 to Downlods path
+4. put popple file in to C drive
+5. install java, visual c++, popplor
+6. click on "start_web.exe"
+   - for first click : create virtual env
+   - for another click : open web app
+
+
+* Dont forget :
+  + use great vpn
+  + after use app delete all session folders
+  + never upload rar and zip file 
+  
+
+FOR check output : first check your google accounts to link the main account
