@@ -343,12 +343,12 @@ def add_company_id_to_dataframe(df, log_details=True):
         
         company_ids.append(company_id)
         
-        # ردیابی تکراری‌ها
+        # Track duplicates
         if company_id not in id_mapping:
             id_mapping[company_id] = []
         id_mapping[company_id].append(idx + 1)
         
-        # نمایش 5 نمونه اول
+        # Show first 5 samples
         if log_details and idx < 5:
             company_name = ""
             for col in ['CompanyNameFA', 'CompanyNameEN', 'company_name_fa', 'company_name_en']:
@@ -358,10 +358,10 @@ def add_company_id_to_dataframe(df, log_details=True):
             
             print(f"      Row {idx + 1}: {company_id} → {company_name}")
     
-    # اضافه کردن به DataFrame (ستون اول)
+    # Add to DataFrame (first column)
     df.insert(0, 'CompanyID', company_ids)
     
-    # آمار
+    # Statistics
     unique_count = len(set(company_ids))
     duplicate_count = len(company_ids) - unique_count
     
