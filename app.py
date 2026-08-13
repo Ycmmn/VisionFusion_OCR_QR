@@ -30,6 +30,9 @@ import re
 import shutil
 
 from supabase import create_client, Client
+import time
+import socket
+import google.generativeai as genai
 
 
 # --------------------------------page settings
