@@ -397,28 +397,32 @@ def merge_all_data_sources(session_dir, pipeline_type):
     Returns:
          Path: Path to the final Excel file
     """
+
     import pandas as pd
     import numpy as np
     from datetime import datetime
     
+
     print(f"\nStarting data merge for {pipeline_type.upper()} mode...")
+
     
-    # مسیرها
+    # -------------------------Paths
     mix_json = Path(session_dir) / "mix_ocr_qr.json"
     scrap_json = Path(session_dir) / "gemini_scrap_output.json"
     web_excel = Path(session_dir) / "web_analysis.xlsx"
     output_enriched = list(Path(session_dir).glob("output_enriched_*.xlsx"))
     
+
     # ========== EXCEL MODE ==========
     if pipeline_type == 'excel':
         print("   Excel Mode detected")
         
-        # 1. اول output_enriched رو چک کن
+        ## 1. First check output_enriched
         if output_enriched:
             excel_file = output_enriched[0]
             print(f"   Using output_enriched: {excel_file.name}")
         
-        # 2. اگه نبود، web_analysis رو چک کن
+        ## 2. If not found, check web_analysis
         elif web_excel.exists():
             excel_file = web_excel
             print(f"   Using web_analysis: {excel_file.name}")
@@ -427,10 +431,10 @@ def merge_all_data_sources(session_dir, pipeline_type):
             print(f"   No Excel output found!")
             return None
         
-        # خواندن و تمیزکاری
+        ## Reading and cleaning
         df = pd.read_excel(excel_file)
         
-        # تمیزکاری
+        # Cleaning
         df = df.fillna("")
         for col in df.columns:
             if df[col].dtype == 'object':
@@ -439,12 +443,12 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     'nan': '', 'None': '', 'NaT': '', '<NA>': '', 'null': '', 'NULL': ''
                 })
 
-        # ========== 🌐 TRANSLATION (جدید!) ==========
+        # ==========------------------- TRANSLATION---------------- ==========
         print(f"\n🌐 Starting automatic translation...")
         df = translate_all_columns(df)
-        # ============================================
+        # =========------------------------------------================
 
-        # ذخیره
+        # save
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = Path(session_dir) / f"merged_complete_{timestamp}.xlsx"
         df.to_excel(output_path, index=False, engine='openpyxl')
@@ -456,7 +460,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
         
         return output_path
     
-    # ========== OCR/QR MODE ==========
+    # ========== -----------------OCR/QR MODE---------------- ==========
     elif pipeline_type == 'ocr_qr':
         print("   OCR/QR Mode detected")
         
