@@ -1289,27 +1289,27 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                         position = parts[1].strip()
                         break
             
-            # اگر جدا نشد، کل متن رو به عنوان اسم در نظر بگیر
+            # If not split, treat the whole text as the name
             if not name:
                 name = text
             
-            # ترجمه به فارسی
+            #  Translate to Persian
             name_fa = translate_to_persian(name)
             position_fa = translate_to_persian(position)
             
             return name_fa, position_fa
 
-        # پیدا کردن ستون‌های PersonX
+        # Find PersonX columns
         person_columns = [col for col in df.columns if col.lower().startswith('person')]
 
         if person_columns:
             print(f"   📋 Found {len(person_columns)} Person columns: {person_columns}")
             
-            # لیست اسامی و پوزیشن‌ها
+            # List of names and positions
             names_list = []
             positions_list = []
             
-            # پردازش هر سطر
+            # Process each row
             for idx in df.index:
                 row_names = []
                 row_positions = []
@@ -1324,11 +1324,11 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                         if position:
                             row_positions.append(position)
                 
-                # ترکیب با " | "
+                # Combine with " | "
                 names_list.append(" | ".join(row_names) if row_names else "")
                 positions_list.append(" | ".join(row_positions) if row_positions else "")
             
-            # اضافه کردن ستون‌های جدید
+            # Add new columns
             if 'Name' not in df.columns:
                 df['Name'] = names_list
                 print(f"   ✅ Added 'Name' column")
@@ -1337,11 +1337,11 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 df['Position'] = positions_list
                 print(f"   ✅ Added 'Position' column")
             
-            # حذف ستون‌های قدیمی PersonX
+            # Remove old PersonX columns
             df.drop(columns=person_columns, inplace=True)
             print(f"   ✅ Removed {len(person_columns)} PersonX columns")
             
-            # نمایش 3 نمونه
+            # Show 3 samples
             print(f"\n   📊 Sample extractions:")
             for i in range(min(3, len(df))):
                 if df.at[i, 'Name'] or df.at[i, 'Position']:
@@ -1355,13 +1355,13 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         print(f"\n   ✅ Cleanup completed!")
 
 
-        # ========== 🌐 ترجمه Position انگلیسی به فارسی ==========
+        # ==========---- -------Translate English Position to Persian --------- ==========
         print(f"\n🌐 Translating English Positions to Persian...")
 
         if 'Position' in df.columns:
             
             
-            genai.configure(api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
+            genai.configure(api_key="AIz**************************zB70")
             model = genai.GenerativeModel('gemini-2.5-flash-lite')
             
             def detect_language_position(text):
