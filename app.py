@@ -242,13 +242,14 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
 
 
 
-# ========== 🆔 تولید Company ID دائمی ==========
+# ------------------------------ Generate Company ID
+
 import hashlib
 import re
 
 def generate_company_id(company_name_fa=None, company_name_en=None):
     
-    # انتخاب نام شرکت
+    # Select company name
     company_name = None
     
     if company_name_fa and str(company_name_fa).strip() not in ['', 'nan', 'None']:
@@ -257,32 +258,38 @@ def generate_company_id(company_name_fa=None, company_name_en=None):
         company_name = str(company_name_en).strip()
     
     if not company_name:
-        # اگه اسم شرکت نبود، ID تصادفی بده
+        # If there's no company name, assign a random ID
         import random
         random_hash = hashlib.md5(str(random.random()).encode()).hexdigest()[:12].upper()
         return f"COMP_UNKNOWN_{random_hash}"
     
-    # نرمالسازی نام شرکت (حذف کلمات اضافی)
+
+    # Normalize company name (remove extra words)
     normalized = company_name.lower()
     
-    # حذف کلمات رایج
+
+    # Remove common words
     for word in ['شرکت', 'company', 'co.', 'co', 'ltd', 'inc', 'group', 'گروه', 
                  'corporation', 'corp', '.', ',', '-', '_']:
         normalized = normalized.replace(word, ' ')
     
-    # حذف فاصله‌های اضافی
+
+    # Remove extra spaces
     normalized = ' '.join(normalized.split())
     normalized = normalized.strip()
     
-    # اگه بعد از نرمالسازی خالی شد
+
+    # If it becomes empty after normalization
     if not normalized or len(normalized) < 2:
         normalized = company_name.lower()
     
-    # ساخت hash دائمی
+
+    # Generate permanent hash
     hash_object = hashlib.sha256(normalized.encode('utf-8'))
     hash_hex = hash_object.hexdigest()[:12].upper()
     
-    # فرمت نهایی
+
+    # Final format
     company_id = f"COMP_{hash_hex}"
     
     return company_id
