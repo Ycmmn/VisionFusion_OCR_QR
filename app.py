@@ -165,7 +165,7 @@ GOOGLE_SCOPES = [
 
 @st.cache_resource
 def get_google_services():
-    # Google Drive & Sheets
+    
     try:
         SERVICE_ACCOUNT_FILE = Path("service-account.json")
         if SERVICE_ACCOUNT_FILE.exists():
@@ -183,11 +183,11 @@ def get_google_services():
         sheets_service = build('sheets', 'v4', credentials=creds)
         return drive_service, sheets_service
     except Exception as e:
-        st.error(f"❌ connection error to Google: {e}")
+        st.error(f"❌ : {e}")
         return None, None
 
 def _col_index_to_letter(col_index):
-    # convert index to excel letter (0->a, 25->z, 26->aa)
+    """تبدیل index به حرف Excel (0->A, 25->Z, 26->AA)"""
     result = ""
     while col_index >= 0:
         result = chr(col_index % 26 + 65) + result
@@ -195,7 +195,7 @@ def _col_index_to_letter(col_index):
     return result
 
 def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
-    # find or create table in drive
+
     try:
         table_name = "Exhibition_Data_Table"
         query = f"name='{table_name}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false"
@@ -211,10 +211,10 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         if files:
             file_id = files[0]['id']
             file_url = files[0].get('webViewLink', f"https://docs.google.com/spreadsheets/d/{file_id}/edit")
-            print(f"   ✅ existing table: {file_id}")
+            print(f"   ✅ : {file_id}")
             return file_id, file_url, True
         
-        print(f"   📝 creating new table...")
+        print(f"   📝 ...")
         spreadsheet = sheets_service.spreadsheets().create(
             body={
                 'properties': {'title': table_name},
@@ -229,12 +229,13 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         if folder_id:
             drive_service.files().update(fileId=file_id, addParents=folder_id, fields='id, parents').execute()
         
-        print(f"   ✅ new table created: {file_id}")
+        print(f"   ✅ : {file_id}")
         return file_id, file_url, False
         
     except Exception as e:
-        print(f"   ❌ error: {e}")
+        print(f"   ❌ : {e}")
         return None, None, False
+
 
 
 
