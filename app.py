@@ -1,20 +1,18 @@
 # -*- coding: utf-8 -*-
 """
-smart exhibition pipeline — final unified edition + google sheets
-complete merge of two apps: «ultimate smart exhibition pipeline» + «smart data pipeline»
-- awesome ui from version 1 + logic and logging and quota management from version 2
-- excel mode and ocr/qr mode with automatic detection
-- smart metadata injection (exhibition + source + smart position)
-- fast mode, debug mode, rate limiting, daily quota
-- batch processing: images(5), pdfs(4), excel(1)
-- quality control tracking: user name, role, date, time
-- google sheets integration: automatic data saving to google drive
+🎯 Smart Exhibition Pipeline — Final Unified Edition + Google Sheets
+ادغام کامل دو اپ: «Ultimate Smart Exhibition Pipeline» + «Smart Data Pipeline»
+- UI خفن نسخه ۱ + منطق و لاگ‌نویسی و مدیریت سهمیه نسخه ۲
+- Excel Mode و OCR/QR Mode با تشخیص خودکار
+- Smart Metadata Injection (Exhibition + Source + Smart Position)
+- Fast Mode, Debug Mode, Rate Limiting, Daily Quota
+- ✨ Batch Processing: Images(5), PDFs(4), Excel(1)
+- ✨ Quality Control Tracking: User Name, Role, Date, Time
+- ☁️ Google Sheets Integration: ذخیره خودکار داده‌ها در Google Drive
 
-run:
+اجرا:
     streamlit run smart_exhibition_pipeline_final.py
 """
-
-
 
 import streamlit as st
 import subprocess
@@ -33,9 +31,9 @@ from supabase import create_client, Client
 import time
 import socket
 import google.generativeai as genai
-
-
-# --------------------------------page settings
+# =========================================================
+# ⚙️ تنظیمات صفحه
+# =========================================================
 st.set_page_config(
     page_title="Smart Exhibition Pipeline",
     page_icon="🎯",
@@ -43,9 +41,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-
- # ---------------------------Permanent Google Sheets Link (Always Visible)
-FIXED_SHEET_URL = "https://docs.google.com/spreadshee******uE/edit"
+# =========================================================
+# 📌 Permanent Google Sheets Link (Always Visible)
+# =========================================================
+FIXED_SHEET_URL = "https://docs.google.com/spreadsheets/d/1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE/edit"
 
 st.markdown(f"""
 <div style="
@@ -67,7 +66,9 @@ st.markdown(f"""
 
 
 
-#---------------------------------- UI with gradients
+# =========================================================
+# 🎨 UI خفن با گرادیانت‌های حرفه‌ای
+# =========================================================
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;700&display=swap');
@@ -136,24 +137,22 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-
-
-# ------------------------  api keys
+# =========================================================
+# 🔐 کلیدهای API
+# =========================================================
 API_KEYS = {
-    "excel": "AIz**********Tag",
-    "ocr": "AIz*************xio",
-    "scrap": "AI***********F3M"
+    "excel": "AIzaSyCWjNxqXiQge4fR1RADEdmCotR3dpnKTag",
+    "ocr": "AIzaSyD5Jc5RDfClu_KiAPxZNyJCydQ9qf_8xio",
+    "scrap": "AIzaSyD1vuPHlbN9bWUAL8sDDj3Z5TcgQ4G4F3M"
 }
-
 for key_name, key_value in API_KEYS.items():
     os.environ[f"GOOGLE_API_KEY_{key_name.upper()}"] = key_value
     os.environ["GOOGLE_API_KEY"] = key_value
     os.environ["GEMINI_API_KEY"] = key_value
 
-
-
-#---------------------------------------- google sheets integration
+# =========================================================
+# ☁️ GOOGLE SHEETS INTEGRATION
+# =========================================================
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -165,7 +164,7 @@ GOOGLE_SCOPES = [
 
 @st.cache_resource
 def get_google_services():
-    
+    """اتصال به Google Drive و Sheets"""
     try:
         SERVICE_ACCOUNT_FILE = Path("service-account.json")
         if SERVICE_ACCOUNT_FILE.exists():
@@ -183,7 +182,7 @@ def get_google_services():
         sheets_service = build('sheets', 'v4', credentials=creds)
         return drive_service, sheets_service
     except Exception as e:
-        st.error(f"❌ : {e}")
+        st.error(f"❌ خطا در اتصال به Google: {e}")
         return None, None
 
 def _col_index_to_letter(col_index):
@@ -195,7 +194,7 @@ def _col_index_to_letter(col_index):
     return result
 
 def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
-
+    """پیدا کردن یا ساخت جدول در Drive"""
     try:
         table_name = "Exhibition_Data_Table"
         query = f"name='{table_name}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false"
@@ -211,10 +210,10 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         if files:
             file_id = files[0]['id']
             file_url = files[0].get('webViewLink', f"https://docs.google.com/spreadsheets/d/{file_id}/edit")
-            print(f"   ✅ : {file_id}")
+            print(f"   ✅ جدول موجود: {file_id}")
             return file_id, file_url, True
         
-        print(f"   📝 ...")
+        print(f"   📝 ساخت جدول جدید...")
         spreadsheet = sheets_service.spreadsheets().create(
             body={
                 'properties': {'title': table_name},
@@ -229,24 +228,24 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         if folder_id:
             drive_service.files().update(fileId=file_id, addParents=folder_id, fields='id, parents').execute()
         
-        print(f"   ✅ : {file_id}")
+        print(f"   ✅ جدول جدید ساخته شد: {file_id}")
         return file_id, file_url, False
         
     except Exception as e:
-        print(f"   ❌ : {e}")
+        print(f"   ❌ خطا: {e}")
         return None, None, False
 
 
 
 
 
-# ---------------------------------------- generate permanent company id 
+# ========== 🆔 تولید Company ID دائمی ==========
 import hashlib
 import re
 
 def generate_company_id(company_name_fa=None, company_name_en=None):
     
-    # select company name
+    # انتخاب نام شرکت
     company_name = None
     
     if company_name_fa and str(company_name_fa).strip() not in ['', 'nan', 'None']:
@@ -255,32 +254,32 @@ def generate_company_id(company_name_fa=None, company_name_en=None):
         company_name = str(company_name_en).strip()
     
     if not company_name:
-        # if company name doesn't exist, give random id
+        # اگه اسم شرکت نبود، ID تصادفی بده
         import random
         random_hash = hashlib.md5(str(random.random()).encode()).hexdigest()[:12].upper()
         return f"COMP_UNKNOWN_{random_hash}"
     
-   # normalize company name (remove extra words)
+    # نرمالسازی نام شرکت (حذف کلمات اضافی)
     normalized = company_name.lower()
     
-    # remove common words
+    # حذف کلمات رایج
     for word in ['شرکت', 'company', 'co.', 'co', 'ltd', 'inc', 'group', 'گروه', 
                  'corporation', 'corp', '.', ',', '-', '_']:
         normalized = normalized.replace(word, ' ')
     
-    # remove extra spaces
+    # حذف فاصله‌های اضافی
     normalized = ' '.join(normalized.split())
     normalized = normalized.strip()
     
-    # if empty after normalization
+    # اگه بعد از نرمالسازی خالی شد
     if not normalized or len(normalized) < 2:
         normalized = company_name.lower()
     
-    # hash 
+    # ساخت hash دائمی
     hash_object = hashlib.sha256(normalized.encode('utf-8'))
     hash_hex = hash_object.hexdigest()[:12].upper()
     
-    # final format
+    # فرمت نهایی
     company_id = f"COMP_{hash_hex}"
     
     return company_id
@@ -289,18 +288,18 @@ def generate_company_id(company_name_fa=None, company_name_en=None):
 
 
 
+
 def add_company_id_to_dataframe(df, log_details=True):
     """
-    add companyid column to dataframe
+    اضافه کردن ستون CompanyID به DataFrame
     
-    args:
-        df: input dataframe
-        log_details: show details in console
+    Args:
+        df: DataFrame ورودی
+        log_details: نمایش جزئیات در Console
     
-    returns:
-        dataframe with companyid column
+    Returns:
+        DataFrame با ستون CompanyID
     """
-
     import pandas as pd
     
     if df.empty:
@@ -311,11 +310,11 @@ def add_company_id_to_dataframe(df, log_details=True):
     print(f"   📊 Processing {len(df)} rows...")
     
     company_ids = []
-    id_mapping = {}  # for tracking duplicates
+    id_mapping = {}  # برای ردیابی تکراری‌ها
     
     for idx, row in df.iterrows():
 
-        # extract company name from row
+        # ✅ استخراج نام شرکت از row
         company_name_fa = None
         company_name_en = None
 
@@ -326,7 +325,7 @@ def add_company_id_to_dataframe(df, log_details=True):
                 else:
                     company_name_en = row[col]
 
-        # generate Company ID
+        # ✅ تولید Company ID
         company_id = generate_company_id(company_name_fa, company_name_en)
 
 
@@ -334,12 +333,12 @@ def add_company_id_to_dataframe(df, log_details=True):
         
         company_ids.append(company_id)
         
-        # track duplicates
+        # ردیابی تکراری‌ها
         if company_id not in id_mapping:
             id_mapping[company_id] = []
         id_mapping[company_id].append(idx + 1)
         
-        # show first 5 samples
+        # نمایش 5 نمونه اول
         if log_details and idx < 5:
             company_name = ""
             for col in ['CompanyNameFA', 'CompanyNameEN', 'company_name_fa', 'company_name_en']:
@@ -349,10 +348,10 @@ def add_company_id_to_dataframe(df, log_details=True):
             
             print(f"      Row {idx + 1}: {company_id} → {company_name}")
     
-    # add to dataframe (first column)
+    # اضافه کردن به DataFrame (ستون اول)
     df.insert(0, 'CompanyID', company_ids)
     
-    # statistics
+    # آمار
     unique_count = len(set(company_ids))
     duplicate_count = len(company_ids) - unique_count
     
@@ -374,46 +373,42 @@ def add_company_id_to_dataframe(df, log_details=True):
     return df
 
 
-
-
-
 def merge_all_data_sources(session_dir, pipeline_type):
     """
-    merge all data sources (for both modes):
+    ادغام تمام منابع داده (برای هر دو Mode):
     
-    ocr/qr mode:
-        - mix_ocr_qr.json (always)
-        - gemini_scrap_output.json (if available)
+    OCR/QR Mode:
+        - mix_ocr_qr.json (همیشه)
+        - gemini_scrap_output.json (اگر موجود بود)
     
-    excel mode:
-        - web_analysis.xlsx (always)
+    Excel Mode:
+        - web_analysis.xlsx (همیشه)
     
-    returns:
-        path: final excel file path
+    Returns:
+        Path: مسیر فایل Excel نهایی
     """
-
     import pandas as pd
     import numpy as np
     from datetime import datetime
     
     print(f"\nStarting data merge for {pipeline_type.upper()} mode...")
     
-    # paths
+    # مسیرها
     mix_json = Path(session_dir) / "mix_ocr_qr.json"
     scrap_json = Path(session_dir) / "gemini_scrap_output.json"
     web_excel = Path(session_dir) / "web_analysis.xlsx"
     output_enriched = list(Path(session_dir).glob("output_enriched_*.xlsx"))
     
-    # excel mode
+    # ========== EXCEL MODE ==========
     if pipeline_type == 'excel':
         print("   Excel Mode detected")
         
-        # 1. first check output_enriched
+        # 1. اول output_enriched رو چک کن
         if output_enriched:
             excel_file = output_enriched[0]
             print(f"   Using output_enriched: {excel_file.name}")
         
-        # 2. if not found, check web_analysis
+        # 2. اگه نبود، web_analysis رو چک کن
         elif web_excel.exists():
             excel_file = web_excel
             print(f"   Using web_analysis: {excel_file.name}")
@@ -422,10 +417,10 @@ def merge_all_data_sources(session_dir, pipeline_type):
             print(f"   No Excel output found!")
             return None
         
-        # read and clean
+        # خواندن و تمیزکاری
         df = pd.read_excel(excel_file)
         
-        # clean
+        # تمیزکاری
         df = df.fillna("")
         for col in df.columns:
             if df[col].dtype == 'object':
@@ -434,12 +429,12 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     'nan': '', 'None': '', 'NaT': '', '<NA>': '', 'null': '', 'NULL': ''
                 })
 
-        # ------------------------ translation (new )
+        # ========== 🌐 TRANSLATION (جدید!) ==========
         print(f"\n🌐 Starting automatic translation...")
         df = translate_all_columns(df)
-        #--------------------------------------------------------
+        # ============================================
 
-        # save
+        # ذخیره
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = Path(session_dir) / f"merged_complete_{timestamp}.xlsx"
         df.to_excel(output_path, index=False, engine='openpyxl')
@@ -451,21 +446,22 @@ def merge_all_data_sources(session_dir, pipeline_type):
         
         return output_path
     
-    #---------------------------------- ocr/qr mode 
+    # ========== OCR/QR MODE ==========
     elif pipeline_type == 'ocr_qr':
         print("   OCR/QR Mode detected")
         
-        # 1. read mix_ocr_qr.json (mandatory)
+        # 1. خواندن mix_ocr_qr.json (الزامی)
         if not mix_json.exists():
             print(f"   {mix_json.name} not found!")
             return None
+        
         
         print(f"   Reading {mix_json.name}...")
         try:
             with open(mix_json, 'r', encoding='utf-8') as f:
                 mix_data = json.load(f)
             
-            # convert to dataframe
+            # تبدیل به DataFrame (هر فایل = یک رکورد، حتی اگه چند صفحه PDF داشته باشه)
             records = []
             for file_item in mix_data:
                 if not isinstance(file_item, dict):
@@ -483,11 +479,12 @@ def merge_all_data_sources(session_dir, pipeline_type):
                 else:
                     continue
                 
+                # ادغام تمام صفحات این فایل در یک رکورد واحد
+                record = {}
+                
                 for page_result in page_results:
                     if not isinstance(page_result, dict) or not page_result:
                         continue
-                    
-                    record = {}
                     
                     for key, value in page_result.items():
                         if key in ['ocr_text']:
@@ -497,21 +494,48 @@ def merge_all_data_sources(session_dir, pipeline_type):
                             if not value:
                                 continue
                             
-                            for idx, item in enumerate(value, 1):
-                                if item is not None:
-                                    col_name = key if idx == 1 else f"{key}{idx}"
-                                    record[col_name] = str(item)
+                            for item in value:
+                                if item is None:
+                                    continue
+                                item_str = str(item)
+                                
+                                if key not in record or str(record.get(key, '')).strip() in ['', 'nan', 'None']:
+                                    record[key] = item_str
+                                else:
+                                    existing_values = str(record[key]).split('|')
+                                    existing_values = [v.strip() for v in existing_values]
+                                    if item_str.strip() in existing_values:
+                                        continue
+                                    i = 2
+                                    while True:
+                                        new_col = f"{key}{i}"
+                                        if new_col not in record or str(record.get(new_col, '')).strip() in ['', 'nan', 'None']:
+                                            record[new_col] = item_str
+                                            break
+                                        i += 1
                         
                         elif value is not None and str(value).strip():
-                            record[key] = str(value)
+                            value_str = str(value)
+                            
+                            if key not in record or str(record.get(key, '')).strip() in ['', 'nan', 'None']:
+                                record[key] = value_str
+                            elif str(record[key]).strip() == value_str.strip():
+                                continue
+                            else:
+                                i = 2
+                                while True:
+                                    new_col = f"{key}{i}"
+                                    if new_col not in record or str(record.get(new_col, '')).strip() in ['', 'nan', 'None']:
+                                        record[new_col] = value_str
+                                        break
+                                    i += 1
                 
-                    
-                    # make sure file_name is taken from file_item
-                    if 'file_name' not in record or not record.get('file_name'):
-                        record['file_name'] = file_item.get('file_name', 'Unknown')
+                # مطمئن شو file_name از file_item گرفته میشه
+                if 'file_name' not in record or not record.get('file_name'):
+                    record['file_name'] = file_item.get('file_name', 'Unknown')
 
-                    if record:
-                        records.append(record)
+                if record:
+                    records.append(record)
             
             if not records:
                 print(f"   mix_ocr_qr: No valid records")
@@ -524,11 +548,11 @@ def merge_all_data_sources(session_dir, pipeline_type):
             print(f"   Error reading mix_ocr_qr.json: {e}")
             return None
         
-        # 2. read gemini_scrap_output.json (optional)
+        # 2. خواندن gemini_scrap_output.json (اختیاری)
         if not scrap_json.exists():
             print(f"   {scrap_json.name} not found - using only OCR/QR data")
             
-            # just mix_ocr_qr
+            # فقط mix_ocr_qr
             df_mix = df_mix.fillna("")
             for col in df_mix.columns:
                 if df_mix[col].dtype == 'object':
@@ -546,8 +570,8 @@ def merge_all_data_sources(session_dir, pipeline_type):
             
             return output_path
         
-        # 3. read and process scraping data
-        
+        # ========== 3. خواندن و پردازش scraping data ==========
+        # ========== 3. خواندن و پردازش scraping data ==========
         print(f"   Reading {scrap_json.name}...")
         try:
             with open(scrap_json, 'r', encoding='utf-8') as f:
@@ -559,20 +583,20 @@ def merge_all_data_sources(session_dir, pipeline_type):
             else:
                 df_scrap = pd.DataFrame(scrap_data)
                 
-                # only successful ones
+                # فقط موفق‌ها
                 if 'status' in df_scrap.columns:
                     df_scrap = df_scrap[df_scrap['status'] == 'SUCCESS'].copy()
                 
-                # remove extra columns
+                # حذف ستون‌های اضافی
                 for col in ['status', 'error']:
                     if col in df_scrap.columns:
                         df_scrap.drop(columns=[col], inplace=True)
                 
-                # add file_name from ocr/qr to scraping
+                # ✅ اضافه کردن file_name از OCR/QR به scraping
                 if not df_scrap.empty:
                     print(f"   🔗 Matching file_names from OCR/QR to Scraping...")
                     
-                    # normalize_url function
+                    # تابع normalize_url
                     def normalize_url(url):
                         if not url or pd.isna(url):
                             return ""
@@ -580,7 +604,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
                         url = url.replace('http://', '').replace('https://', '').replace('www.', '')
                         return url.split('/')[0].split('?')[0]
                     
-                    # create dictionary: website → file_name
+                    # ساخت دیکشنری: Website → file_name
                     url_to_filename = {}
                     for idx, row in df_mix.iterrows():
                         for col in ['Website', 'Website2', 'Website3', 'urls', 'url']:
@@ -594,9 +618,9 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     
                     print(f"      📋 Found {len(url_to_filename)} URL→file_name mappings")
                     
-                    # add file_name to scraping
+                    # اضافه کردن file_name به scraping
                     matched_count = 0
-                    # if doesn't have file_name, add it
+                    # ✅ اگه file_name نداره، اضافه کن
                     if 'file_name' not in df_scrap.columns:
                         df_scrap['file_name'] = ''
 
@@ -612,16 +636,16 @@ def merge_all_data_sources(session_dir, pipeline_type):
                             matched_count += 1
 
 
-                        
-                        print(f"   Matched {matched_count}/{len(df_scrap)} scraping records with file_name")
+                        #
+                        print(f"      ✅ Matched {matched_count}/{len(df_scrap)} scraping records with file_name")
 
-                        # fill empty file_names
+                        # ========== 🔧 پر کردن file_name های خالی ==========
                         print(f"\n   🔧 Filling empty file_names for Web rows...")
 
                         if 'file_name' in df_scrap.columns:
-                            # if some rows don't have file_name, use the first available file_name
+                            # اگه بعضی سطرها file_name ندارن، از اولین file_name موجود استفاده کن
                             if url_to_filename:
-                                # get first file_name from dictionary
+                                # گرفتن اولین file_name از دیکشنری
                                 default_filename = list(url_to_filename.values())[0]
                                 
                                 empty_count = 0
@@ -635,7 +659,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     
                     print(f"      ✅ Matched {matched_count}/{len(df_scrap)} scraping records with file_name")
                     
-                    # remove duplicate scraping rows
+                    # ✅ حذف سطرهای تکراری scraping
                     print(f"\n   🧹 Removing duplicate scraping records...")
                     
                     initial_count = len(df_scrap)
@@ -643,13 +667,13 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     if 'Website' in df_scrap.columns or 'urls' in df_scrap.columns:
                         url_col = 'Website' if 'Website' in df_scrap.columns else 'urls'
                         
-                        # normalize url 
+                        # نرمالسازی URL
                         df_scrap['_normalized_url'] = df_scrap[url_col].apply(normalize_url)
                         
-                        # remove duplicates (keep first)
+                        # حذف تکراری‌ها (نگه‌داشتن اولین)
                         df_scrap = df_scrap.drop_duplicates(subset=['_normalized_url'], keep='first')
                         
-                        # remove helper column
+                        # حذف ستون کمکی
                         df_scrap.drop(columns=['_normalized_url'], inplace=True)
                         
                         removed_count = initial_count - len(df_scrap)
@@ -673,13 +697,54 @@ def merge_all_data_sources(session_dir, pipeline_type):
             df_mix.to_excel(output_path, index=False, engine='openpyxl')
             return output_path
         
-        # 4. merge ocr/qr + scraping (without merging rows)
-        print(f"\n   Concatenating OCR/QR + Web Scraping (separate rows)...")
+
         
-        # just concat, without merging
-        df_final = pd.concat([df_mix, df_scrap], ignore_index=True)
+
+        print(f"\n   🔗 Merging OCR/QR + Scraping into single rows...")
+
+        all_records = {}
+
+        for _, row in df_mix.iterrows():
+            fname = str(row.get('file_name', '')).strip()
+            if fname and fname not in ['', 'nan', 'Unknown']:
+                all_records[fname] = row.to_dict()
+            else:
+                all_records[f"_ocr_{_}"] = row.to_dict()
+
+        unmatched_scrap = []
+        for _, row in df_scrap.iterrows():
+            fname = str(row.get('file_name', '')).strip()
+            if fname and fname in all_records:
+                base = all_records[fname]
+                for col, val in row.items():
+                    if val is None or str(val).strip() in ['', 'nan', 'None']:
+                        continue
+                    if col not in base or str(base.get(col, '')).strip() in ['', 'nan', 'None']:
+                        base[col] = val
+                    else:
+                        i = 2
+                        while True:
+                            new_col = f"{col}{i}"
+                            if new_col not in base or str(base.get(new_col, '')).strip() in ['', 'nan', 'None']:
+                                base[new_col] = val
+                                break
+                            i += 1
+                all_records[fname] = base
+            else:
+                unmatched_scrap.append(row.to_dict())
+
+        final_list = list(all_records.values()) + unmatched_scrap
+        df_final = pd.DataFrame(final_list)
+        print(f"   ✅ Before: OCR/QR={len(df_mix)}, Scrap={len(df_scrap)}")
+        print(f"   ✅ After merge: {len(df_final)} rows")
+
+
+
+
+
+
         
-        # cleaning
+        # تمیزکاری
         df_final = df_final.fillna("")
         for col in df_final.columns:
             if df_final[col].dtype == 'object':
@@ -688,28 +753,28 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     'nan': '', 'None': '', 'NaT': '', '<NA>': '', 'null': '', 'NULL': ''
                 })
         
-        # generate unique companyid for each file_name
+        # ========== 🆔 تولید CompanyID منحصر به فرد برای هر file_name ==========
         print(f"\n🆔 Generating unique CompanyID for each file_name...")
         
         if 'file_name' in df_final.columns:
-            # create dictionary: file_name → companyid
+            # ساخت دیکشنری: file_name → CompanyID
             file_to_company_id = {}
             
             for idx, row in df_final.iterrows():
                 fname = row.get('file_name', '')
                 
                 if not fname or pd.isna(fname) or str(fname).strip() in ['', 'Unknown', 'web_only']:
-                    # if doesn't have file_name, give unique id
+                    # اگه file_name نداره، ID منحصر به فرد بده
                     company_id = generate_company_id(
                         row.get('CompanyNameFA'),
                         row.get('CompanyNameEN')
                     )
                 else:
-                    # if has file_name, check if created before
+                    # اگه file_name داره، چک کن قبلاً ساخته شده یا نه
                     fname_str = str(fname).strip()
                     
                     if fname_str not in file_to_company_id:
-                        # first time seeing this file_name
+                        # اولین باری که این file_name رو میبینیم
                         company_id = generate_company_id(
                             row.get('CompanyNameFA'),
                             row.get('CompanyNameEN')
@@ -717,23 +782,23 @@ def merge_all_data_sources(session_dir, pipeline_type):
                         file_to_company_id[fname_str] = company_id
                         print(f"      {fname_str} → {company_id}")
                     else:
-                        # seen before, use same id
+                        # قبلاً دیدیم، از همون ID استفاده کن
                         company_id = file_to_company_id[fname_str]
                 
-                # add companyid
+                # اضافه کردن CompanyID
                 df_final.at[idx, 'CompanyID'] = company_id
             
-            # move companyid to first
+            # جابجایی CompanyID به اول
             cols = ['CompanyID'] + [col for col in df_final.columns if col != 'CompanyID']
             df_final = df_final[cols]
             
             print(f"   ✅ Generated {len(file_to_company_id)} unique CompanyIDs for {len(df_final)} rows")
         
-        # sort based on file_name
+        # ========== 📑 مرتب‌سازی بر اساس file_name ==========
         print(f"\n📑 Sorting by file_name...")
         
         if 'file_name' in df_final.columns:
-            # sort: first file_name, then companyid
+            # مرتب‌سازی: اول file_name، بعد CompanyID
             df_final = df_final.sort_values(
                 by=['file_name', 'CompanyID'], 
                 ascending=[True, True]
@@ -741,14 +806,14 @@ def merge_all_data_sources(session_dir, pipeline_type):
             
             print(f"   ✅ Sorted {len(df_final)} rows by file_name")
             
-            # show statistics
+            # نمایش آمار
             file_counts = df_final['file_name'].value_counts()
             print(f"\n   📊 File Distribution:")
             for fname, count in list(file_counts.items())[:5]:
                 if fname and str(fname) not in ['', 'nan', 'Unknown']:
                     print(f"      • {fname}: {count} rows")
         
-        # save
+        # ذخیره
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = Path(session_dir) / f"merged_complete_{timestamp}.xlsx"
         df_final.to_excel(output_path, index=False, engine='openpyxl')
@@ -766,24 +831,20 @@ def merge_all_data_sources(session_dir, pipeline_type):
         return None
 
 
-
-
-
-def translate_all_columns(df, api_key="AIz***70"):
+def translate_all_columns(df, api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70"):
     """
-    translate all columns in dataframe
-    - only english → persian
+    ترجمه تمام ستون‌ها در DataFrame
+    - فقط انگلیسی → فارسی
     """
-
-    import google.generativeai as genai
-    import time
+    
+    
     
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel('gemini-1.5-flash')
+    model = genai.GenerativeModel('gemini-2.5-flash-lite')
     
     print(f"\n🌐 Starting translation for {len(df)} rows...")
     
-    # columns that should not be translated
+    # ستون‌هایی که نباید ترجمه بشن
     skip_columns = [
         'file_name', 'Exhibition', 'Source', 
         'QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp',
@@ -795,13 +856,13 @@ def translate_all_columns(df, api_key="AIz***70"):
     ]
     
     def detect_language(text):
-        #detect language: fa or en
+        """تشخیص زبان: fa یا en"""
         if not text or pd.isna(text) or str(text).strip() == '':
             return None
         
         text = str(text).strip()
         
-        # check persian characters
+        # چک کردن حروف فارسی
         persian_chars = set('آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
         has_persian = any(c in persian_chars for c in text)
         
@@ -811,7 +872,7 @@ def translate_all_columns(df, api_key="AIz***70"):
             return 'en'
     
     def translate_text(text):
-        ## translate english with gemini
+        """ترجمه متن انگلیسی به فارسی با Gemini"""
         if not text or pd.isna(text) or str(text).strip() == '':
             return ""
         
@@ -823,7 +884,7 @@ def translate_all_columns(df, api_key="AIz***70"):
             response = model.generate_content(prompt)
             translation = response.text.strip()
             
-            # remove markdown & quotes
+            # حذف markdown و quotes
             translation = translation.replace('*', '').replace('`', '').strip('"').strip("'")
             
             return translation
@@ -832,19 +893,19 @@ def translate_all_columns(df, api_key="AIz***70"):
             print(f"   ⚠️ Translation error: {e}")
             return ""
     
-    # process each column
+    # پردازش هر ستون
     for col in df.columns:
-        # Skip specific columns
+        # Skip ستون‌های خاص
         if col in skip_columns:
             continue
         
-    
+        # چک کردن اینکه ستون قبلاً ترجمه شده یا نه
         if col.endswith('_translated') or col.endswith('FA') or col.endswith('EN'):
             continue
         
         print(f"\n   🔄 Processing column: {col}")
         
-        # count non-empty cells
+        # شمارش سلول‌های غیرخالی
         non_empty = df[col].notna() & (df[col].astype(str).str.strip() != '')
         total_cells = non_empty.sum()
         
@@ -854,7 +915,7 @@ def translate_all_columns(df, api_key="AIz***70"):
         
         print(f"      📊 {total_cells} non-empty cells")
         
-        # process each row
+        # پردازش هر سطر
         translated_count = 0
         
         for idx in df.index:
@@ -863,18 +924,18 @@ def translate_all_columns(df, api_key="AIz***70"):
             if not cell_value or pd.isna(cell_value) or str(cell_value).strip() == '':
                 continue
             
-            # language detection
+            # تشخیص زبان
             lang = detect_language(cell_value)
             
             if lang != 'en':
-                
+                # فقط متن‌های انگلیسی رو پردازش می‌کنیم
                 continue
             
-            
+            # ترجمه انگلیسی → فارسی
             translated = translate_text(cell_value)
             
             if translated:
-                # save in new column
+                # ذخیره در ستون جدید
                 new_col = f"{col}FA" if not col.endswith('EN') else col.replace('EN', 'FA')
                 df.at[idx, new_col] = translated
                 translated_count += 1
@@ -887,10 +948,131 @@ def translate_all_columns(df, api_key="AIz***70"):
     print(f"\n   ✅ Translation completed!")
     return df
 
+def retry_sheets_append(sheets_service, file_id, sheet_name, chunk_values, max_retries=5, base_wait=10):
+    
+    NETWORK_ERRORS = (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, TimeoutError, socket.timeout, socket.error, OSError)
+    for attempt in range(1, max_retries + 1):
+        try:
+            result = sheets_service.spreadsheets().values().append(
+                spreadsheetId=file_id,
+                range=f'{sheet_name}!A:A',
+                valueInputOption='USER_ENTERED',
+                insertDataOption='INSERT_ROWS',
+                body={'values': chunk_values}
+            ).execute()
+            return result
+        except NETWORK_ERRORS as e:
+            wait_time = base_wait * (2 ** (attempt - 1))
+            print(f"   ⚠️ Network error attempt {attempt}/{max_retries}: {e}")
+            if attempt == max_retries:
+                raise
+            print(f"   ⏳ Waiting {wait_time}s...")
+            time.sleep(wait_time)
+        except HttpError as e:
+            if e.resp.status in [400, 403, 404]:
+                raise
+            wait_time = base_wait * (2 ** attempt)
+            print(f"   ⚠️ HTTP {e.resp.status} attempt {attempt}/{max_retries}, waiting {wait_time}s...")
+            if attempt == max_retries:
+                raise
+            time.sleep(wait_time)
+
+
+
+def retry_sheets_execute(request, max_retries=5, base_wait=10):
+    """اجرای هر نوع request گوگل شیتس (get, update, ...) با retry"""
+    
+    NETWORK_ERRORS = (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, TimeoutError, socket.timeout, socket.error, OSError)
+    for attempt in range(1, max_retries + 1):
+        try:
+            return request.execute()
+        except NETWORK_ERRORS as e:
+            wait_time = base_wait * (2 ** (attempt - 1))
+            print(f"   ⚠️ Network error attempt {attempt}/{max_retries}: {e}")
+            if attempt == max_retries:
+                raise
+            print(f"   ⏳ Waiting {wait_time}s...")
+            time.sleep(wait_time)
+        except HttpError as e:
+            if e.resp.status in [400, 403, 404]:
+                raise
+            wait_time = base_wait * (2 ** attempt)
+            print(f"   ⚠️ HTTP {e.resp.status} attempt {attempt}/{max_retries}, waiting {wait_time}s...")
+            if attempt == max_retries:
+                raise
+            time.sleep(wait_time)
+
+
+def consolidate_columns(df):
+    """
+    ادغام ستون‌های مشابه با | به عنوان جداکننده
+    هیچ مقداری حذف نمی‌شه مگر تکراری
+    """
+    print(f"\n🔀 Consolidating columns...")
+    
+    # تعریف گروه‌ها
+    COLUMN_GROUPS = {
+        'Phones':             ['phones', 'phones2', 'phones3', 'phones4', 'Phone1', 'Phone2', 'phones5', 'phones6', 'phones7', 'phones8', 'phones9', 'Phone3', 'Phone4', 'Phone5'],
+        'Faxes':              ['faxes', 'faxes2', 'Fax'],
+        'Emails':             ['emails', 'Email', 'OtherEmails'],
+        'Websites':           ['urls', 'url', 'Website', 'url2', 'url3', 'url4', 'url5','urls2', 'urls3', 'urls4'],
+        'CompanyName':        ['company_names', 'company_names2', 'company_names3', 'CompanyNameEN', 'CompanyNameFA', 'CompanyNameFA_translated', 'company_names4', 'company_names5', 'company_names6', 'CompanyNameEN2', 'CompanyNameEN3', 'CompanyNameFA_translated2','CompanyNameFA_translated3', 'CompanyNameFA_translated4', 'CompanyNameFA_translated5'],
+        'Services':           ['services', 'services2', 'services3', 'services4', 'services5', 'services6', 'services7', 'services8','services9', 'services10', 'services11'],
+        'Address':            ['AddressEN', 'AddressFA'],
+        'ProductName':        ['ProductName', 'ProductNameFA', 'ProductName2', 'ProductName3', 'ProductName4', 'ProductName5'],
+        'ProductCategory':    ['ProductCategory', 'ProductCategoryFA', 'ProductCategory2', 'ProductCategory3', 'ProductCategory4', 'ProductCategoryFA2', 'ProductCategoryFA3', 'ProductCategoryFA4', 'ProductCategoryFA5'],
+        'ProductDescription': ['ProductDescription', 'ProductDescriptionFA'],
+        'Applications':       ['Applications', 'ApplicationsFA', 'Applications2', 'Applications3', 'Applications4', 'Applications5', 'ApplicationsFA2', 'ApplicationsFA3', 'ApplicationsFA4', 'ApplicationsFA5'],
+        'Description':        ['Description', 'DescriptionFA', 'Description2', 'Description3', 'Description4', 'Description5', 'DescriptionFA2','DescriptionFA3', 'DescriptionFA4', 'DescriptionFA5'],
+        'History':            ['History', 'HistoryFA'],
+        'Employees':          ['Employees', 'EmployeesFA'],
+        'ClientsPartners':    ['ClientsPartners', 'ClientsPartnersFA', 'ClientsPartners2', 'ClientsPartners3', 'ClientsPartners4', 'ClientsPartners5', 'ClientsPartnersFA2', 'ClientsPartnersFA3', 'ClientsPartnersFA4', 'ClientsPartnersFA5'],
+        'Markets':            ['Markets', 'MarketsFA'],
+        'Brands':             ['Brands', 'BrandsFA', 'Brands2', 'Brands3', 'Brands4', 'Brands5', 'BrandsFA2', 'BrandsFA3', 'BrandsFA4', 'BrandsFA5'],
+        'Industry':           ['Industry', 'IndustryFA', 'Industry2', 'Industry3', 'Industry4', 'Industry5', 'IndustryFA2', 'IndustryFA3', 'IndustryFA4', 'IndustryFA5'],
+        'Certifications':     ['Certifications', 'CertificationsFA'],
+        'Country':            ['Country', 'CountryFA'],
+        'City':               ['City', 'CityFA'],
+        'Notes':              ['notes', 'notes2', 'notes3'],
+    }
+    
+    for new_col, source_cols in COLUMN_GROUPS.items():
+        # پیدا کردن ستون‌هایی که واقعاً در df هستن
+        existing = [c for c in source_cols if c in df.columns]
+        
+        if not existing:
+            continue
+        
+        print(f"   🔗 {new_col} ← {existing}")
+        
+        # ادغام مقادیر هر سطر
+        def merge_row(row):
+            values = []
+            seen = set()
+            for col in existing:
+                val = str(row[col]).strip() if col in row else ''
+                if val and val.lower() not in ['nan', 'none', 'nat', '', 'null']:
+                    if val not in seen:  # حذف تکراری
+                        values.append(val)
+                        seen.add(val)
+            return ' | '.join(values)
+        
+        df[new_col] = df.apply(merge_row, axis=1)
+        
+        # حذف ستون‌های قدیمی (به جز اگه اسمشون همون new_col باشه)
+        cols_to_drop = [c for c in existing if c != new_col]
+        df.drop(columns=cols_to_drop, inplace=True, errors='ignore')
+    
+    print(f"   ✅ Done! Final columns: {len(df.columns)}")
+    return df
+
+
+
+
 
 
 def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None, qc_metadata=None):
-    """read excel data and append to google sheets (variable row count)"""
+    """Read Excel data and append to Google Sheets (variable row count)"""
     try:
         drive_service, sheets_service = get_google_services()
         if not drive_service or not sheets_service:
@@ -898,11 +1080,11 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         print(f"\n☁️ Starting data save to Google Drive...")
 
-        # use existing google sheet instead of creating a new one
-        file_id = "1OeQ***27yuE"
+        # ✅ Use existing Google Sheet instead of creating a new one
+        file_id = "1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE"
         file_url = f"https://docs.google.com/spreadsheets/d/{file_id}/edit"
         exists = True
-        print(f"    Using existing Google Sheet: {file_url}")
+        print(f"   ✅ Using existing Google Sheet: {file_url}")
 
         if not file_id:
             return False, "Error creating table", None, 0
@@ -913,34 +1095,35 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             return False, "Excel file is empty", None, 0
         
         print(f"   ✅ {len(df)} rows × {len(df.columns)} columns read")
-        #  adding exhibition name 
+        # ========== 📝 اضافه کردن Exhibition Name ==========
         if exhibition_name:
             print(f"\n📝 Adding Exhibition to Google Sheets: {exhibition_name}")
             if 'Exhibition' not in df.columns:
                 df.insert(0, 'Exhibition', exhibition_name)
         
-        # adding qc metadata 
+        # ========== 👤 اضافه کردن QC Metadata ==========
+       
         if qc_metadata:
             print(f"\n👤 Adding QC Metadata to Google Sheets...")
             
             qc_columns_order = ['QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp']
             
-            # calculate start position (after exhibition if exists)
+            # محاسبه موقعیت شروع (بعد از Exhibition اگه هست)
             start_pos = 1 if 'Exhibition' in df.columns else 0
             
             for idx, col in enumerate(qc_columns_order, start=start_pos):
                 if col in qc_metadata and col not in df.columns:
-                    # convert to string to prevent conversion to number
+                    # ✅ تبدیل به string برای جلوگیری از تبدیل به عدد
                     value = str(qc_metadata[col])
                     
-                    # add apostrophe for date and time (like phone number)
+                    # ✅ اضافه کردن apostrophe برای تاریخ و ساعت (مثل شماره تلفن)
                     if col in ['QC_Date', 'QC_Time', 'QC_Timestamp']:
                         value = f"'{value}"
                     
                     df.insert(idx, col, value)
                     print(f"   ✅ {col}: {qc_metadata[col]}")
         
-        # adding source 
+        # ========== 📋 اضافه کردن Source ==========
         print(f"\n📋 Detecting Source (Image/PDF/Excel/Web)...")
         
         if 'file_name' in df.columns and 'Source' not in df.columns:
@@ -959,14 +1142,14 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 else:
                     return 'Unknown'
             
-            # calculate source column position (after qc metadata)
+            # محاسبه موقعیت ستون Source (بعد از QC metadata)
             qc_count = sum(1 for col in ['QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp'] if col in df.columns)
             source_pos = (1 if 'Exhibition' in df.columns else 0) + qc_count
             
             df.insert(source_pos, 'Source', df['file_name'].apply(detect_source))
             
             source_counts = df['Source'].value_counts()
-            print(f"    Source Distribution:")
+            print(f"   ✅ Source Distribution:")
             for source, count in source_counts.items():
                 print(f"      • {source}: {count} rows")
         
@@ -975,88 +1158,89 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
 
 
-        #  convert date and time to text format 
+        # ========== 🕐 تبدیل تاریخ و ساعت به Text Format ==========
         print(f"\n🕐 Converting date/time columns to text format...")
         
         date_time_columns = ['QC_Date', 'QC_Time', 'QC_Timestamp']
         
         for col in date_time_columns:
             if col in df.columns:
-                # convert to string with apostrophe at start (for google sheets)
+                # تبدیل به string با apostrophe در اول (برای Google Sheets)
                 df[col] = df[col].apply(
                     lambda x: f"'{str(x)}" if x and str(x).strip() not in ['', 'nan', 'None'] else ""
                 )
-                print(f"  {col} converted to text format")
+                print(f"   ✅ {col} converted to text format")
         
       
 
         print(f"\n   📊 Final DataFrame: {len(df)} rows × {len(df.columns)} columns")
 
         
-        # add: if doesn't have companyid, add it
+        # ✅ اضافه کن: اگه CompanyID نداشت، اضافه کن
         if 'CompanyID' not in df.columns:
             print(f"   ⚠️ CompanyID not found, generating...")
             df = add_company_id_to_dataframe(df, log_details=False)
         else:
             print(f"   ✅ CompanyID column exists")
         
-        # make sure companyid is first column
+        # ✅ مطمئن شو CompanyID ستون اول است
         if 'CompanyID' in df.columns:
             cols = ['CompanyID'] + [col for col in df.columns if col != 'CompanyID']
             df = df[cols]
-            print(f"   CompanyID is now the first column")
+            print(f"   ✅ CompanyID is now the first column")
         
         
 
-        # clean dataframe from nan and none values
+        # ✅ Clean DataFrame from NaN and None values
         import numpy as np
 
-        # replace empty values
+        # جایگزینی مقادیر خالی
         df = df.replace({np.nan: "", None: "", 'nan': "", 'None': "", 'NaT': ""})
-
+       # ========== 🔀 ادغام ستون‌های مشابه ==========
+        df = consolidate_columns(df)
 
         
-        # removing unnecessary columns 
+        # ========== 🧹 حذف ستون‌های اضافی ==========
         print(f"\n🧹 Removing unnecessary columns...")
 
         columns_to_remove = []
 
-        # 1. remove data_source and source_type
+        # 1. حذف data_source و source_type
         for col in ['data_source', 'source_type', 'Data_Source', 'Source_Type']:
             if col in df.columns:
                 columns_to_remove.append(col)
                 print(f"   ❌ Removing: {col}")
 
-        # 2. remove logo
+        # 2. حذف Logo
         if 'Logo' in df.columns:
             columns_to_remove.append('Logo')
             print(f"   ❌ Removing: Logo")
 
-        # remove columns
+        # حذف ستون‌ها
         if columns_to_remove:
             df.drop(columns=columns_to_remove, inplace=True)
             print(f"   ✅ Removed {len(columns_to_remove)} columns")
 
-        #  extracting person/position 
+        # ========== 👤 استخراج Person/Position ==========
         print(f"\n👤 Extracting Person & Position from PersonX columns...")
 
-        import google.generativeai as genai
-        genai.configure(api_key="AIzaSy***70")
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        
+        genai.configure(api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
+        model = genai.GenerativeModel('gemini-2.5-flash-lite')
 
         def translate_to_persian(text):
-            """translate english to persian"""
+            """ترجمه انگلیسی به فارسی"""
             if not text or pd.isna(text) or str(text).strip() == '':
                 return ""
             
             text = str(text).strip()
             
-            # check if it's persian or not
+            # چک کردن اینکه فارسی هست یا نه
             persian_chars = set('آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
             has_persian = any(c in persian_chars for c in text)
             
             if has_persian:
-                return text  # already persian
+                return text  # قبلاً فارسیه
             
             try:
                 prompt = f"Translate this English text to Persian. Only return the translation:\n\n{text}"
@@ -1067,14 +1251,16 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 return text
 
         def extract_person_position(person_col_value):
-        
-            #extract name and position from personx column
+            """
+            استخراج Name و Position از ستون PersonX
+            مثال: "علی احمدی - مدیر فروش" → ("علی احمدی", "مدیر فروش")
+            """
             if not person_col_value or pd.isna(person_col_value) or str(person_col_value).strip() == '':
                 return "", ""
             
             text = str(person_col_value).strip()
             
-            # try to separate with different separators
+            # تلاش برای جدا کردن با separator های مختلف
             separators = [' - ', ' – ', ' | ', ' / ', '\n', '،', ',']
             
             name = ""
@@ -1088,27 +1274,27 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                         position = parts[1].strip()
                         break
             
-            # if not separated, consider entire text as name
+            # اگر جدا نشد، کل متن رو به عنوان اسم در نظر بگیر
             if not name:
                 name = text
             
-            # translate to persian
+            # ترجمه به فارسی
             name_fa = translate_to_persian(name)
             position_fa = translate_to_persian(position)
             
             return name_fa, position_fa
 
-        # find personx columns
+        # پیدا کردن ستون‌های PersonX
         person_columns = [col for col in df.columns if col.lower().startswith('person')]
 
         if person_columns:
             print(f"   📋 Found {len(person_columns)} Person columns: {person_columns}")
             
-            # list of names and positions
+            # لیست اسامی و پوزیشن‌ها
             names_list = []
             positions_list = []
             
-            # process each row
+            # پردازش هر سطر
             for idx in df.index:
                 row_names = []
                 row_positions = []
@@ -1123,11 +1309,11 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                         if position:
                             row_positions.append(position)
                 
-                # combine with " | "
+                # ترکیب با " | "
                 names_list.append(" | ".join(row_names) if row_names else "")
                 positions_list.append(" | ".join(row_positions) if row_positions else "")
             
-            # add new columns
+            # اضافه کردن ستون‌های جدید
             if 'Name' not in df.columns:
                 df['Name'] = names_list
                 print(f"   ✅ Added 'Name' column")
@@ -1136,11 +1322,11 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 df['Position'] = positions_list
                 print(f"   ✅ Added 'Position' column")
             
-            # remove old personx columns
+            # حذف ستون‌های قدیمی PersonX
             df.drop(columns=person_columns, inplace=True)
             print(f"   ✅ Removed {len(person_columns)} PersonX columns")
             
-            # show 3 samples
+            # نمایش 3 نمونه
             print(f"\n   📊 Sample extractions:")
             for i in range(min(3, len(df))):
                 if df.at[i, 'Name'] or df.at[i, 'Position']:
@@ -1154,18 +1340,17 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         print(f"\n   ✅ Cleanup completed!")
 
 
-        #  translate english positions to persian 
+        # ========== 🌐 ترجمه Position انگلیسی به فارسی ==========
         print(f"\n🌐 Translating English Positions to Persian...")
 
         if 'Position' in df.columns:
-            import google.generativeai as genai
-            import time
             
-            genai.configure(api_key="AIzaS***zB70")
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            
+            genai.configure(api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
+            model = genai.GenerativeModel('gemini-2.5-flash-lite')
             
             def detect_language_position(text):
-                #detect language: fa or en
+                """تشخیص زبان: fa یا en"""
                 if not text or pd.isna(text) or str(text).strip() == '':
                     return None
                 
@@ -1176,7 +1361,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 return 'fa' if has_persian else 'en'
             
             def translate_position_to_persian(text):
-                #translate english to persian
+                """ترجمه انگلیسی به فارسی"""
                 if not text or pd.isna(text) or str(text).strip() == '':
                     return ""
                 
@@ -1199,40 +1384,40 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 if not position_value or pd.isna(position_value) or str(position_value).strip() == '':
                     continue
                 
-                # detect language
+                # تشخیص زبان
                 lang = detect_language_position(position_value)
                 
                 if lang == 'en':
-                    # translate english → persian
+                    # ترجمه انگلیسی → فارسی
                     position_fa = translate_position_to_persian(position_value)
                     
                     if position_fa:
-                        # combine: english | persian
+                        # ترکیب: انگلیسی | فارسی
                         df.at[idx, 'Position'] = f"{position_value} | {position_fa}"
                         translated_count += 1
                         
-                        if translated_count <= 3:  # show 3 samples
+                        if translated_count <= 3:  # نمایش 3 نمونه
                             print(f"      Row {idx+1}: {position_value} → {position_fa}")
                     
-                    time.sleep(1)  # rate limiting
+                    time.sleep(1)  # Rate limiting
             
             if translated_count > 0:
                 print(f"   ✅ Translated {translated_count} English positions")
             else:
                 print(f"   ℹ️ No English positions found")
 
-        # remove positionfa and positionen 
+        # ========== 🗑️ حذف PositionFA و PositionEN ==========
         print(f"\n🗑️ Removing PositionFA and PositionEN columns...")
         for col in ['PositionFA', 'PositionEN']:
             if col in df.columns:
                 df.drop(columns=[col], inplace=True)
                 print(f"   ❌ Removed: {col}")
 
-    
-        # consolidating address columns
+        #
+        # ========== 📍 یکپارچه‌سازی Address Columns ==========
         print(f"\n📍 Consolidating Address columns...")
         
-        # find all address columns
+        # پیدا کردن تمام ستون‌های Address
         address_columns = []
         for col in df.columns:
             col_lower = col.lower()
@@ -1243,15 +1428,15 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         if address_columns:
             print(f"   📋 Found {len(address_columns)} Address columns: {address_columns}")
             
-            # language detection function
+            # تابع تشخیص زبان
             def detect_language_address(text):
-                """detect address language: fa or en"""
+                """تشخیص زبان آدرس: fa یا en"""
                 if not text or pd.isna(text) or str(text).strip() == '':
                     return None
                 
                 text = str(text).strip()
                 
-                # check persian characters
+                # چک کردن حروف فارسی
                 persian_chars = set('آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
                 has_persian = any(c in persian_chars for c in text)
                 
@@ -1260,9 +1445,9 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 else:
                     return 'en'
             
-            # english to persian translation function
+            # تابع ترجمه انگلیسی به فارسی
             def translate_address_to_persian(text):
-                """translate english address to persian"""
+                """ترجمه آدرس انگلیسی به فارسی"""
                 if not text or pd.isna(text) or str(text).strip() == '':
                     return ""
                 
@@ -1277,13 +1462,13 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     print(f"   ⚠️ Translation error: {e}")
                     return text
             
-            # new lists for unified addresses
+            # لیست‌های جدید برای آدرس‌های یکپارچه
             unified_address_en = []
             unified_address_fa = []
             
-            # process each row
+            # پردازش هر سطر
             for idx in df.index:
-                # collect all addresses from different columns
+                # جمع‌آوری تمام آدرس‌ها از ستون‌های مختلف
                 all_addresses = []
                 
                 for col in address_columns:
@@ -1292,16 +1477,16 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                         if addr and not pd.isna(addr) and str(addr).strip() not in ['', 'nan', 'None']:
                             all_addresses.append(str(addr).strip())
                 
-                # if no address found
+                # اگه هیچ آدرسی نبود
                 if not all_addresses:
                     unified_address_en.append("")
                     unified_address_fa.append("")
                     continue
                 
-                # remove duplicates
+                # حذف تکراری‌ها
                 unique_addresses = list(dict.fromkeys(all_addresses))
                 
-                # separate persian and english addresses
+                # جداسازی آدرس‌های فارسی و انگلیسی
                 fa_addresses = []
                 en_addresses = []
                 
@@ -1313,35 +1498,35 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     elif lang == 'en':
                         en_addresses.append(addr)
                 
-                # combine english addresses
+                # ترکیب آدرس‌های انگلیسی
                 final_en = " | ".join(en_addresses) if en_addresses else ""
                 
-                # combine persian addresses
+                # ترکیب آدرس‌های فارسی
                 final_fa = " | ".join(fa_addresses) if fa_addresses else ""
                 
-                # if we have english address but no persian → translate it
+                # اگه آدرس انگلیسی داریم ولی فارسی نداریم → ترجمه کن
                 if final_en and not final_fa:
                     print(f"   Row {idx+1}: Translating EN→FA...")
                     final_fa = translate_address_to_persian(final_en)
-                    time.sleep(1)  # rate limiting
+                    time.sleep(1)  # Rate limiting
                 
                 unified_address_en.append(final_en)
                 unified_address_fa.append(final_fa)
             
-            # remove old columns
+            # حذف ستون‌های قدیمی
             for col in address_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
             
             print(f"   ✅ Removed {len(address_columns)} old Address columns")
             
-            # add new columns
+            # اضافه کردن ستون‌های جدید
             df['AddressEN'] = unified_address_en
             df['AddressFA'] = unified_address_fa
             
             print(f"   ✅ Added unified 'AddressEN' and 'AddressFA' columns")
             
-            # show 3 samples
+            # نمایش 3 نمونه
             print(f"\n   📊 Sample unified addresses:")
             for i in range(min(3, len(df))):
                 if df.at[i, 'AddressEN'] or df.at[i, 'AddressFA']:
@@ -1356,24 +1541,28 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         
         print(f"\n   ✅ Address consolidation completed!")
         
-        # end of address consolidation
+        # ========== پایان یکپارچه‌سازی Address ==========
 
-        #  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ cleaning formulas and errors
+
+
+
+
+        # ========== 🧹 تمیز کردن فرمول‌ها و ارورها ==========
         def remove_formulas_from_df(df):
-            """remove formulas, errors and convert to simple values"""
+            """حذف فرمول‌ها، ارورها و تبدیل به مقادیر ساده"""
             for col in df.columns:
                 if df[col].dtype == 'object':
-                    # remove excel formulas (that start with =)
+                    # حذف فرمول‌های Excel (که با = شروع میشن)
                     df[col] = df[col].apply(
                         lambda x: str(x)[1:] if isinstance(x, str) and x.startswith('=') else x
                     )
                     
-                    # remove #error!, #ref!, #value!, #n/a, etc.
+                    # حذف #ERROR!, #REF!, #VALUE!, #N/A, etc.
                     df[col] = df[col].apply(
                         lambda x: "" if isinstance(x, str) and x.startswith('#') else x
                     )
                     
-                    # convert persian digits to english
+                    # تبدیل اعداد فارسی به انگلیسی
                     persian_digits = '۰۱۲۳۴۵۶۷۸۹'
                     english_digits = '0123456789'
                     trans_table = str.maketrans(persian_digits, english_digits)
@@ -1385,24 +1574,24 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         
         df = remove_formulas_from_df(df)
         print(f"   🧹 Cleaned formulas and errors from {len(df.columns)} columns")
-        
-        # convert phone numbers to string
+        # =====================================================
+        # ========== 📞 تبدیل شماره تلفن‌ها به String ==========
         phone_columns = ['phones', 'phones2', 'phones3', 'phones4', 'phones5',
                         'Phone1', 'Phone2', 'Phone3', 'Phone4', 'Phone5',
                         'Fax', 'Fax2', 'WhatsApp', 'Telegram']
         
         for col in phone_columns:
             if col in df.columns:
-                # convert number to string with apostrophe at start (for google sheets)
+                # تبدیل عدد به string با apostrophe در اول (برای Google Sheets)
                 df[col] = df[col].apply(
                     lambda x: f"'{str(x)}" if x and str(x).strip() not in ['', 'nan', 'None'] else ""
                 )
         
         print(f"   📞 Converted phone columns to text format")
 
-        
-        
-        #convert fax to string
+        #
+        # ====================================================
+        # ========== 📠 تبدیل FAX ها به String (رفع #ERROR!) ==========
         print(f"\n📠 Converting FAX columns to text format...")
 
         fax_columns = []
@@ -1412,7 +1601,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 fax_columns.append(col)
 
         for col in fax_columns:
-            # convert to string with apostrophe to prevent error in google sheets
+            # تبدیل به string با apostrophe برای جلوگیری از #ERROR! در Google Sheets
             df[col] = df[col].apply(
                 lambda x: f"'{str(x)}" if x and str(x).strip() not in ['', 'nan', 'None'] else ""
             )
@@ -1420,9 +1609,9 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         print(f"   📠 Converted {len(fax_columns)} FAX columns")
 
-       
+        # ====================================================
 
-        #  removing duplicate data in each row
+        # ========== 🧹 حذف داده‌های تکراری در هر سطر (3+ بار تکرار در یک ROW) ==========
         print(f"\n🧹 Removing duplicate values within each row (3+ occurrences)...")
 
         total_removed = 0
@@ -1431,29 +1620,29 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         for idx in df.index:
             row = df.loc[idx]
             
-            # count values in this row 
+            # شمارش مقادیر در این سطر (فقط مقادیر غیرخالی)
             values = []
             for col in df.columns:
                 val = row[col]
-                # only valid values
+                # فقط مقادیر معتبر
                 if val and str(val).strip() not in ['', 'nan', 'None', 'null', 'NULL']:
                     values.append((col, str(val).strip()))
             
             if not values:
                 continue
             
-            # count repetition of each value in this row
+            # شمارش تکرار هر مقدار در این سطر
             value_counts = {}
             for col, val in values:
                 if val not in value_counts:
                     value_counts[val] = []
                 value_counts[val].append(col)
             
-            # find values that repeat 3+ times
+            # پیدا کردن مقادیری که 3+ بار تکرار شدن
             row_modified = False
             for val, columns in value_counts.items():
                 if len(columns) >= 3:
-                    # keep first occurrence, remove rest
+                    # نگه‌داشتن اولین occurrence، حذف بقیه
                     for col in columns[1:]:
                         df.at[idx, col] = ''
                         total_removed += 1
@@ -1462,7 +1651,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     if not row_modified:
                         rows_affected += 1
                     
-                    # show first 5 samples
+                    # نمایش 5 نمونه اول
                     if rows_affected <= 5:
                         print(f"   Row {idx+1}: '{val[:30]}' appeared {len(columns)} times in columns {columns[:3]} → kept first, removed {len(columns)-1}")
 
@@ -1471,9 +1660,17 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         else:
             print(f"   ℹ️ No duplicate values found (3+ times in same row)")
 
+# ====================================================
 
-        
-        # clean text columns
+
+
+
+
+
+
+        # ====================================================
+
+        # تمیز کردن ستون‌های متنی
         for col in df.columns:
             if df[col].dtype == 'object':
                 df[col] = df[col].astype(str).str.strip()
@@ -1485,16 +1682,23 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     'null': '',
                     'NULL': ''
                 })
-                # remove case-insensitive values
+                # حذف مقادیر case-insensitive
                 df[col] = df[col].apply(lambda x: "" if str(x).lower() in ['nan', 'none', 'nat', 'null'] else x)
         
         sheet_name = 'Sheet1'
         
-        result = sheets_service.spreadsheets().values().get(
+        result = retry_sheets_execute(sheets_service.spreadsheets().values().get(
             spreadsheetId=file_id, range=f'{sheet_name}!1:1'
-        ).execute()
+        ))
         
         existing_headers = result.get('values', [[]])[0] if result.get('values') else []
+
+
+
+
+
+
+
         new_headers = df.columns.tolist()
         
         print(f"   📋 Existing columns: {len(existing_headers)} | New columns: {len(new_headers)}")
@@ -1515,18 +1719,28 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             if new_columns:
                 print(f"   🆕 New columns: {new_columns}")
                 print(f"   🔄 Updating headers...")
-                sheets_service.spreadsheets().values().update(
+
+
+
+
+
+                retry_sheets_execute(sheets_service.spreadsheets().values().update(
                     spreadsheetId=file_id,
                     range=f'{sheet_name}!1:1',
                     valueInputOption='USER_ENTERED',
                     body={'values': [all_columns]}
-                ).execute()
+                ))
                 
-                result = sheets_service.spreadsheets().values().get(
+                result = retry_sheets_execute(sheets_service.spreadsheets().values().get(
                     spreadsheetId=file_id, range=f'{sheet_name}!A:A'
-                ).execute()
+                ))
                 existing_rows_count = len(result.get('values', [])) - 1
-                
+
+
+
+
+
+
                 if existing_rows_count > 0:
                     print(f"   📝 Filling {existing_rows_count} old rows...")
                     empty_values = [[''] * len(new_columns) for _ in range(existing_rows_count)]
@@ -1534,14 +1748,26 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     start_col_letter = _col_index_to_letter(start_col_index)
                     end_col_letter = _col_index_to_letter(start_col_index + len(new_columns) - 1)
                     
-                    sheets_service.spreadsheets().values().update(
+
+
+
+
+
+                    retry_sheets_execute(sheets_service.spreadsheets().values().update(
                         spreadsheetId=file_id,
                         range=f'{sheet_name}!{start_col_letter}2:{end_col_letter}{existing_rows_count+1}',
                         valueInputOption='USER_ENTERED',
                         body={'values': empty_values}
-                    ).execute()
+                    ))
                     print(f"   ✅ Old rows updated")
             
+
+
+
+
+
+
+
             for col in all_columns:
                 if col not in df.columns:
                     df[col] = ''
@@ -1550,18 +1776,18 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             print(f"   ✅ DataFrame sorted: {len(df)} rows × {len(all_columns)} columns")
             values = df.values.tolist()
 
-        # ✅ convert all nan or none to string before sending to sheets
+        # ✅ Convert all NaN or None to string before sending to Sheets
         def clean_cell(cell):
-            """complete cell cleaning"""
+            """تمیز کردن کامل سلول"""
             if pd.isna(cell) or cell is None:
                 return ""
             cell_str = str(cell).strip()
     
-            # check unwanted values
+            # چک کردن مقادیر ناخواسته
             if cell_str.lower() in ['nan', 'none', 'nat', '<na>', 'null']:
                 return ""
             
-            # remove excel errors
+            # حذف ارورهای Excel
             if cell_str.startswith('#'):
                 return ""
     
@@ -1569,68 +1795,58 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         values = [[clean_cell(cell) for cell in row] for row in values]
         
-        result = sheets_service.spreadsheets().values().get(
+
+
+
+
+        result = retry_sheets_execute(sheets_service.spreadsheets().values().get(
             spreadsheetId=file_id, range=f'{sheet_name}!A:A'
-        ).execute()
+        ))
         existing_rows = len(result.get('values', []))
+
+
+
+
         
         print(f"   📊 Current rows: {existing_rows}")
         print(f"   📤 Adding {len(values)} rows...")
         
-        from googleapiclient.errors import HttpError
-        body = {'values': values}
+       
 
-        try:
-            result = sheets_service.spreadsheets().values().append(
-                spreadsheetId=file_id,
-                range=f'{sheet_name}!A:A',
-                valueInputOption='USER_ENTERED',
-                insertDataOption='INSERT_ROWS',
-                body=body
-            ).execute()
-    
-            updated_rows = result.get('updates', {}).get('updatedRows', 0)
-            total_rows = existing_rows + updated_rows
-
-        except HttpError as e:
-            error_code = e.resp.status
-            error_msg = str(e)
-    
-            if error_code == 429:
-                # rate limit
-                print(f"   ❌ Rate Limit: google api called too many times")
-                return False, "Rate limit reached. please wait a few minutes", None, 0
-    
-            elif error_code == 403:
-                # permission denied
-                print(f"   ❌ Permission Error: no access to sheet")
-                return False, "no access to google sheet. check service account", None, 0
-    
-            elif "exceeds grid limits" in error_msg or "GRID_LIMITS" in error_msg:
-                # sheet full (10m cells)
-                print(f"   ❌ Sheet Full: 10 million cell capacity filled")
-                return False, "sheet is full (10m cells limit). create a new sheet", None, 0
-    
-            elif "Quota exceeded" in error_msg:
-                # daily quota
-                print(f"   ❌ Quota Exceeded: google daily quota finished")
-                return False, "google daily quota finished. try again tomorrow", None, 0
-    
-            else:
-                # unknown error
-                print(f"   ❌ Google API Error: {error_msg}")
-                return False, f"google error: {error_msg}", None, 0
-
-        except Exception as e:
-            print(f"   ❌ Unexpected Error: {e}")
-            return False, str(e), None, 0
+        # تقسیم به chunk‌های 500 سطری
+        chunks = [values[i:i+500] for i in range(0, len(values), 500)]
+        print(f"\n📦 {len(chunks)} chunks × 500 rows")
         
+        uploaded_rows = 0
+        failed_chunks = []
+        
+        for chunk_idx, chunk in enumerate(chunks, 1):
+            print(f"   📤 Chunk {chunk_idx}/{len(chunks)} ({len(chunk)} rows)...")
+            try:
+                retry_sheets_append(sheets_service, file_id, sheet_name, chunk)
+                uploaded_rows += len(chunk)
+                print(f"   ✅ Chunk {chunk_idx} done")
+                if chunk_idx < len(chunks):
+                    time.sleep(2)
+            except Exception as e:
+                print(f"   ❌ Chunk {chunk_idx} failed: {e}")
+                failed_chunks.append(chunk_idx)
+                continue
+        
+        updated_rows = uploaded_rows
+        total_rows = existing_rows + uploaded_rows
 
-        result = sheets_service.spreadsheets().values().get(
+
+
+
+        result = retry_sheets_execute(sheets_service.spreadsheets().values().get(
             spreadsheetId=file_id, range=f'{sheet_name}!1:1'
-        ).execute()
+        ))
         total_columns = len(result.get('values', [[]])[0])
         
+
+
+
         total_cells = total_rows * total_columns
         capacity = (total_cells / 10_000_000) * 100
         
@@ -1647,13 +1863,10 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         import traceback
         traceback.print_exc()
         return False, str(e), None, 0
-    
-
-
 
 
 def get_or_create_folder(folder_name="Exhibition_Data"):
-    #find/create folder in drive
+    """پیدا/ساخت پوشه در Drive"""
     try:
         drive_service, _ = get_google_services()
         if not drive_service:
@@ -1666,26 +1879,26 @@ def get_or_create_folder(folder_name="Exhibition_Data"):
         files = results.get('files', [])
         
         if files:
-            print(f"   ✅ existing folder: {files[0]['name']}")
+            print(f"   ✅ پوشه موجود: {files[0]['name']}")
             return files[0]['id']
         
         folder = drive_service.files().create(
             body={'name': folder_name, 'mimeType': 'application/vnd.google-apps.folder'},
             fields='id'
         ).execute()
-        print(f"   ✅ new folder: {folder_name}")
+        print(f"   ✅ پوشه جدید: {folder_name}")
         return folder.get('id')
         
     except Exception as e:
-        print(f"   ❌ error: {e}")
+        print(f"   ❌ خطا: {e}")
         return None
 
 
 
 
-
-
-# quota management
+# =========================================================
+# 📅 Quota Management
+# =========================================================
 DAILY_LIMIT = 240
 QUOTA_FILE = Path("quota.json")
 
@@ -1720,11 +1933,11 @@ def decrease_quota(amount=1):
     save_quota(quota)
     return quota
 
-
-# quality control tracking functions
-
+# =========================================================
+# ✨ Quality Control Tracking Functions
+# =========================================================
 def get_qc_metadata(user_name, user_role):
-    """create quality control metadata"""
+    """ساخت متادیتای کنترل کیفیت"""
     now = datetime.datetime.now()
     return {
         "QC_Supervisor": user_name,
@@ -1735,7 +1948,7 @@ def get_qc_metadata(user_name, user_role):
     }
 
 def add_qc_metadata_to_excel(excel_path, qc_metadata):
-    """add quality control metadata to excel"""
+    """اضافه کردن متادیتای کنترل کیفیت به Excel"""
     try:
         df = pd.read_excel(excel_path)
         for key in ["QC_Supervisor", "QC_Role", "QC_Date", "QC_Time", "QC_Timestamp"]:
@@ -1749,7 +1962,7 @@ def add_qc_metadata_to_excel(excel_path, qc_metadata):
         return False
 
 def save_qc_log(session_dir, qc_metadata, exhibition_name, pipeline_type, total_files):
-    """save quality control log in json file"""
+    """ذخیره لاگ کنترل کیفیت در فایل JSON"""
     try:
         qc_log_file = session_dir / "qc_log.json"
         qc_log = {
@@ -1766,24 +1979,25 @@ def save_qc_log(session_dir, qc_metadata, exhibition_name, pipeline_type, total_
         print(f"   ❌ Error saving QC log: {e}")
         return False
 
-
-# smart shared functions
+# =========================================================
+# 🧠 توابع هوشمند مشترک
+# =========================================================
 def detect_source_type(file_name):
-    """detect file type: image, pdf, excel"""
+    """تشخیص نوع فایل: Image, PDF, Excel"""
     if not file_name or pd.isna(file_name):
         return "Unknown"
     
     file_name = str(file_name).lower()
     
-    # images
+    # تصاویر
     if file_name.endswith(('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.gif', '.tiff', '.tif', '.svg', '.heic')):
         return "Image"
     
-    # pdf
+    # PDF
     elif file_name.endswith('.pdf'):
         return "PDF"
     
-    # excel
+    # Excel
     elif file_name.endswith(('.xlsx', '.xls', '.xlsm', '.xlsb', '.csv')):
         return "Excel"
     
@@ -1831,19 +2045,21 @@ def smart_position_from_department(department):
     return f"مسئول {department.title()}"
 
 
+# =========================================================
+# 🌍 استخراج Country & City از Address
+# =========================================================
 
-# extract country & city from address
 def extract_country_city_from_address(address_fa, address_en):
     """
-    extract country and city from persian and english address
+    استخراج کشور و شهر از آدرس فارسی و انگلیسی
     
-    returns:
+    Returns:
         tuple: (country, city)
     """
     
-    # list of main iranian cities (persian + english)
+    # لیست شهرهای اصلی ایران (فارسی + انگلیسی)
     IRANIAN_CITIES = {
-        # major cities
+        # شهرهای بزرگ
         'تهران': 'Tehran', 'مشهد': 'Mashhad', 'اصفهان': 'Isfahan', 
         'شیراز': 'Shiraz', 'تبریز': 'Tabriz', 'کرج': 'Karaj',
         'قم': 'Qom', 'اهواز': 'Ahvaz', 'کرمانشاه': 'Kermanshah',
@@ -1854,21 +2070,21 @@ def extract_country_city_from_address(address_fa, address_en):
         'گرگان': 'Gorgan', 'ساری': 'Sari', 'بجنورد': 'Bojnord',
         'سمنان': 'Semnan', 'یاسوج': 'Yasuj', 'بوشهر': 'Bushehr',
         'ایلام': 'Ilam', 'بیرجند': 'Birjand', 'شهرکرد': 'Shahrekord',
-        # english names
+        # نام‌های انگلیسی
         'tehran': 'Tehran', 'mashhad': 'Mashhad', 'isfahan': 'Isfahan',
         'shiraz': 'Shiraz', 'tabriz': 'Tabriz', 'karaj': 'Karaj',
         'qom': 'Qom', 'ahvaz': 'Ahvaz', 'kermanshah': 'Kermanshah',
     }
     
-    # list of countries (persian + english)
+    # لیست کشورها (فارسی + انگلیسی)
     COUNTRIES = {
-        # persian
+        # فارسی
         'ایران': 'Iran', 'آلمان': 'Germany', 'چین': 'China', 
         'ترکیه': 'Turkey', 'امارات': 'UAE', 'آمریکا': 'USA',
         'انگلستان': 'UK', 'فرانسه': 'France', 'ایتالیا': 'Italy',
         'کره': 'South Korea', 'ژاپن': 'Japan', 'هند': 'India',
         'عراق': 'Iraq', 'افغانستان': 'Afghanistan', 'پاکستان': 'Pakistan',
-        # english
+        # انگلیسی
         'iran': 'Iran', 'germany': 'Germany', 'china': 'China',
         'turkey': 'Turkey', 'uae': 'UAE', 'usa': 'USA',
         'uk': 'UK', 'france': 'France', 'italy': 'Italy',
@@ -1878,7 +2094,7 @@ def extract_country_city_from_address(address_fa, address_en):
     country = None
     city = None
     
-    # combine addresses
+    # ترکیب آدرس‌ها
     combined_address = ""
     if address_fa and not pd.isna(address_fa):
         combined_address += str(address_fa).lower() + " "
@@ -1888,30 +2104,30 @@ def extract_country_city_from_address(address_fa, address_en):
     if not combined_address.strip():
         return None, None
     
-    # search for city
+    # جستجوی شهر
     for city_name, city_en in IRANIAN_CITIES.items():
         if city_name.lower() in combined_address:
             city = city_en
-            country = "Iran"  # if iranian city found, country is iran
+            country = "Iran"  # اگر شهر ایرانی پیدا شد، کشور ایران است
             break
     
-    # search for country (if not found yet)
+    # جستجوی کشور (اگر هنوز پیدا نشده)
     if not country:
         for country_name, country_en in COUNTRIES.items():
             if country_name.lower() in combined_address:
                 country = country_en
                 break
     
-    # if country not found but city was iranian
+    # اگر کشور پیدا نشد ولی شهر ایرانی بود
     if city and not country:
         country = "Iran"
     
-    # if only country found (without city) and it was iran
+    # اگر فقط کشور پیدا شد (بدون شهر) و ایران بود
     if country == "Iran" and not city:
-        # try to find city with regex
+        # سعی در یافتن شهر با regex
         import re
         
-        # common iranian address patterns
+        # الگوهای رایج آدرس ایران
         patterns = [
             r'استان\s+(\w+)',  # استان تهران
             r'شهر\s+(\w+)',     # شهر تهران
@@ -1929,19 +2145,15 @@ def extract_country_city_from_address(address_fa, address_en):
     return country, city
 
 
-
-
-
-
 def add_country_city_columns(excel_path):
-    
-    # add country and city columns to excel
-    
+    """
+    اضافه کردن ستون‌های Country و City به Excel
+    """
     try:
         print(f"\n🌍 Adding Country & City columns...")
         df = pd.read_excel(excel_path)
         
-        # check existence of address columns
+        # چک کردن وجود ستون‌های Address
         has_address_fa = 'AddressFA' in df.columns
         has_address_en = 'AddressEN' in df.columns
         
@@ -1949,19 +2161,19 @@ def add_country_city_columns(excel_path):
             print("   ⚠️ No AddressFA or AddressEN columns found")
             return False
         
-        # add columns if not exist
+        # اضافه کردن ستون‌ها در صورت عدم وجود
         if 'Country' not in df.columns:
             df['Country'] = None
         if 'City' not in df.columns:
             df['City'] = None
         
-        # process each row
+        # پردازش هر سطر
         filled_count = 0
         for idx in df.index:
             address_fa = df.at[idx, 'AddressFA'] if has_address_fa else None
             address_en = df.at[idx, 'AddressEN'] if has_address_en else None
             
-            # only if country/city were empty
+            # فقط اگر Country/City خالی بودند
             if pd.isna(df.at[idx, 'Country']) or str(df.at[idx, 'Country']).strip() == '':
                 country, city = extract_country_city_from_address(address_fa, address_en)
                 
@@ -1975,11 +2187,11 @@ def add_country_city_columns(excel_path):
                     else:
                         print(f"   Row {idx + 1}: {country} (no city)")
         
-        # save
+        # ذخیره
         df.to_excel(excel_path, index=False, engine='openpyxl')
         print(f"   ✅ Updated {filled_count} rows with Country/City")
         
-        # show statistics
+        # نمایش آمار
         if 'Country' in df.columns:
             country_counts = df['Country'].value_counts()
             print(f"\n   📊 Country Distribution:")
@@ -1998,28 +2210,28 @@ def add_country_city_columns(excel_path):
 
 def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metadata=None):
     """
-    add complete metadata to excel:
-    - exhibition name
-    - source (image/pdf/excel)
-    - qc supervisor
-    - qc role
-    - qc date
-    - qc time
-    - qc timestamp
-    - smart position detection
+    اضافه کردن متادیتای کامل به Excel:
+    - Exhibition Name
+    - Source (Image/PDF/Excel)
+    - QC Supervisor
+    - QC Role
+    - QC Date
+    - QC Time
+    - QC Timestamp
+    - Smart Position Detection
     """
     try:
         print(f"\n📝 Adding Exhibition, Source & QC Metadata...")
         df = pd.read_excel(excel_path)
         print(f"   ✅ Loaded: {len(df)} rows × {len(df.columns)} columns")
 
-        # add exhibition
+        # ========== اضافه کردن Exhibition ==========
         df.insert(0, 'Exhibition', exhibition_name)
         print(f"   📋 Exhibition: '{exhibition_name}'")
         
-        # add qc metadata 
+        # ========== اضافه کردن QC Metadata ==========
         if qc_metadata:
-            # add qc columns at the beginning of dataframe
+            # اضافه کردن ستون‌های QC در ابتدای DataFrame
             qc_columns = ['QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp']
             
             for idx, col in enumerate(qc_columns, start=1):
@@ -2031,53 +2243,53 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
             print(f"   📅 QC Date: {qc_metadata.get('QC_Date', 'N/A')}")
             print(f"   🕐 QC Time: {qc_metadata.get('QC_Time', 'N/A')}")
         
-        # detect source 
-        #  read uploaded file types
+        # ========== تشخیص Source ==========
+        # ✅ خواندن نوع فایل‌های آپلود شده
         file_types_path = Path(session_dir) / "uploaded_file_types.json"
         
         if file_types_path.exists():
             file_types = json.loads(file_types_path.read_text(encoding='utf-8'))
             print(f"   📖 Loaded file types: {file_types}")
             
-            # detect source based on file_name
+            # تشخیص Source بر اساس file_name
             if 'file_name' in df.columns:
                 def get_source(fname):
                     if pd.isna(fname):
                         return "Unknown"
                     fname_str = str(fname)
                     
-                    # search in file_types
+                    # جستجو در file_types
                     if fname_str in file_types:
                         return file_types[fname_str]
                     
-                    # if not found, use detect_source_type
+                    # اگر پیدا نشد، از detect_source_type استفاده کن
                     return detect_source_type(fname_str)
                 
-                # add source after qc columns
+                # اضافه کردن Source بعد از QC ستون‌ها
                 insert_position = 6 if qc_metadata else 1
                 df.insert(insert_position, 'Source', df['file_name'].apply(get_source))
                 print(f"   ✅ Source detected from uploaded file types")
             
             else:
-                # if file_name didn't exist, use file count
+                # ✅ اگر file_name نبود، از تعداد فایل‌ها استفاده کن
                 if len(file_types) == 1:
-                    # only one file → give same source to all
+                    # فقط یک فایل بود → همون source رو به همه بده
                     source = list(file_types.values())[0]
                     insert_position = 6 if qc_metadata else 1
                     df.insert(insert_position, 'Source', source)
                     print(f"   ✅ Source set to: {source} (single file)")
                 
                 elif len(file_types) > 1:
-                    # multiple files → based on order
+                    # چند فایل بودن → بر اساس ترتیب
                     sources = list(file_types.values())
                     
-                    # if row count equals file count
+                    # اگر تعداد سطرها با تعداد فایل‌ها برابره
                     if len(df) == len(sources):
                         insert_position = 6 if qc_metadata else 1
                         df.insert(insert_position, 'Source', sources)
                         print(f"   ✅ Source matched by row count")
                     else:
-                        # fill with first source
+                        # پر کردن با اولین source
                         insert_position = 6 if qc_metadata else 1
                         df.insert(insert_position, 'Source', sources[0])
                         print(f"   ⚠️ Multiple files but row count mismatch → using first source")
@@ -2088,7 +2300,7 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
                     print(f"   ⚠️ No file types found")
         
         else:
-            # fallback: use file_name
+            # ✅ fallback: استفاده از file_name
             print(f"   ⚠️ file_types.json not found, using fallback")
             
             if 'file_name' in df.columns:
@@ -2100,7 +2312,7 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
                 df.insert(insert_position, 'Source', 'Unknown')
                 print(f"   ⚠️ No file_name column → Source set to Unknown")
 
-        #  smart position detection 
+        # ========== Smart Position Detection ==========
         if 'Department' in df.columns and 'PositionFA' in df.columns:
             print(f"\n🤖 Smart Position Detection...")
             filled_count = 0
@@ -2116,7 +2328,7 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
             if filled_count > 0:
                 print(f"   ✅ Filled {filled_count} positions from Department")
 
-        # remove extra columns 
+        # ========== حذف ستون‌های اضافی ==========
         columns_to_remove = ['CompanyNameFA_translated']
         removed = 0
         for col in columns_to_remove:
@@ -2128,7 +2340,7 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
         if removed:
             print(f"   ✅ Removed {removed} unnecessary columns")
 
-        # clean data 
+        # ========== تمیز کردن داده‌ها ==========
         for col in df.columns:
             if df[col].dtype == 'object':
                 try:
@@ -2137,25 +2349,25 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
                 except Exception as e:
                     print(f"   ⚠️ Warning: Could not convert column {col}: {e}")
 
-        #  save
+        # ========== ذخیره ==========
         df.to_excel(excel_path, index=False, engine='openpyxl')
         print(f"   💾 Updated: {excel_path.name}")
         print(f"   📊 Final: {len(df)} rows × {len(df.columns)} columns")
         
-        #show source distribution 
+        # ========== نمایش Source Distribution ==========
         if 'Source' in df.columns:
             source_counts = df['Source'].value_counts()
-            print(f"\n    Source Distribution:")
+            print(f"\n   📊 Source Distribution:")
             for source, count in source_counts.items():
                 print(f"      • {source}: {count} rows")
         
-        # show metadata summary 
-        print(f"\n    Metadata Summary:")
-        print(f"      Exhibition: {exhibition_name}")
+        # ========== نمایش خلاصه متادیتا ==========
+        print(f"\n   📋 Metadata Summary:")
+        print(f"      📌 Exhibition: {exhibition_name}")
         if qc_metadata:
-            print(f"       QC Supervisor: {qc_metadata.get('QC_Supervisor')}")
-            print(f"       QC Role: {qc_metadata.get('QC_Role')}")
-            print(f"       QC Timestamp: {qc_metadata.get('QC_Timestamp')}")
+            print(f"      👤 QC Supervisor: {qc_metadata.get('QC_Supervisor')}")
+            print(f"      💼 QC Role: {qc_metadata.get('QC_Role')}")
+            print(f"      📅 QC Timestamp: {qc_metadata.get('QC_Timestamp')}")
         
         return True
     
@@ -2164,8 +2376,9 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
         import traceback
         traceback.print_exc()
         return False
-
-# detect pipeline type and exhibition name
+# =========================================================
+# 🔍 تشخیص نوع Pipeline و نام نمایشگاه
+# =========================================================
 def detect_pipeline_type(files):
     extensions = [f.name.split('.')[-1].lower() for f in files]
     if any(ext in ['xlsx', 'xls'] for ext in extensions):
@@ -2185,10 +2398,11 @@ def extract_exhibition_name(files):
         return " ".join(cleaned_parts[:3])
     return "Unknown_Exhibition"
 
-
-# batch processing logic
+# =========================================================
+# ✨ Batch Processing Logic
+# =========================================================
 def get_batch_size(file_type):
-    """determine batch size based on file type"""
+    """تعیین اندازه Batch بر اساس نوع فایل"""
     file_type = file_type.lower()
     if file_type in ['jpg', 'jpeg', 'png', 'bmp', 'webp', 'gif']:
         return 5
@@ -2200,14 +2414,14 @@ def get_batch_size(file_type):
         return 1
 
 def create_batches(files_list, batch_size):
-    """divide files list into smaller batches"""
+    """تقسیم لیست فایل‌ها به Batch‌های کوچک‌تر"""
     batches = []
     for i in range(0, len(files_list), batch_size):
         batches.append(files_list[i:i + batch_size])
     return batches
 
 def process_files_in_batches(uploads_dir, pipeline_type):
-    """process files in batches"""
+    """پردازش فایل‌ها به صورت Batch"""
     if pipeline_type == 'excel':
         excel_files = list(uploads_dir.glob("*.xlsx")) + list(uploads_dir.glob("*.xls"))
         return [(f,) for f in excel_files], 1
@@ -2241,8 +2455,9 @@ def process_files_in_batches(uploads_dir, pipeline_type):
     
     return [], 1
 
-
-# run script with fast mode + log file
+# =========================================================
+# 🔄 اجرای اسکریپت با Fast Mode + Log File
+# =========================================================
 def run_script(script_name, session_dir, log_area, status_text, script_display_name="", fast_mode=True):
     script_path = Path(script_name)
     if not script_display_name:
@@ -2251,13 +2466,13 @@ def run_script(script_name, session_dir, log_area, status_text, script_display_n
         script_path = Path.cwd() / script_name
         if not script_path.exists():
             status_text.markdown(f"""
-            <div class="status-box status-error">❌ file {script_name} not found!</div>
+            <div class="status-box status-error">❌ فایل {script_name} یافت نشد!</div>
             """, unsafe_allow_html=True)
             return False
 
     status_text.markdown(f"""
     <div class="status-box status-info">
-        <div class="loading-spinner"></div> running {script_display_name}...
+        <div class="loading-spinner"></div> در حال اجرای {script_display_name}...
     </div>
     """, unsafe_allow_html=True)
 
@@ -2298,12 +2513,12 @@ def run_script(script_name, session_dir, log_area, status_text, script_display_n
 
         if process.returncode == 0:
             status_text.markdown(f"""
-            <div class="status-box status-success">✅ {script_display_name} completed successfully!</div>
+            <div class="status-box status-success">✅ {script_display_name} موفقیت‌آمیز بود!</div>
             """, unsafe_allow_html=True)
             return True
         else:
             status_text.markdown(f"""
-            <div class="status-box status-warning">⚠️ {script_display_name} encountered an issue (exit code: {process.returncode})</div>
+            <div class="status-box status-warning">⚠️ {script_display_name} با مشکل مواجه شد (exit code: {process.returncode})</div>
             """, unsafe_allow_html=True)
             try:
                 with open(log_file, 'r', encoding='utf-8') as f:
@@ -2316,32 +2531,35 @@ def run_script(script_name, session_dir, log_area, status_text, script_display_n
 
     except Exception as e:
         status_text.markdown(f"""
-        <div class="status-box status-error">❌ execution error: {str(e)}</div>
+        <div class="status-box status-error">❌ خطای اجرا: {str(e)}</div>
         """, unsafe_allow_html=True)
         return False
 
-
-#  header
+# =========================================================
+# 🎯 Header
+# =========================================================
 st.markdown("""
 <div class="main-header">
     <h1>🎯 Smart Exhibition Pipeline</h1>
-    <p>smart detection • automatic processing • unified output • batch processing • quality control • google sheets</p>
+    <p>تشخیص هوشمند • پردازش خودکار • خروجی یکپارچه • Batch Processing • Quality Control • Google Sheets</p>
 </div>
 """, unsafe_allow_html=True)
 
+# =========================================================
+# 📊 Sidebar
+# =========================================================
 
-# Sidebar^^^^^^^^^^^^^^^^^^^^^^^^^^^
-# quick link to google sheets 
+# ========== لینک سریع به Google Sheets ==========
 if 'sheet_url' in st.session_state:
     st.sidebar.markdown(f"""
     <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                 padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
-        <h4 style="color: white; margin: 0 0 0.5rem 0;">📊 data table</h4>
+        <h4 style="color: white; margin: 0 0 0.5rem 0;">📊 جدول داده‌ها</h4>
         <a href="{st.session_state['sheet_url']}" target="_blank" 
            style="color: white; background: rgba(255,255,255,0.2); 
                   padding: 0.5rem 1rem; border-radius: 8px; 
                   text-decoration: none; display: block; text-align: center;">
-            🔗 open table
+            🔗 باز کردن جدول
         </a>
     </div>
     """, unsafe_allow_html=True)
@@ -2354,63 +2572,65 @@ elif Path("google_sheet_link.txt").exists():
             st.sidebar.markdown(f"""
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                         padding: 1rem; border-radius: 10px; margin-bottom: 1rem;">
-                <h4 style="color: white; margin: 0 0 0.5rem 0;">📊 data table</h4>
+                <h4 style="color: white; margin: 0 0 0.5rem 0;">📊 جدول داده‌ها</h4>
                 <a href="{saved_url}" target="_blank" 
                    style="color: white; background: rgba(255,255,255,0.2); 
                           padding: 0.5rem 1rem; border-radius: 8px; 
                           text-decoration: none; display: block; text-align: center;">
-                    🔗 open table
+                    🔗 باز کردن جدول
                 </a>
                 <p style="color: rgba(255,255,255,0.8); font-size: 0.85rem; margin: 0.5rem 0 0 0;">
-                    saved link
+                    لینک ذخیره شده
                 </p>
             </div>
             """, unsafe_allow_html=True)
     except:
         pass
-# end quick link 
+# ========== پایان لینک سریع ==========
+
 quota = load_quota()
 st.sidebar.markdown(f"""
 <div class="quota-card">
-    <h3>📊 today's api quota</h3>
+    <h3>📊 API Quota امروز</h3>
     <div class="quota-number">{quota['remaining']}</div>
-    <p>out of {DAILY_LIMIT} requests</p>
+    <p>از {DAILY_LIMIT} درخواست</p>
 </div>
 """, unsafe_allow_html=True)
 progress_value = quota['used'] / DAILY_LIMIT if DAILY_LIMIT > 0 else 0
 st.sidebar.progress(progress_value)
 
 if quota['remaining'] <= 0:
-    st.sidebar.markdown('<span class="badge badge-error">❌ quota finished</span>', unsafe_allow_html=True)
+    st.sidebar.markdown('<span class="badge badge-error">❌ سهمیه تمام شد</span>', unsafe_allow_html=True)
 elif quota['remaining'] < 20:
-    st.sidebar.markdown('<span class="badge badge-warning">⚠️ running low</span>', unsafe_allow_html=True)
+    st.sidebar.markdown('<span class="badge badge-warning">⚠️ کم شده</span>', unsafe_allow_html=True)
 else:
-    st.sidebar.markdown('<span class="badge badge-success">✅ quota good</span>', unsafe_allow_html=True)
+    st.sidebar.markdown('<span class="badge badge-success">✅ سهمیه خوب</span>', unsafe_allow_html=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### ⚙️ settings")
-rate_limit = st.sidebar.slider("⏱️ delay between requests (seconds)", 0, 10, 4)
+st.sidebar.markdown("### ⚙️ تنظیمات")
+rate_limit = st.sidebar.slider("⏱️ فاصله بین درخواست‌ها (ثانیه)", 0, 10, 4)
 if rate_limit < 4:
-    st.sidebar.markdown('<span class="badge badge-error">⚠️ block risk</span>', unsafe_allow_html=True)
+    st.sidebar.markdown('<span class="badge badge-error">⚠️ خطر Block</span>', unsafe_allow_html=True)
 elif rate_limit == 4:
-    st.sidebar.markdown('<span class="badge badge-success">✅ safe (15 rpm)</span>', unsafe_allow_html=True)
+    st.sidebar.markdown('<span class="badge badge-success">✅ ایمن (15 RPM)</span>', unsafe_allow_html=True)
 else:
-    st.sidebar.markdown('<span class="badge badge-success">🔒 very safe</span>', unsafe_allow_html=True)
+    st.sidebar.markdown('<span class="badge badge-success">🔒 خیلی ایمن</span>', unsafe_allow_html=True)
 
-debug_mode = st.sidebar.checkbox("🐛 debug mode")
-fast_mode = st.sidebar.checkbox("⚡️ fast mode", value=True)
+debug_mode = st.sidebar.checkbox("🐛 Debug Mode")
+fast_mode = st.sidebar.checkbox("⚡️ Fast Mode", value=True)
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 🔑 key status")
+st.sidebar.markdown("### 🔑 وضعیت کلیدها")
 for key_name, key_value in API_KEYS.items():
     st.sidebar.text(f"{key_name.upper()}: {key_value[:20]}...")
 
 st.sidebar.markdown("---")
-st.sidebar.markdown("### 📦 batch processing")
-st.sidebar.info("📸 images: 30\n📄 pdf: 10\n📊 excel: 5")
+st.sidebar.markdown("### 📦 Batch Processing")
+st.sidebar.info("📸 تصاویر: 30 تا\n📄 PDF: 10 تا\n📊 Excel: 5 تا")
 
-
-#  file upload with limits
+# =========================================================
+# 📂 آپلود فایل‌ها با محدودیت
+# =========================================================
 MAX_IMAGES = 30
 MAX_PDF = 10
 MAX_EXCEL = 5
@@ -2418,15 +2638,15 @@ MAX_FILE_SIZE_MB = 50
 MAX_TOTAL_SIZE_MB = 200
 
 uploaded_files = st.file_uploader(
-    "📤 upload files",
+    "📤 آپلود فایل‌ها",
     type=['jpg', 'jpeg', 'png', 'pdf', 'xlsx', 'xls'],
     accept_multiple_files=True,
-    help=f"max: {MAX_IMAGES} images, {MAX_PDF} pdf, {MAX_EXCEL} excel | per file: {MAX_FILE_SIZE_MB}mb | total: {MAX_TOTAL_SIZE_MB}mb"
+    help=f"حداکثر: {MAX_IMAGES} عکس، {MAX_PDF} PDF، {MAX_EXCEL} Excel | هر فایل: {MAX_FILE_SIZE_MB}MB | کل: {MAX_TOTAL_SIZE_MB}MB"
 )
 
-#  check limits
+# ✅ چک کردن محدودیت‌ها
 if uploaded_files:
-    #  check file sizes 
+    # ============ چک سایز فایل‌ها ============
     valid_files = []
     total_size_mb = 0
     size_warnings = []
@@ -2435,107 +2655,108 @@ if uploaded_files:
         file_size_mb = len(f.getbuffer()) / (1024 * 1024)
         total_size_mb += file_size_mb
         
-        # check individual file size
+        # چک سایز فایل منفرد
         if file_size_mb > MAX_FILE_SIZE_MB:
-            size_warnings.append(f"❌ {f.name}: {file_size_mb:.1f}mb (too large, max {MAX_FILE_SIZE_MB}mb)")
+            size_warnings.append(f"❌ {f.name}: {file_size_mb:.1f}MB (خیلی بزرگ، حداکثر {MAX_FILE_SIZE_MB}MB)")
             continue
         
         valid_files.append(f)
     
-    # check total size
+    # چک سایز کل
     if total_size_mb > MAX_TOTAL_SIZE_MB:
-        st.error(f"❌ total file size: {total_size_mb:.1f}mb (max allowed: {MAX_TOTAL_SIZE_MB}mb)")
+        st.error(f"❌ مجموع حجم فایل‌ها: {total_size_mb:.1f}MB (حداکثر مجاز: {MAX_TOTAL_SIZE_MB}MB)")
         st.stop()
     
-    # display size warnings
+    # نمایش هشدارهای سایز
     if size_warnings:
-        st.warning("⚠️ the following files were rejected due to size:")
+        st.warning("⚠️ فایل‌های زیر به دلیل حجم بالا رد شدند:")
         for warn in size_warnings:
             st.text(f"  {warn}")
     
     if not valid_files:
-        st.error("❌ no valid files uploaded!")
+        st.error("❌ هیچ فایل معتبری آپلود نشد!")
         st.stop()
     
-    # use valid files
+    # استفاده از فایل‌های معتبر
     uploaded_files = valid_files
     
-    # separate files by type
+    # جداسازی فایل‌ها بر اساس نوع
     images = [f for f in uploaded_files if f.type.startswith('image')]
     pdfs = [f for f in uploaded_files if f.type == 'application/pdf']
     excels = [f for f in uploaded_files if 'spreadsheet' in f.type or f.name.endswith(('.xlsx', '.xls'))]
     
-    #  check file counts 
+    # ============ چک تعداد فایل‌ها ============
     warnings = []
     
     if len(images) > MAX_IMAGES:
-        warnings.append(f"⚠️ image count: {len(images)} → limited to {MAX_IMAGES}")
+        warnings.append(f"⚠️ تعداد عکس‌ها: {len(images)} → محدود شد به {MAX_IMAGES}")
         images = images[:MAX_IMAGES]
     
     if len(pdfs) > MAX_PDF:
-        warnings.append(f"⚠️ pdf count: {len(pdfs)} → limited to {MAX_PDF}")
+        warnings.append(f"⚠️ تعداد PDF: {len(pdfs)} → محدود شد به {MAX_PDF}")
         pdfs = pdfs[:MAX_PDF]
     
     if len(excels) > MAX_EXCEL:
-        warnings.append(f"⚠️ excel count: {len(excels)} → limited to {MAX_EXCEL}")
+        warnings.append(f"⚠️ تعداد Excel: {len(excels)} → محدود شد به {MAX_EXCEL}")
         excels = excels[:MAX_EXCEL]
     
-    # display warnings
+    # نمایش هشدارها
     if warnings:
-        st.warning("count limit applied:")
+        st.warning("محدودیت تعداد اعمال شد:")
         for warn in warnings:
             st.text(f"  {warn}")
     
-    # display stats (with size added)
+    # نمایش آمار (با اضافه کردن حجم)
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
-        st.metric("🖼️ images", f"{len(images)}/{MAX_IMAGES}")
+        st.metric("🖼️ عکس", f"{len(images)}/{MAX_IMAGES}")
     with col2:
-        st.metric("📄 pdf", f"{len(pdfs)}/{MAX_PDF}")
+        st.metric("📄 PDF", f"{len(pdfs)}/{MAX_PDF}")
     with col3:
-        st.metric("📊 excel", f"{len(excels)}/{MAX_EXCEL}")
+        st.metric("📊 Excel", f"{len(excels)}/{MAX_EXCEL}")
     with col4:
-        st.metric("📁 total", len(images) + len(pdfs) + len(excels))
+        st.metric("📁 مجموع", len(images) + len(pdfs) + len(excels))
     with col5:
-        st.metric("💾 total size", f"{total_size_mb:.1f}mb")
+        st.metric("💾 حجم کل", f"{total_size_mb:.1f}MB")
     
-    # display size progress bar
+    # نمایش بار پیشرفت حجم
     size_progress = min(total_size_mb / MAX_TOTAL_SIZE_MB, 1.0)
     st.progress(size_progress)
     if size_progress > 0.8:
-        st.warning(f"⚠️ file size is high ({total_size_mb:.1f}/{MAX_TOTAL_SIZE_MB}mb)")
+        st.warning(f"⚠️ حجم فایل‌ها زیاد است ({total_size_mb:.1f}/{MAX_TOTAL_SIZE_MB}MB)")
     
-    # recombine allowed files
+    # ترکیب مجدد فایل‌های مجاز
     uploaded_files = images + pdfs + excels
 
-
-# quality control section
-st.markdown("## 👤 quality control supervisor information")
-st.markdown("*this information will be recorded as quality control metadata in the output*")
+# =========================================================
+# ✨ Quality Control Section
+# =========================================================
+st.markdown("## 👤 اطلاعات ناظر کیفیت")
+st.markdown("*این اطلاعات به عنوان متادیتای کنترل کیفیت در خروجی ثبت می‌شود*")
 
 col_qc1, col_qc2 = st.columns(2)
 with col_qc1:
     qc_user_name = st.text_input(
-        "🧑‍💼 full name",
-        placeholder="example: ali ahmadi",
-        help="full name of data quality supervisor"
+        "🧑‍💼 نام و نام خانوادگی",
+        placeholder="مثال: علی احمدی",
+        help="نام کامل ناظر کیفیت داده‌ها"
     )
 with col_qc2:
     qc_user_role = st.text_input(
-        "💼 position/role",
-        placeholder="example: quality control specialist",
-        help="your position or role in the organization"
+        "💼 سمت/نقش",
+        placeholder="مثال: کارشناس کنترل کیفیت",
+        help="سمت یا نقش شما در سازمان"
     )
 
 if qc_user_name and qc_user_role:
     qc_preview = get_qc_metadata(qc_user_name, qc_user_role)
     st.markdown(f"""
     <div class="qc-card">
-        <h4>✅ quality control information preview</h4>
-        <p><strong>👤 supervisor:</strong> {qc_preview['QC_Supervisor']}</p>
-        <p><strong>💼 role:</strong> {qc_preview['QC_Role']}</p>
-        <p><strong>📅 date:</strong> {qc_preview['QC_Date']}</p>
-        <p><strong>🕐 time:</strong> {qc_preview['QC_Time']}</p>
+        <h4>✅ پیش‌نمایش اطلاعات کنترل کیفیت</h4>
+        <p><strong>👤 ناظر:</strong> {qc_preview['QC_Supervisor']}</p>
+        <p><strong>💼 نقش:</strong> {qc_preview['QC_Role']}</p>
+        <p><strong>📅 تاریخ:</strong> {qc_preview['QC_Date']}</p>
+        <p><strong>🕐 ساعت:</strong> {qc_preview['QC_Time']}</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -2549,29 +2770,29 @@ if uploaded_files:
     with col1:
         st.markdown(f"""
         <div class="metric-card">
-            <h3>🔍 pipeline type</h3>
-            <h2>{'📊 excel' if pipeline_type == 'excel' else '🖼 ocr/qr'}</h2>
+            <h3>🔍 نوع Pipeline</h3>
+            <h2>{'📊 Excel' if pipeline_type == 'excel' else '🖼 OCR/QR'}</h2>
         </div>
         """, unsafe_allow_html=True)
     with col2:
         st.markdown(f"""
         <div class="metric-card">
-            <h3>📁 file count</h3>
+            <h3>📁 تعداد فایل</h3>
             <h2>{len(uploaded_files)}</h2>
         </div>
         """, unsafe_allow_html=True)
     with col3:
         st.markdown(f"""
         <div class="metric-card">
-            <h3>🏢 exhibition</h3>
+            <h3>🏢 نمایشگاه</h3>
             <h2>{exhibition_name[:15]}</h2>
         </div>
         """, unsafe_allow_html=True)
 
     exhibition_name = st.text_input(
-        "📝 edit exhibition name",
+        "📝 ویرایش نام نمایشگاه",
         value=exhibition_name,
-        help="will be recorded in exhibition column"
+        help="در ستون Exhibition ثبت می‌شود"
     )
 
     session_timestamp = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
@@ -2589,7 +2810,7 @@ if uploaded_files:
     
     file_types_path = session_dir / "uploaded_file_types.json"
     file_types_path.write_text(json.dumps(file_types, ensure_ascii=False, indent=2), encoding='utf-8')
-    print(f"   saved file types: {file_types}")
+    print(f"   Saved file types: {file_types}")
 
     os.environ["SESSION_DIR"] = str(session_dir)
     os.environ["SOURCE_FOLDER"] = str(uploads_dir)
@@ -2604,29 +2825,29 @@ if uploaded_files:
     total_batches = len(batches)
     
     if total_batches > 0:
-        st.info(f"📦 number of batches: {total_batches} | batch size: {batch_size}")
+        st.info(f"📦 تعداد Batch‌ها: {total_batches} | اندازه هر Batch: {batch_size}")
 
     st.markdown("---")
 
-    if st.button("🚀 start processing", type="primary"):
+    if st.button("🚀 شروع پردازش", type="primary"):
         if not qc_user_name or not qc_user_role:
             st.markdown("""
             <div class="status-box status-warning">
-                ⚠️ please enter quality supervisor information (name and role)!
+                ⚠️ لطفاً اطلاعات ناظر کیفیت (نام و نقش) را وارد کنید!
             </div>
             """, unsafe_allow_html=True)
             st.stop()
         
         if quota['remaining'] <= 0:
             st.markdown("""
-            <div class="status-box status-error">❌ api quota finished! try again tomorrow.</div>
+            <div class="status-box status-error">❌ سهمیه API تمام شد! فردا دوباره امتحان کنید.</div>
             """, unsafe_allow_html=True)
             st.stop()
 
         qc_metadata = get_qc_metadata(qc_user_name, qc_user_role)
         save_qc_log(session_dir, qc_metadata, exhibition_name, pipeline_type, len(uploaded_files))
         
-        st.markdown("## 🔄 processing in progress...")
+        st.markdown("## 🔄 پردازش در حال انجام...")
         progress_bar = st.progress(0)
         status_text = st.empty()
         log_area = st.empty()
@@ -2639,51 +2860,51 @@ if uploaded_files:
         try:
             if pipeline_type == 'excel':
                 st.markdown("""
-                <div class="status-box status-info">📊 excel mode activated</div>
+                <div class="status-box status-info">📊 Excel Mode فعال شد</div>
                 """, unsafe_allow_html=True)
 
                 excel_input = os.environ.get("INPUT_EXCEL")
                 if not excel_input or not Path(excel_input).exists():
                     st.markdown("""
-                    <div class="status-box status-error">❌ excel file not found!</div>
+                    <div class="status-box status-error">❌ فایل Excel پیدا نشد!</div>
                     """, unsafe_allow_html=True)
                     st.stop()
 
                 try:
                     df_input = pd.read_excel(excel_input)
                     total_rows = len(df_input)
-                    st.info(f"📊 number of companies: {total_rows}")
+                    st.info(f"📊 تعداد شرکت‌ها: {total_rows}")
                     current_quota = load_quota()
                     if current_quota['remaining'] < total_rows:
-                        st.warning(f"⚠️ insufficient quota! needed: {total_rows}, available: {current_quota['remaining']}")
-                        if not st.checkbox("continue with insufficient quota?"):
+                        st.warning(f"⚠️ Quota کافی نیست! نیاز: {total_rows}, موجود: {current_quota['remaining']}")
+                        if not st.checkbox("ادامه با Quota ناکافی؟"):
                             st.stop()
                 except Exception as e:
-                    st.warning(f"couldn't read row count: {e}")
+                    st.warning(f"نتوانستم تعداد ردیف‌ها را بخوانم: {e}")
                     total_rows = 0
 
                 progress_bar.progress(10)
                 current_quota = load_quota()
-                quota_display.info(f"🔋 remaining quota: {current_quota['remaining']}/{DAILY_LIMIT}")
+                quota_display.info(f"🔋 سهمیه باقیمانده: {current_quota['remaining']}/{DAILY_LIMIT}")
 
-                st.info(f"📦 processing {total_rows} rows in batches (size: 1)")
+                st.info(f"📦 پردازش {total_rows} ردیف به صورت Batch (اندازه: 1)")
                 
                 success = run_script(
                     "excel_mode.py",
                     session_dir,
                     log_area,
                     status_text,
-                    "📊 excel web scraper",
+                    "📊 Excel Web Scraper",
                     fast_mode
                 )
                 progress_bar.progress(100)
 
                 if total_rows > 0:
                     quota = decrease_quota(total_rows)
-                    quota_display.success(f"✅ remaining quota: {quota['remaining']}/{DAILY_LIMIT} (used: {total_rows})")
+                    quota_display.success(f"✅ سهمیه باقیمانده: {quota['remaining']}/{DAILY_LIMIT} (استفاده شده: {total_rows})")
                 else:
                     quota = decrease_quota(1)
-                    quota_display.success(f"✅ remaining quota: {quota['remaining']}/{DAILY_LIMIT}")
+                    quota_display.success(f"✅ سهمیه باقیمانده: {quota['remaining']}/{DAILY_LIMIT}")
 
                 output_files = list(session_dir.glob("output_enriched_*.xlsx"))
                 if not output_files:
@@ -2692,27 +2913,27 @@ if uploaded_files:
 
             else:
                 st.markdown("""
-                <div class="status-box status-info">🖼 ocr/qr pipeline activated</div>
+                <div class="status-box status-info">🖼 OCR/QR Pipeline فعال شد</div>
                 """, unsafe_allow_html=True)
 
                 if total_batches > 0:
-                    st.info(f"📦 processing {total_batches} batches | each batch about {batch_size} files")
+                    st.info(f"📦 پردازش {total_batches} Batch | هر Batch حدود {batch_size} فایل")
 
                 stages = [
-                    ("📘 ocr extraction", "ocr_dyn.py", 20),
-                    ("🔍 qr detection", "qr_dyn.py", 40),
-                    ("🧩 merge ocr+qr", "mix_ocr_qr_dyn.py", 60),
-                    ("🌐 web scraping", "scrap.py", 80),
-                    ("💠 final merge", "final_mix.py", 100)
+                    ("📘 OCR Extraction", "ocr_dyn.py", 20),
+                    ("🔍 QR Detection", "qr_dyn.py", 40),
+                    ("🧩 Merge OCR+QR", "mix_ocr_qr_dyn.py", 60),
+                    ("🌐 Web Scraping", "scrap.py", 80),
+                    ("💠 Final Merge", "final_mix.py", 100)
                 ]
 
                 all_success = True
                 for stage_name, script, progress_val in stages:
                     current_quota = load_quota()
-                    quota_display.info(f"🔋 remaining quota: {current_quota['remaining']}/{DAILY_LIMIT}")
+                    quota_display.info(f"🔋 سهمیه باقیمانده: {current_quota['remaining']}/{DAILY_LIMIT}")
 
                     if total_batches > 0:
-                        st.markdown(f"**{stage_name}** - processing {total_batches} batches...")
+                        st.markdown(f"**{stage_name}** - پردازش {total_batches} Batch...")
 
                     stage_success = run_script(
                         script, session_dir, log_area, status_text,
@@ -2721,7 +2942,7 @@ if uploaded_files:
                     if not stage_success:
                         all_success = False
                         st.markdown(f"""
-                        <div class="status-box status-warning">⚠️ {stage_name} encountered an issue, continuing...</div>
+                        <div class="status-box status-warning">⚠️ {stage_name} با مشکل مواجه شد، ادامه می‌دهیم...</div>
                         """, unsafe_allow_html=True)
 
                     progress_bar.progress(progress_val)
@@ -2729,10 +2950,10 @@ if uploaded_files:
                     
                     quota_decrease_amount = max(1, total_batches)
                     quota = decrease_quota(quota_decrease_amount)
-                    quota_display.success(f"✅ remaining quota: {quota['remaining']}/{DAILY_LIMIT}")
+                    quota_display.success(f"✅ سهمیه باقیمانده: {quota['remaining']}/{DAILY_LIMIT}")
                     
                     if quota['remaining'] <= 0:
-                        st.markdown('<div class="status-box status-error">❌ api quota finished!</div>', unsafe_allow_html=True)
+                        st.markdown('<div class="status-box status-error">❌ سهمیه API تمام شد!</div>', unsafe_allow_html=True)
                         break
 
                 success = all_success
@@ -2744,7 +2965,7 @@ if uploaded_files:
             elapsed = time.time() - start_time
 
             if success and output_files:
-                st.info("📝 adding exhibition, source and qc metadata...")
+                st.info("📝 در حال اضافه کردن Exhibition، Source و QC Metadata...")
                 for output_file in output_files:
                     add_exhibition_and_source(
                     
@@ -2758,55 +2979,55 @@ if uploaded_files:
                 
             
                 
-                # google sheets upload 
+                # ========== GOOGLE SHEETS UPLOAD ==========
                 st.markdown("---")
-                st.markdown("## save data to google drive")
-                st.info("all data (ocr/qr + web scraping) will be saved together")
+                st.markdown("## ذخیره داده‌ها در Google Drive")
+                st.info("تمام داده‌ها (OCR/QR + Web Scraping) با هم ذخیره می‌شوند")
                 sheets_status = st.empty()
-                sheets_status.info("merging and preparing data...")
+                sheets_status.info("در حال ادغام و آماده‌سازی داده‌ها...")
                 try:
-                    # merge all data sources
+                    # ادغام تمام منابع داده
                     merged_excel = merge_all_data_sources(session_dir, pipeline_type)
 
                     if not merged_excel or not merged_excel.exists():
-                        sheets_status.warning("no data found for upload")
+                        sheets_status.warning("هیچ داده‌ای برای آپلود پیدا نشد")
                     else:
-                        # cleaning only for ocr/qr mode
+                        # 🔹 تمیزکاری فقط برای OCR/QR Mode
                         if pipeline_type == 'ocr_qr':
-                            sheets_status.info("🧹 cleaning data...")
+                            sheets_status.info("🧹 در حال تمیزکاری داده‌ها...")
                             
                             try:
                                 from script2 import script2_process_file
                                 
-                                # output file name
+                                # نام فایل خروجی
                                 timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                                 processed_excel = session_dir / f"merged_complete_processed_{timestamp}.xlsx"
                                 
-                                # run script 2
+                                # اجرای Script 2
                                 script2_process_file(
                                     input_path=str(merged_excel),
                                     output_path=str(processed_excel)
                                 )
                                 
-                                # check if output was created?
+                                # چک کن خروجی ساخته شد؟
                                 if processed_excel.exists():
-                                    sheets_status.success("✅ data cleaned")
-                                    final_file = processed_excel  # ← use this for upload
+                                    sheets_status.success("✅ داده‌ها تمیز شدند")
+                                    final_file = processed_excel  # ← از این برای آپلود استفاده کن
                                 else:
-                                    sheets_status.warning("⚠️ cleaning failed, using original file")
+                                    sheets_status.warning("⚠️ تمیزکاری کار نکرد، از فایل اولیه استفاده می‌شود")
                                     final_file = merged_excel
                             
                             except Exception as e:
-                                sheets_status.warning(f"⚠️ error in cleaning: {e}")
+                                sheets_status.warning(f"⚠️ خطا در تمیزکاری: {e}")
                                 final_file = merged_excel
                         
                         else:
-                            # excel mode: without cleaning
-                            sheets_status.info("📊 excel mode - no cleaning")
+                            # Excel Mode: بدون تمیزکاری
+                            sheets_status.info("📊 Excel Mode - بدون تمیزکاری")
                             final_file = merged_excel
                         
-                        # upload to google
-                        sheets_status.info(f"uploading {final_file.name}...")
+                        # آپلود به گوگل
+                        sheets_status.info(f"در حال آپلود {final_file.name}...")
                         folder_id = get_or_create_folder("Exhibition_Data")
 
                         success_gs, msg_gs, url_gs, total_rows = append_excel_data_to_sheets(
@@ -2825,39 +3046,39 @@ if uploaded_files:
                             
                             st.markdown(f"""
                             <div class="file-display" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
-                                <h4>permanent table link</h4>
+                                <h4>لینک دائمی جدول</h4>
                                 <p style="background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 8px; margin: 0.5rem 0;">
                                     <a href="{url_gs}" target="_blank" style="color: white; font-weight: bold; font-size: 1.1rem;">
-                                        open in google drive
+                                        باز کردن در Google Drive
                                     </a>
                                 </p>
                             </div>
                             """, unsafe_allow_html=True)
                         
                         else:
-                            sheets_status.error(f"error: {msg_gs}")
+                            sheets_status.error(f"خطا: {msg_gs}")
                 except Exception as e:
-                    sheets_status.error(f"error merging data: {e}")
+                    sheets_status.error(f"خطا در ادغام داده‌ها: {e}")
                     import traceback
                     traceback.print_exc()
 
-                
-                #end google sheets^^^^^^^^^^^^^^^^^^^^^^^^^
+                # ========== END GOOGLE SHEETS ==========
+                # ========== END GOOGLE SHEETS ==========
 
             st.markdown("---")
 
             if success and output_files:
                 st.markdown("""
                 <div class="status-box status-success">
-                    <h2>🎉 processing completed successfully!</h2>
+                    <h2>🎉 پردازش با موفقیت کامل شد!</h2>
                 </div>
                 """, unsafe_allow_html=True)
 
                 st.markdown(f"""
                 <div class="qc-card">
-                    <h4>👤 quality supervisor information</h4>
-                    <p><strong>supervisor:</strong> {qc_metadata['QC_Supervisor']} | <strong>role:</strong> {qc_metadata['QC_Role']}</p>
-                    <p><strong>date and time:</strong> {qc_metadata['QC_Timestamp']}</p>
+                    <h4>👤 اطلاعات ناظر کیفیت</h4>
+                    <p><strong>ناظر:</strong> {qc_metadata['QC_Supervisor']} | <strong>نقش:</strong> {qc_metadata['QC_Role']}</p>
+                    <p><strong>تاریخ و ساعت:</strong> {qc_metadata['QC_Timestamp']}</p>
                 </div>
                 """, unsafe_allow_html=True)
 
@@ -2865,7 +3086,7 @@ if uploaded_files:
                 with col1:
                     st.markdown(f"""
                     <div class="metric-card">
-                        <h3>⏱️ execution time</h3>
+                        <h3>⏱️ زمان اجرا</h3>
                         <h2>{elapsed:.1f}s</h2>
                     </div>
                     """, unsafe_allow_html=True)
@@ -2873,21 +3094,21 @@ if uploaded_files:
                     quota_now = load_quota()
                     st.markdown(f"""
                     <div class="metric-card">
-                        <h3>🔋 remaining quota</h3>
+                        <h3>🔋 سهمیه باقیمانده</h3>
                         <h2>{quota_now['remaining']}</h2>
                     </div>
                     """, unsafe_allow_html=True)
                 with col3:
                     st.markdown(f"""
                     <div class="metric-card">
-                        <h3>📊 output file</h3>
+                        <h3>📊 فایل خروجی</h3>
                         <h2>{len(output_files)}</h2>
                     </div>
                     """, unsafe_allow_html=True)
 
             
-                st.markdown("## download final files")
-                # add merged_complete file
+                st.markdown("## دانلود فایل‌های نهایی")
+                # اضافه کردن فایل merged_complete
                 merged_files = list(session_dir.glob("merged_complete_*.xlsx"))
                 if merged_files:
                     all_output_files = merged_files + output_files
@@ -2901,13 +3122,13 @@ if uploaded_files:
                             st.markdown(f"""
                             <div class="file-display">
                                 <h4>📄 {output_file.name}</h4>
-                                <p>size: {output_file.stat().st_size / 1024:.1f} kb</p>
+                                <p>حجم: {output_file.stat().st_size / 1024:.1f} KB</p>
                             </div>
                             """, unsafe_allow_html=True)
                         with colB:
                             with open(output_file, "rb") as f:
                                 st.download_button(
-                                    label="⬇️ download",
+                                    label="⬇️ دانلود",
                                     data=f,
                                     file_name=output_file.name,
                                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -2918,34 +3139,34 @@ if uploaded_files:
                             for c in df_prev.columns:
                                 if df_prev[c].dtype == 'object':
                                     df_prev[c] = df_prev[c].astype(str).replace('nan', '')
-                            with st.expander(f"👁 preview {output_file.name}"):
+                            with st.expander(f"👁 پیش‌نمایش {output_file.name}"):
                                 st.markdown(f"""
                                 <div class="status-box status-info" style="margin-top:0;">
-                                    <p style="margin:0;">📊 <strong>{len(df_prev)}</strong> rows × 
-                                       <strong>{len(df_prev.columns)}</strong> columns</p>
+                                    <p style="margin:0;">📊 <strong>{len(df_prev)}</strong> ردیف × 
+                                       <strong>{len(df_prev.columns)}</strong> ستون</p>
                                 </div>
                                 """, unsafe_allow_html=True)
                                 cols_display = ", ".join(df_prev.columns.tolist()[:20])
                                 if len(df_prev.columns) > 20: cols_display += "..."
-                                st.info(f"🔤 columns: {cols_display}")
+                                st.info(f"🔤 ستون‌ها: {cols_display}")
                                 st.dataframe(df_prev.head(10), width='stretch')
                         except Exception as e:
-                            st.warning(f"⚠️ error displaying preview: {e}")
+                            st.warning(f"⚠️ خطا در نمایش پیش‌نمایش: {e}")
 
                 json_files = [f for f in session_dir.glob("*.json") if f.name != "quota.json"]
                 if json_files:
-                    with st.expander("📄 json files and logs (optional)"):
+                    with st.expander("📄 فایل‌های JSON و لاگ‌ها (اختیاری)"):
                         for json_file in json_files:
                             col1, col2 = st.columns([3, 1])
                             with col1:
                                 if json_file.name == "qc_log.json":
-                                    st.write(f"**👤 {json_file.name}** (quality control log)")
+                                    st.write(f"**👤 {json_file.name}** (لاگ کنترل کیفیت)")
                                 else:
                                     st.write(f"**{json_file.name}**")
                             with col2:
                                 with open(json_file, "rb") as f:
                                     st.download_button(
-                                        label="⬇️ download",
+                                        label="⬇️ دانلود",
                                         data=f,
                                         file_name=json_file.name,
                                         mime="application/json",
@@ -2956,13 +3177,13 @@ if uploaded_files:
             else:
                 st.markdown("""
                 <div class="status-box status-warning">
-                    <h2>⚠️ processing incomplete</h2>
-                    <p>some data was not processed. check logs.</p>
+                    <h2>⚠️ پردازش کامل نشد</h2>
+                    <p>بعضی داده‌ها پردازش نشدند. لاگ‌ها را بررسی کنید.</p>
                 </div>
                 """, unsafe_allow_html=True)
-                st.info("💡 note: if a company has no url, its information cannot be retrieved from the web.")
+                st.info("💡 نکته: اگر شرکتی URL نداشته باشد، نمی‌توان اطلاعات آن را از وب دریافت کرد.")
                 if debug_mode:
-                    with st.expander("🔍 session files list"):
+                    with st.expander("🔍 لیست فایل‌های Session"):
                         for f in session_dir.rglob("*"):
                             if f.is_file():
                                 st.write(f"📄 {f.relative_to(session_dir)}")
@@ -2970,20 +3191,20 @@ if uploaded_files:
         except Exception as e:
             st.markdown("""
             <div class="status-box status-error">
-                <h2>❌ unexpected error</h2>
+                <h2>❌ خطای غیرمنتظره</h2>
             </div>
             """, unsafe_allow_html=True)
-            st.error(f"error: {str(e)}")
+            st.error(f"خطا: {str(e)}")
             if debug_mode:
                 import traceback
-                with st.expander("📋 error details"):
+                with st.expander("📋 جزئیات خطا"):
                     st.code(traceback.format_exc())
 
 else:
     st.markdown("""
     <div class="status-box status-info">
-        <h3>👋 welcome!</h3>
-        <p>please first enter quality supervisor information, then upload your files</p>
+        <h3>👋 خوش آمدید!</h3>
+        <p>لطفاً ابتدا اطلاعات ناظر کیفیت را وارد کنید، سپس فایل‌های خود را آپلود کنید</p>
     </div>
     """, unsafe_allow_html=True)
 
@@ -2992,13 +3213,13 @@ else:
         st.markdown("""
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                     padding: 2rem; border-radius: 15px; color: white; height: 100%;">
-            <h3>📊 excel mode</h3>
+            <h3>📊 Excel Mode</h3>
             <ul style="line-height: 2;">
-                <li>excel file with url/website</li>
-                <li>smart web scraping</li>
-                <li>complete company information extraction</li>
-                <li>output: enriched excel</li>
-                <li>📦 batch: 1 row</li>
+                <li>فایل Excel با URL/Website</li>
+                <li>وب‌اسکرپینگ هوشمند</li>
+                <li>استخراج اطلاعات کامل شرکت</li>
+                <li>خروجی: Excel غنی‌شده</li>
+                <li>📦 Batch: 1 ردیف</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
@@ -3006,30 +3227,30 @@ else:
         st.markdown("""
         <div style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); 
                     padding: 2rem; border-radius: 15px; color: white; height: 100%;">
-            <h3>🖼 ocr/qr mode</h3>
+            <h3>🖼 OCR/QR Mode</h3>
             <ul style="line-height: 2;">
-                <li>images (jpg, png) or pdf</li>
-                <li>ocr extraction + qr detection</li>
-                <li>web scraping from urls</li>
-                <li>output: unified excel</li>
-                <li>📦 batch: images(5) | pdf(4)</li>
+                <li>تصاویر (JPG, PNG) یا PDF</li>
+                <li>استخراج OCR + تشخیص QR</li>
+                <li>وب‌اسکرپینگ از URLها</li>
+                <li>خروجی: Excel یکپارچه</li>
+                <li>📦 Batch: تصاویر(5) | PDF(4)</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown("### ✨ key features")
+    st.markdown("### ✨ ویژگی‌های کلیدی")
     features = [
-        ("🎯", "automatic detection", "excel or ocr/qr intelligently"),
-        ("🏢", "exhibition field", "editable exhibition name"),
-        ("📊", "source tracking", "source detection (image/pdf/excel)"),
-        ("🤖", "smart position", "50+ persian/english departments"),
-        ("🔋", "quota management", "smart api management (240/day)"),
-        ("⚡️", "fast mode", "fast processing with optimized logs"),
-        ("🔒", "rate limit", "4 seconds (safe - 15 rpm)"),
-        ("📦", "batch processing", "images(5) | pdf(4) | excel(1)"),
-        ("👤", "quality control", "record name and role of quality supervisor"),
-        ("☁️", "google sheets", "automatic save to drive")
+        ("🎯", "تشخیص خودکار", "Excel یا OCR/QR به صورت هوشمند"),
+        ("🏢", "Exhibition Field", "نام نمایشگاه قابل ویرایش"),
+        ("📊", "Source Tracking", "تشخیص منبع (Image/PDF/Excel)"),
+        ("🤖", "Smart Position", "50+ دپارتمان فارسی/انگلیسی"),
+        ("🔋", "Quota Management", "مدیریت هوشمند API (240/روز)"),
+        ("⚡️", "Fast Mode", "پردازش سریع با لاگ بهینه"),
+        ("🔒", "Rate Limit", "4 ثانیه (ایمن - 15 RPM)"),
+        ("📦", "Batch Processing", "تصاویر(5) | PDF(4) | Excel(1)"),
+        ("👤", "Quality Control", "ثبت نام و نقش ناظر کیفیت"),
+        ("☁️", "Google Sheets", "ذخیره خودکار در Drive")
     ]
     cols = st.columns(3)
     for idx, (icon, title, desc) in enumerate(features):
@@ -3047,24 +3268,24 @@ st.markdown("---")
 st.markdown("""
 <div style="text-align: center; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
             border-radius: 15px; color: white; margin-top: 2rem;">
-    <h4>🚀 smart exhibition pipeline + google sheets</h4>
+    <h4>🚀 Smart Exhibition Pipeline + Google Sheets</h4>
     <p style="margin: 0.5rem 0;">
-        ⚡️ rate limiting: 4s (safe) | 🔒 api limit: 15 rpm, 240/day
+        ⚡️ Rate Limiting: 4s (ایمن) | 🔒 API Limit: 15 RPM, 240/روز
     </p>
     <p style="margin: 0.5rem 0;">
-        📌 exhibition + source tracking | 🤖 smart position detection
+        📌 Exhibition + Source Tracking | 🤖 Smart Position Detection
     </p>
     <p style="margin: 0.5rem 0;">
-        📦 batch processing: images(5) | pdf(4) | excel(1)
+        📦 Batch Processing: تصاویر(5) | PDF(4) | Excel(1)
     </p>
     <p style="margin: 0.5rem 0;">
-        👤 quality control tracking: name, role, date, time
+        👤 Quality Control Tracking: نام، نقش، تاریخ، ساعت
     </p>
     <p style="margin: 0.5rem 0;">
-        ☁️ google sheets: automatic data save to drive
+        ☁️ Google Sheets: ذخیره خودکار داده‌ها در Drive
     </p>
     <p style="margin: 1rem 0 0 0; opacity: 0.8; font-size: 0.9rem;">
-        made with ❤️ using streamlit & gemini ai
+        Made with ❤️ using Streamlit & Gemini AI
     </p>
 </div>
 """, unsafe_allow_html=True)
