@@ -141,10 +141,11 @@ st.markdown("""
 
 # ------------------------  api keys
 API_KEYS = {
-    "excel": "AIzA****xI",
-    "ocr": "AIza***XEEcxY",
-    "scrap": "AIzaS****70"
+    "excel": "AIz**********Tag",
+    "ocr": "AIz*************xio",
+    "scrap": "AI***********F3M"
 }
+
 for key_name, key_value in API_KEYS.items():
     os.environ[f"GOOGLE_API_KEY_{key_name.upper()}"] = key_value
     os.environ["GOOGLE_API_KEY"] = key_value
