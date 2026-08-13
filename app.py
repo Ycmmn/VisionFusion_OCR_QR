@@ -1250,12 +1250,12 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             
             text = str(text).strip()
             
-            # چک کردن اینکه فارسی هست یا نه
+            # Check whether it's Persian or not
             persian_chars = set('آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
             has_persian = any(c in persian_chars for c in text)
             
             if has_persian:
-                return text  # قبلاً فارسیه
+                return text  # Already Persian
             
             try:
                 prompt = f"Translate this English text to Persian. Only return the translation:\n\n{text}"
@@ -1267,15 +1267,15 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         def extract_person_position(person_col_value):
             """
-            استخراج Name و Position از ستون PersonX
-            مثال: "علی احمدی - مدیر فروش" → ("علی احمدی", "مدیر فروش")
+            Extract Name and Position from the PersonX column
+            Example: "Ali Ahmadi - Sales Manager" → ("Ali Ahmadi", "Sales Manager")
             """
             if not person_col_value or pd.isna(person_col_value) or str(person_col_value).strip() == '':
                 return "", ""
             
             text = str(person_col_value).strip()
             
-            # تلاش برای جدا کردن با separator های مختلف
+            ## Try splitting with different separators
             separators = [' - ', ' – ', ' | ', ' / ', '\n', '،', ',']
             
             name = ""
