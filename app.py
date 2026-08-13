@@ -995,7 +995,7 @@ def retry_sheets_append(sheets_service, file_id, sheet_name, chunk_values, max_r
 
 
 def retry_sheets_execute(request, max_retries=5, base_wait=10):
-    """اجرای هر نوع request گوگل شیتس (get, update, ...) با retry"""
+    """Execute any type of Google Sheets request (get, update, ...) with retry"""
     
     NETWORK_ERRORS = (ConnectionResetError, ConnectionAbortedError, BrokenPipeError, TimeoutError, socket.timeout, socket.error, OSError)
     for attempt in range(1, max_retries + 1):
@@ -1020,12 +1020,12 @@ def retry_sheets_execute(request, max_retries=5, base_wait=10):
 
 def consolidate_columns(df):
     """
-    ادغام ستون‌های مشابه با | به عنوان جداکننده
-    هیچ مقداری حذف نمی‌شه مگر تکراری
+   Merge similar columns using | as a separator
+    No value is removed unless duplicate
     """
     print(f"\n🔀 Consolidating columns...")
     
-    # تعریف گروه‌ها
+    # Define groups
     COLUMN_GROUPS = {
         'Phones':             ['phones', 'phones2', 'phones3', 'phones4', 'Phone1', 'Phone2', 'phones5', 'phones6', 'phones7', 'phones8', 'phones9', 'Phone3', 'Phone4', 'Phone5'],
         'Faxes':              ['faxes', 'faxes2', 'Fax'],
@@ -1052,7 +1052,7 @@ def consolidate_columns(df):
     }
     
     for new_col, source_cols in COLUMN_GROUPS.items():
-        # پیدا کردن ستون‌هایی که واقعاً در df هستن
+        # Find columns that actually exist in df
         existing = [c for c in source_cols if c in df.columns]
         
         if not existing:
