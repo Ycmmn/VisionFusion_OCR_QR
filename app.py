@@ -301,14 +301,14 @@ def generate_company_id(company_name_fa=None, company_name_en=None):
 
 def add_company_id_to_dataframe(df, log_details=True):
     """
-    اضافه کردن ستون CompanyID به DataFrame
+    Add CompanyID column to DataFrame
     
     Args:
-        df: DataFrame ورودی
-        log_details: نمایش جزئیات در Console
+        df: DataFrame input
+        log_details: Show details in Console
     
     Returns:
-        DataFrame با ستون CompanyID
+        DataFrame with column CompanyID
     """
     import pandas as pd
     
@@ -320,11 +320,11 @@ def add_company_id_to_dataframe(df, log_details=True):
     print(f"   📊 Processing {len(df)} rows...")
     
     company_ids = []
-    id_mapping = {}  # برای ردیابی تکراری‌ها
+    id_mapping = {}  ## For tracking duplicates
     
     for idx, row in df.iterrows():
 
-        # ✅ استخراج نام شرکت از row
+        #  Extract company name from row
         company_name_fa = None
         company_name_en = None
 
@@ -335,7 +335,7 @@ def add_company_id_to_dataframe(df, log_details=True):
                 else:
                     company_name_en = row[col]
 
-        # ✅ تولید Company ID
+        # Generate Company ID
         company_id = generate_company_id(company_name_fa, company_name_en)
 
 
