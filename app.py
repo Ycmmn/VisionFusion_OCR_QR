@@ -44,7 +44,6 @@ st.set_page_config(
 )
 
 
-
  # ---------------------------Permanent Google Sheets Link (Always Visible)
 FIXED_SHEET_URL = "https://do******uE/edit"
 
