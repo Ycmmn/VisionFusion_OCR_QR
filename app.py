@@ -1,18 +1,18 @@
 # -*- coding: utf-8 -*-
 """
 🎯 Smart Exhibition Pipeline — Final Unified Edition + Google Sheets
-ادغام کامل دو اپ: «Ultimate Smart Exhibition Pipeline» + «Smart Data Pipeline»
-- UI خفن نسخه ۱ + منطق و لاگ‌نویسی و مدیریت سهمیه نسخه ۲
-- Excel Mode و OCR/QR Mode با تشخیص خودکار
+Full integration of two apps: "Ultimate Smart Exhibition Pipeline" + "Smart Data Pipeline"
+- Version 1's cool UI + Version 2's logic, logging, and quota management
+- Excel Mode and OCR/QR Mode with automatic detection
 - Smart Metadata Injection (Exhibition + Source + Smart Position)
 - Fast Mode, Debug Mode, Rate Limiting, Daily Quota
 - ✨ Batch Processing: Images(5), PDFs(4), Excel(1)
 - ✨ Quality Control Tracking: User Name, Role, Date, Time
-- ☁️ Google Sheets Integration: ذخیره خودکار داده‌ها در Google Drive
-
-اجرا:
+- ☁️ Google Sheets Integration: Automatically save data to Google Drive
+Run:
     streamlit run smart_exhibition_pipeline_final.py
 """
+
 
 import streamlit as st
 import subprocess
@@ -31,6 +31,8 @@ from supabase import create_client, Client
 import time
 import socket
 import google.generativeai as genai
+
+
 # =========================================================
 # ⚙️ تنظیمات صفحه
 # =========================================================
