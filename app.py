@@ -33,9 +33,7 @@ import socket
 import google.generativeai as genai
 
 
-# =========================================================
-# ⚙️ تنظیمات صفحه
-# =========================================================
+#--------------------- Page settings
 st.set_page_config(
     page_title="Smart Exhibition Pipeline",
     page_icon="🎯",
@@ -43,10 +41,10 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# =========================================================
-# 📌 Permanent Google Sheets Link (Always Visible)
-# =========================================================
-FIXED_SHEET_URL = "https://docs.google.com/spreadsheets/d/1OeQbiqvo6v58rcxaoSUidOk0IxSGmL8YCpLnyh27yuE/edit"
+
+#---------------------------- Permanent Google Sheets Link (Always Visible)
+
+FIXED_SHEET_URL = "https://docs.google.com/spre********E/edit"
 
 st.markdown(f"""
 <div style="
