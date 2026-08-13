@@ -45,7 +45,7 @@ st.set_page_config(
 
 
  # ---------------------------Permanent Google Sheets Link (Always Visible)
-FIXED_SHEET_URL = "https://do******uE/edit"
+FIXED_SHEET_URL = "https://docs.google.com/spreadshee******uE/edit"
 
 st.markdown(f"""
 <div style="
@@ -64,6 +64,7 @@ st.markdown(f"""
     </p>
 </div>
 """, unsafe_allow_html=True)
+
 
 
 #---------------------------------- UI with gradients
