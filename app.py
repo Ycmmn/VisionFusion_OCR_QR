@@ -657,9 +657,9 @@ def merge_all_data_sources(session_dir, pipeline_type):
                         print(f"\n   🔧 Filling empty file_names for Web rows...")
 
                         if 'file_name' in df_scrap.columns:
-                            # اگه بعضی سطرها file_name ندارن، از اولین file_name موجود استفاده کن
+                            # If some rows don't have file_name, use the first available file_name
                             if url_to_filename:
-                                # گرفتن اولین file_name از دیکشنری
+                                ## Get the first file_name from the dictionary
                                 default_filename = list(url_to_filename.values())[0]
                                 
                                 empty_count = 0
@@ -673,7 +673,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     
                     print(f"      ✅ Matched {matched_count}/{len(df_scrap)} scraping records with file_name")
                     
-                    # ✅ حذف سطرهای تکراری scraping
+                    # Remove duplicate scraping rows
                     print(f"\n   🧹 Removing duplicate scraping records...")
                     
                     initial_count = len(df_scrap)
@@ -681,13 +681,13 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     if 'Website' in df_scrap.columns or 'urls' in df_scrap.columns:
                         url_col = 'Website' if 'Website' in df_scrap.columns else 'urls'
                         
-                        # نرمالسازی URL
+                        # Normalize  URL
                         df_scrap['_normalized_url'] = df_scrap[url_col].apply(normalize_url)
                         
-                        # حذف تکراری‌ها (نگه‌داشتن اولین)
+                        # Remove duplicates (keep the first)
                         df_scrap = df_scrap.drop_duplicates(subset=['_normalized_url'], keep='first')
                         
-                        # حذف ستون کمکی
+                        # Remove helper column
                         df_scrap.drop(columns=['_normalized_url'], inplace=True)
                         
                         removed_count = initial_count - len(df_scrap)
