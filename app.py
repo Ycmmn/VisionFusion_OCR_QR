@@ -1365,7 +1365,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             model = genai.GenerativeModel('gemini-2.5-flash-lite')
             
             def detect_language_position(text):
-                """تشخیص زبان: fa یا en"""
+                """Detect language: fa or en"""
                 if not text or pd.isna(text) or str(text).strip() == '':
                     return None
                 
@@ -1376,7 +1376,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 return 'fa' if has_persian else 'en'
             
             def translate_position_to_persian(text):
-                """ترجمه انگلیسی به فارسی"""
+                """Translate English to Persian"""
                 if not text or pd.isna(text) or str(text).strip() == '':
                     return ""
                 
@@ -1399,19 +1399,19 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 if not position_value or pd.isna(position_value) or str(position_value).strip() == '':
                     continue
                 
-                # تشخیص زبان
+                # Detect language
                 lang = detect_language_position(position_value)
                 
                 if lang == 'en':
-                    # ترجمه انگلیسی → فارسی
+                    # Translate English → Persian
                     position_fa = translate_position_to_persian(position_value)
                     
                     if position_fa:
-                        # ترکیب: انگلیسی | فارسی
+                        # Combine: English | Persian
                         df.at[idx, 'Position'] = f"{position_value} | {position_fa}"
                         translated_count += 1
                         
-                        if translated_count <= 3:  # نمایش 3 نمونه
+                        if translated_count <= 3:  # Show 3 samples
                             print(f"      Row {idx+1}: {position_value} → {position_fa}")
                     
                     time.sleep(1)  # Rate limiting
@@ -1421,18 +1421,18 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             else:
                 print(f"   ℹ️ No English positions found")
 
-        # ========== 🗑️ حذف PositionFA و PositionEN ==========
+        # ==========----------Remove PositionFA and PositionEN--------==========
         print(f"\n🗑️ Removing PositionFA and PositionEN columns...")
         for col in ['PositionFA', 'PositionEN']:
             if col in df.columns:
                 df.drop(columns=[col], inplace=True)
                 print(f"   ❌ Removed: {col}")
 
-        #
-        # ========== 📍 یکپارچه‌سازی Address Columns ==========
+        
+        # =========------------------Consolidate Address Columns-----------==========
         print(f"\n📍 Consolidating Address columns...")
         
-        # پیدا کردن تمام ستون‌های Address
+        # Consolidate Address Columns
         address_columns = []
         for col in df.columns:
             col_lower = col.lower()
@@ -1443,7 +1443,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         if address_columns:
             print(f"   📋 Found {len(address_columns)} Address columns: {address_columns}")
             
-            # تابع تشخیص زبان
+            # Language detection function
             def detect_language_address(text):
                 """تشخیص زبان آدرس: fa یا en"""
                 if not text or pd.isna(text) or str(text).strip() == '':
@@ -1451,7 +1451,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 
                 text = str(text).strip()
                 
-                # چک کردن حروف فارسی
+                # Check for Persian characters
                 persian_chars = set('آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
                 has_persian = any(c in persian_chars for c in text)
                 
@@ -1460,9 +1460,9 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 else:
                     return 'en'
             
-            # تابع ترجمه انگلیسی به فارسی
+            # English-to-Persian translation function
             def translate_address_to_persian(text):
-                """ترجمه آدرس انگلیسی به فارسی"""
+                
                 if not text or pd.isna(text) or str(text).strip() == '':
                     return ""
                 
@@ -1477,13 +1477,13 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     print(f"   ⚠️ Translation error: {e}")
                     return text
             
-            # لیست‌های جدید برای آدرس‌های یکپارچه
+            # New lists for consolidated addresses
             unified_address_en = []
             unified_address_fa = []
             
-            # پردازش هر سطر
+            # Process each row
             for idx in df.index:
-                # جمع‌آوری تمام آدرس‌ها از ستون‌های مختلف
+                # Collect all addresses from different columns
                 all_addresses = []
                 
                 for col in address_columns:
@@ -1492,16 +1492,16 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                         if addr and not pd.isna(addr) and str(addr).strip() not in ['', 'nan', 'None']:
                             all_addresses.append(str(addr).strip())
                 
-                # اگه هیچ آدرسی نبود
+                # If there's no address at all
                 if not all_addresses:
                     unified_address_en.append("")
                     unified_address_fa.append("")
                     continue
                 
-                # حذف تکراری‌ها
+                # Remove duplicates
                 unique_addresses = list(dict.fromkeys(all_addresses))
                 
-                # جداسازی آدرس‌های فارسی و انگلیسی
+                # Separate Persian and English addresses
                 fa_addresses = []
                 en_addresses = []
                 
@@ -1513,13 +1513,13 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     elif lang == 'en':
                         en_addresses.append(addr)
                 
-                # ترکیب آدرس‌های انگلیسی
+                # Combine English addresses
                 final_en = " | ".join(en_addresses) if en_addresses else ""
                 
-                # ترکیب آدرس‌های فارسی
+                # Combine Persian addresses
                 final_fa = " | ".join(fa_addresses) if fa_addresses else ""
                 
-                # اگه آدرس انگلیسی داریم ولی فارسی نداریم → ترجمه کن
+                # If we have an English address but no Persian → translate it
                 if final_en and not final_fa:
                     print(f"   Row {idx+1}: Translating EN→FA...")
                     final_fa = translate_address_to_persian(final_en)
@@ -1528,20 +1528,20 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 unified_address_en.append(final_en)
                 unified_address_fa.append(final_fa)
             
-            # حذف ستون‌های قدیمی
+            # Remove old columns
             for col in address_columns:
                 if col in df.columns:
                     df.drop(columns=[col], inplace=True)
             
             print(f"   ✅ Removed {len(address_columns)} old Address columns")
             
-            # اضافه کردن ستون‌های جدید
+            # Add new columns
             df['AddressEN'] = unified_address_en
             df['AddressFA'] = unified_address_fa
             
             print(f"   ✅ Added unified 'AddressEN' and 'AddressFA' columns")
             
-            # نمایش 3 نمونه
+            # Show 3 samples
             print(f"\n   📊 Sample unified addresses:")
             for i in range(min(3, len(df))):
                 if df.at[i, 'AddressEN'] or df.at[i, 'AddressFA']:
