@@ -2136,19 +2136,19 @@ def add_country_city_columns(excel_path):
             print("   ⚠️ No AddressFA or AddressEN columns found")
             return False
         
-        # اضافه کردن ستون‌ها در صورت عدم وجود
+        # Add columns if they don't exist
         if 'Country' not in df.columns:
             df['Country'] = None
         if 'City' not in df.columns:
             df['City'] = None
         
-        # پردازش هر سطر
+        # Process each row
         filled_count = 0
         for idx in df.index:
             address_fa = df.at[idx, 'AddressFA'] if has_address_fa else None
             address_en = df.at[idx, 'AddressEN'] if has_address_en else None
             
-            # فقط اگر Country/City خالی بودند
+            # Only if Country/City are empty
             if pd.isna(df.at[idx, 'Country']) or str(df.at[idx, 'Country']).strip() == '':
                 country, city = extract_country_city_from_address(address_fa, address_en)
                 
@@ -2162,11 +2162,11 @@ def add_country_city_columns(excel_path):
                     else:
                         print(f"   Row {idx + 1}: {country} (no city)")
         
-        # ذخیره
+        # Save
         df.to_excel(excel_path, index=False, engine='openpyxl')
         print(f"   ✅ Updated {filled_count} rows with Country/City")
         
-        # نمایش آمار
+        #  Show statistics
         if 'Country' in df.columns:
             country_counts = df['Country'].value_counts()
             print(f"\n   📊 Country Distribution:")
