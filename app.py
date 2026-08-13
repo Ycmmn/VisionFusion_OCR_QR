@@ -2079,34 +2079,34 @@ def extract_country_city_from_address(address_fa, address_en):
     if not combined_address.strip():
         return None, None
     
-    # جستجوی شهر
+    # Search for city
     for city_name, city_en in IRANIAN_CITIES.items():
         if city_name.lower() in combined_address:
             city = city_en
-            country = "Iran"  # اگر شهر ایرانی پیدا شد، کشور ایران است
+            country = "Iran"  # If an Iranian city is found, the country is Iran
             break
     
-    # جستجوی کشور (اگر هنوز پیدا نشده)
+    # Search for country (if not found yet)
     if not country:
         for country_name, country_en in COUNTRIES.items():
             if country_name.lower() in combined_address:
                 country = country_en
                 break
     
-    # اگر کشور پیدا نشد ولی شهر ایرانی بود
+    # If country not found but city is Iranian
     if city and not country:
         country = "Iran"
     
-    # اگر فقط کشور پیدا شد (بدون شهر) و ایران بود
+    #  If only country was found (no city) and it's Iran
     if country == "Iran" and not city:
-        # سعی در یافتن شهر با regex
+        # Try to find the city using regex
         import re
         
-        # الگوهای رایج آدرس ایران
+        # Common Iranian address patterns
         patterns = [
-            r'استان\s+(\w+)',  # استان تهران
-            r'شهر\s+(\w+)',     # شهر تهران
-            r'م\.(\w+)',        # م.تهران
+            r'استان\s+(\w+)',  # Province Tehran
+            r'شهر\s+(\w+)',     # City Tehran
+            r'م\.(\w+)',        # M.Tehran
         ]
         
         for pattern in patterns:
@@ -2122,13 +2122,13 @@ def extract_country_city_from_address(address_fa, address_en):
 
 def add_country_city_columns(excel_path):
     """
-    اضافه کردن ستون‌های Country و City به Excel
+     Add Country and City columns to Excel
     """
     try:
         print(f"\n🌍 Adding Country & City columns...")
         df = pd.read_excel(excel_path)
         
-        # چک کردن وجود ستون‌های Address
+        # Check whether Address columns exist
         has_address_fa = 'AddressFA' in df.columns
         has_address_en = 'AddressEN' in df.columns
         
