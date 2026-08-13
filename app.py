@@ -2226,45 +2226,45 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
             file_types = json.loads(file_types_path.read_text(encoding='utf-8'))
             print(f"   📖 Loaded file types: {file_types}")
             
-            # تشخیص Source بر اساس file_name
+            # Detect Source based on file_name
             if 'file_name' in df.columns:
                 def get_source(fname):
                     if pd.isna(fname):
                         return "Unknown"
                     fname_str = str(fname)
                     
-                    # جستجو در file_types
+                    #  Search in file_types
                     if fname_str in file_types:
                         return file_types[fname_str]
                     
-                    # اگر پیدا نشد، از detect_source_type استفاده کن
+                    # If not found, use detect_source_type
                     return detect_source_type(fname_str)
                 
-                # اضافه کردن Source بعد از QC ستون‌ها
+                # Add Source after QC columns
                 insert_position = 6 if qc_metadata else 1
                 df.insert(insert_position, 'Source', df['file_name'].apply(get_source))
                 print(f"   ✅ Source detected from uploaded file types")
             
             else:
-                # ✅ اگر file_name نبود، از تعداد فایل‌ها استفاده کن
+                # If there's no file_name, use the number of files
                 if len(file_types) == 1:
-                    # فقط یک فایل بود → همون source رو به همه بده
+                    #  Only one file → give the same source to all
                     source = list(file_types.values())[0]
                     insert_position = 6 if qc_metadata else 1
                     df.insert(insert_position, 'Source', source)
                     print(f"   ✅ Source set to: {source} (single file)")
                 
                 elif len(file_types) > 1:
-                    # چند فایل بودن → بر اساس ترتیب
+                    # Multiple files → based on order
                     sources = list(file_types.values())
                     
-                    # اگر تعداد سطرها با تعداد فایل‌ها برابره
+                    # If the row count matches the file count
                     if len(df) == len(sources):
                         insert_position = 6 if qc_metadata else 1
                         df.insert(insert_position, 'Source', sources)
                         print(f"   ✅ Source matched by row count")
                     else:
-                        # پر کردن با اولین source
+                        # Fill with the first source
                         insert_position = 6 if qc_metadata else 1
                         df.insert(insert_position, 'Source', sources[0])
                         print(f"   ⚠️ Multiple files but row count mismatch → using first source")
@@ -2275,7 +2275,7 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
                     print(f"   ⚠️ No file types found")
         
         else:
-            # ✅ fallback: استفاده از file_name
+            #  fallback: use file_name
             print(f"   ⚠️ file_types.json not found, using fallback")
             
             if 'file_name' in df.columns:
@@ -2303,7 +2303,7 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
             if filled_count > 0:
                 print(f"   ✅ Filled {filled_count} positions from Department")
 
-        # ========== حذف ستون‌های اضافی ==========
+        # ==========  Remove extra columns ==========
         columns_to_remove = ['CompanyNameFA_translated']
         removed = 0
         for col in columns_to_remove:
@@ -2315,7 +2315,7 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
         if removed:
             print(f"   ✅ Removed {removed} unnecessary columns")
 
-        # ========== تمیز کردن داده‌ها ==========
+        # ==========  Clean data ==========
         for col in df.columns:
             if df[col].dtype == 'object':
                 try:
@@ -2324,19 +2324,19 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
                 except Exception as e:
                     print(f"   ⚠️ Warning: Could not convert column {col}: {e}")
 
-        # ========== ذخیره ==========
+        # ========== Save  ==========
         df.to_excel(excel_path, index=False, engine='openpyxl')
         print(f"   💾 Updated: {excel_path.name}")
         print(f"   📊 Final: {len(df)} rows × {len(df.columns)} columns")
         
-        # ========== نمایش Source Distribution ==========
+        # ========== Show Source Distribution ==========
         if 'Source' in df.columns:
             source_counts = df['Source'].value_counts()
             print(f"\n   📊 Source Distribution:")
             for source, count in source_counts.items():
                 print(f"      • {source}: {count} rows")
         
-        # ========== نمایش خلاصه متادیتا ==========
+        # ========== Show metadata summary ==========
         print(f"\n   📋 Metadata Summary:")
         print(f"      📌 Exhibition: {exhibition_name}")
         if qc_metadata:
@@ -2352,7 +2352,7 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
         traceback.print_exc()
         return False
 # =========================================================
-# 🔍 تشخیص نوع Pipeline و نام نمایشگاه
+# Detect Pipeline type and exhibition name
 # =========================================================
 def detect_pipeline_type(files):
     extensions = [f.name.split('.')[-1].lower() for f in files]
@@ -2374,10 +2374,10 @@ def extract_exhibition_name(files):
     return "Unknown_Exhibition"
 
 # =========================================================
-# ✨ Batch Processing Logic
+# Batch Processing Logic
 # =========================================================
 def get_batch_size(file_type):
-    """تعیین اندازه Batch بر اساس نوع فایل"""
+    """Determine batch size based on file type"""
     file_type = file_type.lower()
     if file_type in ['jpg', 'jpeg', 'png', 'bmp', 'webp', 'gif']:
         return 5
@@ -2396,7 +2396,7 @@ def create_batches(files_list, batch_size):
     return batches
 
 def process_files_in_batches(uploads_dir, pipeline_type):
-    """پردازش فایل‌ها به صورت Batch"""
+    """Split the file list into smaller batches""""
     if pipeline_type == 'excel':
         excel_files = list(uploads_dir.glob("*.xlsx")) + list(uploads_dir.glob("*.xls"))
         return [(f,) for f in excel_files], 1
