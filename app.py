@@ -464,7 +464,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
     elif pipeline_type == 'ocr_qr':
         print("   OCR/QR Mode detected")
         
-        # 1. خواندن mix_ocr_qr.json (الزامی)
+        ## 1. Read mix_ocr_qr.json (required)
         if not mix_json.exists():
             print(f"   {mix_json.name} not found!")
             return None
@@ -475,7 +475,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
             with open(mix_json, 'r', encoding='utf-8') as f:
                 mix_data = json.load(f)
             
-            # تبدیل به DataFrame (هر فایل = یک رکورد، حتی اگه چند صفحه PDF داشته باشه)
+            ## Convert to DataFrame (each file = one record, even if it has multiple PDF pages)
             records = []
             for file_item in mix_data:
                 if not isinstance(file_item, dict):
@@ -493,7 +493,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
                 else:
                     continue
                 
-                # ادغام تمام صفحات این فایل در یک رکورد واحد
+                ## Merge all pages of this file into a single record
                 record = {}
                 
                 for page_result in page_results:
@@ -544,7 +544,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
                                         break
                                     i += 1
                 
-                # مطمئن شو file_name از file_item گرفته میشه
+                ## Make sure file_name is taken from file_item
                 if 'file_name' not in record or not record.get('file_name'):
                     record['file_name'] = file_item.get('file_name', 'Unknown')
 
@@ -562,11 +562,11 @@ def merge_all_data_sources(session_dir, pipeline_type):
             print(f"   Error reading mix_ocr_qr.json: {e}")
             return None
         
-        # 2. خواندن gemini_scrap_output.json (اختیاری)
+        #2. Read gemini_scrap_output.json (optional)
         if not scrap_json.exists():
             print(f"   {scrap_json.name} not found - using only OCR/QR data")
             
-            # فقط mix_ocr_qr
+            #  mix_ocr_qr
             df_mix = df_mix.fillna("")
             for col in df_mix.columns:
                 if df_mix[col].dtype == 'object':
@@ -584,8 +584,8 @@ def merge_all_data_sources(session_dir, pipeline_type):
             
             return output_path
         
-        # ========== 3. خواندن و پردازش scraping data ==========
-        # ========== 3. خواندن و پردازش scraping data ==========
+        # ==========----------- 3.Read and process scraping data -----------==========
+
         print(f"   Reading {scrap_json.name}...")
         try:
             with open(scrap_json, 'r', encoding='utf-8') as f:
@@ -597,20 +597,20 @@ def merge_all_data_sources(session_dir, pipeline_type):
             else:
                 df_scrap = pd.DataFrame(scrap_data)
                 
-                # فقط موفق‌ها
+                # Only the successful ones
                 if 'status' in df_scrap.columns:
                     df_scrap = df_scrap[df_scrap['status'] == 'SUCCESS'].copy()
                 
-                # حذف ستون‌های اضافی
+                # Remove extra columns
                 for col in ['status', 'error']:
                     if col in df_scrap.columns:
                         df_scrap.drop(columns=[col], inplace=True)
                 
-                # ✅ اضافه کردن file_name از OCR/QR به scraping
+                # Add file_name from OCR/QR to scraping
                 if not df_scrap.empty:
                     print(f"   🔗 Matching file_names from OCR/QR to Scraping...")
                     
-                    # تابع normalize_url
+                    # normalize_url
                     def normalize_url(url):
                         if not url or pd.isna(url):
                             return ""
@@ -618,7 +618,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
                         url = url.replace('http://', '').replace('https://', '').replace('www.', '')
                         return url.split('/')[0].split('?')[0]
                     
-                    # ساخت دیکشنری: Website → file_name
+                    # Website → file_name
                     url_to_filename = {}
                     for idx, row in df_mix.iterrows():
                         for col in ['Website', 'Website2', 'Website3', 'urls', 'url']:
@@ -632,9 +632,9 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     
                     print(f"      📋 Found {len(url_to_filename)} URL→file_name mappings")
                     
-                    # اضافه کردن file_name به scraping
+                    # file_name to scraping
                     matched_count = 0
-                    # ✅ اگه file_name نداره، اضافه کن
+                      
                     if 'file_name' not in df_scrap.columns:
                         df_scrap['file_name'] = ''
 
@@ -650,10 +650,10 @@ def merge_all_data_sources(session_dir, pipeline_type):
                             matched_count += 1
 
 
-                        #
+                        
                         print(f"      ✅ Matched {matched_count}/{len(df_scrap)} scraping records with file_name")
 
-                        # ========== 🔧 پر کردن file_name های خالی ==========
+                    
                         print(f"\n   🔧 Filling empty file_names for Web rows...")
 
                         if 'file_name' in df_scrap.columns:
