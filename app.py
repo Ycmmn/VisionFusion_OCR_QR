@@ -1556,28 +1556,24 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         
         print(f"\n   ✅ Address consolidation completed!")
         
-        # ========== پایان یکپارچه‌سازی Address ==========
+        
 
-
-
-
-
-        # ========== 🧹 تمیز کردن فرمول‌ها و ارورها ==========
+        # ==========-----     Clean formulas and errors  -----------==========
         def remove_formulas_from_df(df):
-            """حذف فرمول‌ها، ارورها و تبدیل به مقادیر ساده"""
+            """Remove formulas, errors, and convert to plain values"""
             for col in df.columns:
                 if df[col].dtype == 'object':
-                    # حذف فرمول‌های Excel (که با = شروع میشن)
+                    # Remove Excel formulas (starting with =)
                     df[col] = df[col].apply(
                         lambda x: str(x)[1:] if isinstance(x, str) and x.startswith('=') else x
                     )
                     
-                    # حذف #ERROR!, #REF!, #VALUE!, #N/A, etc.
+                    # Remove #ERROR!, #REF!, #VALUE!, #N/A, etc.
                     df[col] = df[col].apply(
                         lambda x: "" if isinstance(x, str) and x.startswith('#') else x
                     )
                     
-                    # تبدیل اعداد فارسی به انگلیسی
+                    # Convert Persian digits to English
                     persian_digits = '۰۱۲۳۴۵۶۷۸۹'
                     english_digits = '0123456789'
                     trans_table = str.maketrans(persian_digits, english_digits)
@@ -1590,14 +1586,14 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         df = remove_formulas_from_df(df)
         print(f"   🧹 Cleaned formulas and errors from {len(df.columns)} columns")
         # =====================================================
-        # ========== 📞 تبدیل شماره تلفن‌ها به String ==========
+        # ==========---------    Convert phone numbers to String----------- ==========
         phone_columns = ['phones', 'phones2', 'phones3', 'phones4', 'phones5',
                         'Phone1', 'Phone2', 'Phone3', 'Phone4', 'Phone5',
                         'Fax', 'Fax2', 'WhatsApp', 'Telegram']
         
         for col in phone_columns:
             if col in df.columns:
-                # تبدیل عدد به string با apostrophe در اول (برای Google Sheets)
+                # Convert number to string with leading apostrophe (for Google Sheets) 
                 df[col] = df[col].apply(
                     lambda x: f"'{str(x)}" if x and str(x).strip() not in ['', 'nan', 'None'] else ""
                 )
@@ -1606,7 +1602,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         #
         # ====================================================
-        # ========== 📠 تبدیل FAX ها به String (رفع #ERROR!) ==========
+        # ==========-------  Convert FAX to String (fixes #ERROR!)   ------- ==========
         print(f"\n📠 Converting FAX columns to text format...")
 
         fax_columns = []
