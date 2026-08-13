@@ -385,17 +385,17 @@ def add_company_id_to_dataframe(df, log_details=True):
 
 def merge_all_data_sources(session_dir, pipeline_type):
     """
-    ادغام تمام منابع داده (برای هر دو Mode):
+    Merge all data sources (for both Modes)::
     
     OCR/QR Mode:
-        - mix_ocr_qr.json (همیشه)
-        - gemini_scrap_output.json (اگر موجود بود)
+        - mix_ocr_qr.json (always)
+        - gemini_scrap_output.json (if available)
     
     Excel Mode:
-        - web_analysis.xlsx (همیشه)
+        - web_analysis.xlsx (always)
     
     Returns:
-        Path: مسیر فایل Excel نهایی
+         Path: Path to the final Excel file
     """
     import pandas as pd
     import numpy as np
