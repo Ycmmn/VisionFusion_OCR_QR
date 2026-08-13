@@ -1602,7 +1602,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         #
         # ====================================================
-        # ==========-------  Convert FAX to String (fixes #ERROR!)   ------- ==========
+        # ==========-------  Convert FAX to String (fixes #ERROR!)   -------==========
         print(f"\n📠 Converting FAX columns to text format...")
 
         fax_columns = []
@@ -1612,7 +1612,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 fax_columns.append(col)
 
         for col in fax_columns:
-            # تبدیل به string با apostrophe برای جلوگیری از #ERROR! در Google Sheets
+            # Convert to string with apostrophe to prevent #ERROR! in Google Sheets
             df[col] = df[col].apply(
                 lambda x: f"'{str(x)}" if x and str(x).strip() not in ['', 'nan', 'None'] else ""
             )
@@ -1622,7 +1622,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         # ====================================================
 
-        # ========== 🧹 حذف داده‌های تکراری در هر سطر (3+ بار تکرار در یک ROW) ==========
+        # ========== Remove duplicate values within each row (3+ occurrences in one ROW)) ==========
         print(f"\n🧹 Removing duplicate values within each row (3+ occurrences)...")
 
         total_removed = 0
@@ -1631,29 +1631,29 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         for idx in df.index:
             row = df.loc[idx]
             
-            # شمارش مقادیر در این سطر (فقط مقادیر غیرخالی)
+            # Count values in this row (only non-empty values)
             values = []
             for col in df.columns:
                 val = row[col]
-                # فقط مقادیر معتبر
+                # Only valid values
                 if val and str(val).strip() not in ['', 'nan', 'None', 'null', 'NULL']:
                     values.append((col, str(val).strip()))
             
             if not values:
                 continue
             
-            # شمارش تکرار هر مقدار در این سطر
+            # Count occurrences of each value in this row
             value_counts = {}
             for col, val in values:
                 if val not in value_counts:
                     value_counts[val] = []
                 value_counts[val].append(col)
             
-            # پیدا کردن مقادیری که 3+ بار تکرار شدن
+            # Find values that occurred 3+ times
             row_modified = False
             for val, columns in value_counts.items():
                 if len(columns) >= 3:
-                    # نگه‌داشتن اولین occurrence، حذف بقیه
+                    # Keep the first occurrence, remove the rest
                     for col in columns[1:]:
                         df.at[idx, col] = ''
                         total_removed += 1
@@ -1662,7 +1662,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     if not row_modified:
                         rows_affected += 1
                     
-                    # نمایش 5 نمونه اول
+                    # Show first 5 samples
                     if rows_affected <= 5:
                         print(f"   Row {idx+1}: '{val[:30]}' appeared {len(columns)} times in columns {columns[:3]} → kept first, removed {len(columns)-1}")
 
@@ -1672,11 +1672,6 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             print(f"   ℹ️ No duplicate values found (3+ times in same row)")
 
 # ====================================================
-
-
-
-
-
 
 
         # ====================================================
