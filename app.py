@@ -758,7 +758,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
 
 
         
-        # تمیزکاری
+        # Cleaning
         df_final = df_final.fillna("")
         for col in df_final.columns:
             if df_final[col].dtype == 'object':
@@ -767,28 +767,28 @@ def merge_all_data_sources(session_dir, pipeline_type):
                     'nan': '', 'None': '', 'NaT': '', '<NA>': '', 'null': '', 'NULL': ''
                 })
         
-        # ========== 🆔 تولید CompanyID منحصر به فرد برای هر file_name ==========
+        #-------------Generate unique CompanyID for each file_name ----
         print(f"\n🆔 Generating unique CompanyID for each file_name...")
         
         if 'file_name' in df_final.columns:
-            # ساخت دیکشنری: file_name → CompanyID
+            #  file_name → CompanyID
             file_to_company_id = {}
             
             for idx, row in df_final.iterrows():
                 fname = row.get('file_name', '')
                 
                 if not fname or pd.isna(fname) or str(fname).strip() in ['', 'Unknown', 'web_only']:
-                    # اگه file_name نداره، ID منحصر به فرد بده
+                    #  If there's no file_name, assign a unique ID
                     company_id = generate_company_id(
                         row.get('CompanyNameFA'),
                         row.get('CompanyNameEN')
                     )
                 else:
-                    # اگه file_name داره، چک کن قبلاً ساخته شده یا نه
+                    # If it has a file_name, check whether it was already created
                     fname_str = str(fname).strip()
                     
                     if fname_str not in file_to_company_id:
-                        # اولین باری که این file_name رو میبینیم
+                        # First time we're seeing this file_name
                         company_id = generate_company_id(
                             row.get('CompanyNameFA'),
                             row.get('CompanyNameEN')
@@ -796,23 +796,23 @@ def merge_all_data_sources(session_dir, pipeline_type):
                         file_to_company_id[fname_str] = company_id
                         print(f"      {fname_str} → {company_id}")
                     else:
-                        # قبلاً دیدیم، از همون ID استفاده کن
+                        # Already seen, use the same ID
                         company_id = file_to_company_id[fname_str]
                 
-                # اضافه کردن CompanyID
+                #  add CompanyID
                 df_final.at[idx, 'CompanyID'] = company_id
             
-            # جابجایی CompanyID به اول
+            # move CompanyID to  front
             cols = ['CompanyID'] + [col for col in df_final.columns if col != 'CompanyID']
             df_final = df_final[cols]
             
             print(f"   ✅ Generated {len(file_to_company_id)} unique CompanyIDs for {len(df_final)} rows")
         
-        # ========== 📑 مرتب‌سازی بر اساس file_name ==========
+        # ==========         Sort by file_name  ==========
         print(f"\n📑 Sorting by file_name...")
         
         if 'file_name' in df_final.columns:
-            # مرتب‌سازی: اول file_name، بعد CompanyID
+            #  Sort: first by file_name, then by CompanyID
             df_final = df_final.sort_values(
                 by=['file_name', 'CompanyID'], 
                 ascending=[True, True]
@@ -820,7 +820,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
             
             print(f"   ✅ Sorted {len(df_final)} rows by file_name")
             
-            # نمایش آمار
+            # Show statistics
             file_counts = df_final['file_name'].value_counts()
             print(f"\n   📊 File Distribution:")
             for fname, count in list(file_counts.items())[:5]:
