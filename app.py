@@ -1872,9 +1872,8 @@ def get_or_create_folder(folder_name="Exhibition_Data"):
 
 
 
-# =========================================================
-# 📅 Quota Management
-# =========================================================
+# ==========---------------- Quota Management -------------================
+
 DAILY_LIMIT = 240
 QUOTA_FILE = Path("quota.json")
 
@@ -1909,11 +1908,11 @@ def decrease_quota(amount=1):
     save_quota(quota)
     return quota
 
-# =========================================================
-# ✨ Quality Control Tracking Functions
-# =========================================================
+
+#====================------------ Quality Control Tracking Functions --------------===================
+
 def get_qc_metadata(user_name, user_role):
-    """ساخت متادیتای کنترل کیفیت"""
+    """Build quality control metadata"""
     now = datetime.datetime.now()
     return {
         "QC_Supervisor": user_name,
@@ -1924,7 +1923,7 @@ def get_qc_metadata(user_name, user_role):
     }
 
 def add_qc_metadata_to_excel(excel_path, qc_metadata):
-    """اضافه کردن متادیتای کنترل کیفیت به Excel"""
+    """Add quality control metadata to Excel"""
     try:
         df = pd.read_excel(excel_path)
         for key in ["QC_Supervisor", "QC_Role", "QC_Date", "QC_Time", "QC_Timestamp"]:
@@ -1938,7 +1937,7 @@ def add_qc_metadata_to_excel(excel_path, qc_metadata):
         return False
 
 def save_qc_log(session_dir, qc_metadata, exhibition_name, pipeline_type, total_files):
-    """ذخیره لاگ کنترل کیفیت در فایل JSON"""
+    """Save the quality control log to a JSON file"""
     try:
         qc_log_file = session_dir / "qc_log.json"
         qc_log = {
@@ -1955,17 +1954,17 @@ def save_qc_log(session_dir, qc_metadata, exhibition_name, pipeline_type, total_
         print(f"   ❌ Error saving QC log: {e}")
         return False
 
-# =========================================================
-# 🧠 توابع هوشمند مشترک
-# =========================================================
+
+# =============---------------------  Shared smart functions------------================
+
 def detect_source_type(file_name):
-    """تشخیص نوع فایل: Image, PDF, Excel"""
+    """Detect file type: Image, PDF, Excel"""
     if not file_name or pd.isna(file_name):
         return "Unknown"
     
     file_name = str(file_name).lower()
     
-    # تصاویر
+    # Images
     if file_name.endswith(('.jpg', '.jpeg', '.png', '.bmp', '.webp', '.gif', '.tiff', '.tif', '.svg', '.heic')):
         return "Image"
     
@@ -2021,21 +2020,21 @@ def smart_position_from_department(department):
     return f"مسئول {department.title()}"
 
 
-# =========================================================
-# 🌍 استخراج Country & City از Address
-# =========================================================
+
+# ==============--------------------  Extract Country & City from Address------------------======================
 
 def extract_country_city_from_address(address_fa, address_en):
     """
-    استخراج کشور و شهر از آدرس فارسی و انگلیسی
+    Extract country and city from Persian and English addresses
     
     Returns:
         tuple: (country, city)
     """
     
-    # لیست شهرهای اصلی ایران (فارسی + انگلیسی)
+    
+    # List of major Iranian cities (Persian + English)
     IRANIAN_CITIES = {
-        # شهرهای بزرگ
+        # Major cities
         'تهران': 'Tehran', 'مشهد': 'Mashhad', 'اصفهان': 'Isfahan', 
         'شیراز': 'Shiraz', 'تبریز': 'Tabriz', 'کرج': 'Karaj',
         'قم': 'Qom', 'اهواز': 'Ahvaz', 'کرمانشاه': 'Kermanshah',
@@ -2052,15 +2051,15 @@ def extract_country_city_from_address(address_fa, address_en):
         'qom': 'Qom', 'ahvaz': 'Ahvaz', 'kermanshah': 'Kermanshah',
     }
     
-    # لیست کشورها (فارسی + انگلیسی)
+    # List of countries (Persian + English)
     COUNTRIES = {
-        # فارسی
+        # Persian
         'ایران': 'Iran', 'آلمان': 'Germany', 'چین': 'China', 
         'ترکیه': 'Turkey', 'امارات': 'UAE', 'آمریکا': 'USA',
         'انگلستان': 'UK', 'فرانسه': 'France', 'ایتالیا': 'Italy',
         'کره': 'South Korea', 'ژاپن': 'Japan', 'هند': 'India',
         'عراق': 'Iraq', 'افغانستان': 'Afghanistan', 'پاکستان': 'Pakistan',
-        # انگلیسی
+        # English
         'iran': 'Iran', 'germany': 'Germany', 'china': 'China',
         'turkey': 'Turkey', 'uae': 'UAE', 'usa': 'USA',
         'uk': 'UK', 'france': 'France', 'italy': 'Italy',
@@ -2070,7 +2069,7 @@ def extract_country_city_from_address(address_fa, address_en):
     country = None
     city = None
     
-    # ترکیب آدرس‌ها
+    # Combine addresses
     combined_address = ""
     if address_fa and not pd.isna(address_fa):
         combined_address += str(address_fa).lower() + " "
