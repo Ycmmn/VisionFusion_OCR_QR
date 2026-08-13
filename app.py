@@ -137,22 +137,25 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# =========================================================
-# 🔐 کلیدهای API
-# =========================================================
+
+
+
+#------------------------- API keys
+
+
 API_KEYS = {
-    "excel": "AIzaSyCWjNxqXiQge4fR1RADEdmCotR3dpnKTag",
-    "ocr": "AIzaSyD5Jc5RDfClu_KiAPxZNyJCydQ9qf_8xio",
-    "scrap": "AIzaSyD1vuPHlbN9bWUAL8sDDj3Z5TcgQ4G4F3M"
+    "excel": "AIz************************Tag",
+    "ocr": "AIz**************************8xio",
+    "scrap": "AIza***********************4F3M"
 }
 for key_name, key_value in API_KEYS.items():
     os.environ[f"GOOGLE_API_KEY_{key_name.upper()}"] = key_value
     os.environ["GOOGLE_API_KEY"] = key_value
     os.environ["GEMINI_API_KEY"] = key_value
 
-# =========================================================
-# ☁️ GOOGLE SHEETS INTEGRATION
-# =========================================================
+
+#----------------------- GOOGLE SHEETS INTEGRATION
+
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
@@ -164,7 +167,7 @@ GOOGLE_SCOPES = [
 
 @st.cache_resource
 def get_google_services():
-    """اتصال به Google Drive و Sheets"""
+    """    Google Drive و Sheets  """
     try:
         SERVICE_ACCOUNT_FILE = Path("service-account.json")
         if SERVICE_ACCOUNT_FILE.exists():
@@ -182,11 +185,11 @@ def get_google_services():
         sheets_service = build('sheets', 'v4', credentials=creds)
         return drive_service, sheets_service
     except Exception as e:
-        st.error(f"❌ خطا در اتصال به Google: {e}")
+        st.error(f"❌ error connection to Google: {e}")
         return None, None
 
 def _col_index_to_letter(col_index):
-    """تبدیل index به حرف Excel (0->A, 25->Z, 26->AA)"""
+    """ index Excel (0->A, 25->Z, 26->AA)"""
     result = ""
     while col_index >= 0:
         result = chr(col_index % 26 + 65) + result
@@ -194,7 +197,7 @@ def _col_index_to_letter(col_index):
     return result
 
 def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
-    """پیدا کردن یا ساخت جدول در Drive"""
+    """Find or create the sheet/table in Drive"""
     try:
         table_name = "Exhibition_Data_Table"
         query = f"name='{table_name}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false"
@@ -210,10 +213,10 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         if files:
             file_id = files[0]['id']
             file_url = files[0].get('webViewLink', f"https://docs.google.com/spreadsheets/d/{file_id}/edit")
-            print(f"   ✅ جدول موجود: {file_id}")
+            print(f"   ✅ : {file_id}")
             return file_id, file_url, True
         
-        print(f"   📝 ساخت جدول جدید...")
+        print(f"   📝 ...")
         spreadsheet = sheets_service.spreadsheets().create(
             body={
                 'properties': {'title': table_name},
@@ -228,11 +231,11 @@ def find_or_create_data_table(drive_service, sheets_service, folder_id=None):
         if folder_id:
             drive_service.files().update(fileId=file_id, addParents=folder_id, fields='id, parents').execute()
         
-        print(f"   ✅ جدول جدید ساخته شد: {file_id}")
+        print(f"   ✅ new table: {file_id}")
         return file_id, file_url, False
         
     except Exception as e:
-        print(f"   ❌ خطا: {e}")
+        print(f"   ❌ error: {e}")
         return None, None, False
 
 
