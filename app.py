@@ -1676,7 +1676,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
         # ====================================================
 
-        # تمیز کردن ستون‌های متنی
+        # Clean text columns
         for col in df.columns:
             if df[col].dtype == 'object':
                 df[col] = df[col].astype(str).str.strip()
@@ -1688,7 +1688,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     'null': '',
                     'NULL': ''
                 })
-                # حذف مقادیر case-insensitive
+                # Remove values case-insensitively
                 df[col] = df[col].apply(lambda x: "" if str(x).lower() in ['nan', 'none', 'nat', 'null'] else x)
         
         sheet_name = 'Sheet1'
@@ -1698,11 +1698,6 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         ))
         
         existing_headers = result.get('values', [[]])[0] if result.get('values') else []
-
-
-
-
-
 
 
         new_headers = df.columns.tolist()
@@ -1727,9 +1722,6 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 print(f"   🔄 Updating headers...")
 
 
-
-
-
                 retry_sheets_execute(sheets_service.spreadsheets().values().update(
                     spreadsheetId=file_id,
                     range=f'{sheet_name}!1:1',
@@ -1744,9 +1736,6 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
 
 
-
-
-
                 if existing_rows_count > 0:
                     print(f"   📝 Filling {existing_rows_count} old rows...")
                     empty_values = [[''] * len(new_columns) for _ in range(existing_rows_count)]
@@ -1754,10 +1743,6 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                     start_col_letter = _col_index_to_letter(start_col_index)
                     end_col_letter = _col_index_to_letter(start_col_index + len(new_columns) - 1)
                     
-
-
-
-
 
                     retry_sheets_execute(sheets_service.spreadsheets().values().update(
                         spreadsheetId=file_id,
@@ -1770,10 +1755,6 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
 
 
-
-
-
-
             for col in all_columns:
                 if col not in df.columns:
                     df[col] = ''
@@ -1782,18 +1763,18 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             print(f"   ✅ DataFrame sorted: {len(df)} rows × {len(all_columns)} columns")
             values = df.values.tolist()
 
-        # ✅ Convert all NaN or None to string before sending to Sheets
+        #  Convert all NaN or None to string before sending to Sheets
         def clean_cell(cell):
-            """تمیز کردن کامل سلول"""
+            """ clean all of cells """
             if pd.isna(cell) or cell is None:
                 return ""
             cell_str = str(cell).strip()
     
-            # چک کردن مقادیر ناخواسته
+            # Check for unwanted values
             if cell_str.lower() in ['nan', 'none', 'nat', '<na>', 'null']:
                 return ""
             
-            # حذف ارورهای Excel
+            # Remove Excel errors
             if cell_str.startswith('#'):
                 return ""
     
@@ -1802,24 +1783,17 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         values = [[clean_cell(cell) for cell in row] for row in values]
         
 
-
-
-
         result = retry_sheets_execute(sheets_service.spreadsheets().values().get(
             spreadsheetId=file_id, range=f'{sheet_name}!A:A'
         ))
         existing_rows = len(result.get('values', []))
 
 
-
-
-        
         print(f"   📊 Current rows: {existing_rows}")
         print(f"   📤 Adding {len(values)} rows...")
         
-       
 
-        # تقسیم به chunk‌های 500 سطری
+        # Split into 500-row chunks
         chunks = [values[i:i+500] for i in range(0, len(values), 500)]
         print(f"\n📦 {len(chunks)} chunks × 500 rows")
         
@@ -1843,15 +1817,11 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         total_rows = existing_rows + uploaded_rows
 
 
-
-
         result = retry_sheets_execute(sheets_service.spreadsheets().values().get(
             spreadsheetId=file_id, range=f'{sheet_name}!1:1'
         ))
         total_columns = len(result.get('values', [[]])[0])
         
-
-
 
         total_cells = total_rows * total_columns
         capacity = (total_cells / 10_000_000) * 100
@@ -1872,7 +1842,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
 
 def get_or_create_folder(folder_name="Exhibition_Data"):
-    """پیدا/ساخت پوشه در Drive"""
+    """ make folder in Drive"""
     try:
         drive_service, _ = get_google_services()
         if not drive_service:
@@ -1885,18 +1855,18 @@ def get_or_create_folder(folder_name="Exhibition_Data"):
         files = results.get('files', [])
         
         if files:
-            print(f"   ✅ پوشه موجود: {files[0]['name']}")
+            print(f"   ✅ : {files[0]['name']}")
             return files[0]['id']
         
         folder = drive_service.files().create(
             body={'name': folder_name, 'mimeType': 'application/vnd.google-apps.folder'},
             fields='id'
         ).execute()
-        print(f"   ✅ پوشه جدید: {folder_name}")
+        print(f"   ✅: {folder_name}")
         return folder.get('id')
         
     except Exception as e:
-        print(f"   ❌ خطا: {e}")
+        print(f"   ❌ error: {e}")
         return None
 
 
