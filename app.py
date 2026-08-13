@@ -8,7 +8,7 @@
 - Fast Mode, Debug Mode, Rate Limiting, Daily Quota
 - ✨ Batch Processing: Images(5), PDFs(4), Excel(1)
 - ✨ Quality Control Tracking: User Name, Role, Date, Time
-- ☁️ Google Sheets Integration: ذخیره خودکار داده‌ها در Google Drive
+- ☁️ Google Sheets Integration: Google Drive
 
 اجرا:
     streamlit run smart_exhibition_pipeline_final.py
