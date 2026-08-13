@@ -827,7 +827,7 @@ def merge_all_data_sources(session_dir, pipeline_type):
                 if fname and str(fname) not in ['', 'nan', 'Unknown']:
                     print(f"      • {fname}: {count} rows")
         
-        # ذخیره
+        # Save
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         output_path = Path(session_dir) / f"merged_complete_{timestamp}.xlsx"
         df_final.to_excel(output_path, index=False, engine='openpyxl')
@@ -845,10 +845,11 @@ def merge_all_data_sources(session_dir, pipeline_type):
         return None
 
 
-def translate_all_columns(df, api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70"):
+def translate_all_columns(df, api_key="AIz*****************B70"):
     """
-    ترجمه تمام ستون‌ها در DataFrame
-    - فقط انگلیسی → فارسی
+    Translate all columns in the DataFrame
+    - English → Persian only
+
     """
     
     
@@ -858,7 +859,7 @@ def translate_all_columns(df, api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
     
     print(f"\n🌐 Starting translation for {len(df)} rows...")
     
-    # ستون‌هایی که نباید ترجمه بشن
+    # Columns that should not be translated
     skip_columns = [
         'file_name', 'Exhibition', 'Source', 
         'QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp',
@@ -870,13 +871,13 @@ def translate_all_columns(df, api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
     ]
     
     def detect_language(text):
-        """تشخیص زبان: fa یا en"""
+        """Detect language: fa or en"""
         if not text or pd.isna(text) or str(text).strip() == '':
             return None
         
         text = str(text).strip()
         
-        # چک کردن حروف فارسی
+        #Check for Persian characters
         persian_chars = set('آابپتثجچحخدذرزژسشصضطظعغفقکگلمنوهی')
         has_persian = any(c in persian_chars for c in text)
         
@@ -886,7 +887,7 @@ def translate_all_columns(df, api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
             return 'en'
     
     def translate_text(text):
-        """ترجمه متن انگلیسی به فارسی با Gemini"""
+        """Translate English text to Persian using Gemini"""
         if not text or pd.isna(text) or str(text).strip() == '':
             return ""
         
@@ -898,7 +899,7 @@ def translate_all_columns(df, api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
             response = model.generate_content(prompt)
             translation = response.text.strip()
             
-            # حذف markdown و quotes
+            # Remove  markdown and quotes
             translation = translation.replace('*', '').replace('`', '').strip('"').strip("'")
             
             return translation
@@ -907,19 +908,19 @@ def translate_all_columns(df, api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
             print(f"   ⚠️ Translation error: {e}")
             return ""
     
-    # پردازش هر ستون
+    # Process each column
     for col in df.columns:
-        # Skip ستون‌های خاص
+        # Skip specific columns
         if col in skip_columns:
             continue
         
-        # چک کردن اینکه ستون قبلاً ترجمه شده یا نه
+        #Check whether the column has already been translated
         if col.endswith('_translated') or col.endswith('FA') or col.endswith('EN'):
             continue
         
         print(f"\n   🔄 Processing column: {col}")
         
-        # شمارش سلول‌های غیرخالی
+        #Count non-empty cells
         non_empty = df[col].notna() & (df[col].astype(str).str.strip() != '')
         total_cells = non_empty.sum()
         
@@ -929,7 +930,7 @@ def translate_all_columns(df, api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
         
         print(f"      📊 {total_cells} non-empty cells")
         
-        # پردازش هر سطر
+        #Process each row
         translated_count = 0
         
         for idx in df.index:
@@ -938,18 +939,18 @@ def translate_all_columns(df, api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
             if not cell_value or pd.isna(cell_value) or str(cell_value).strip() == '':
                 continue
             
-            # تشخیص زبان
+            # Detect language
             lang = detect_language(cell_value)
             
             if lang != 'en':
-                # فقط متن‌های انگلیسی رو پردازش می‌کنیم
+                #  Only process English text
                 continue
             
-            # ترجمه انگلیسی → فارسی
+            #  Translate English → Persian
             translated = translate_text(cell_value)
             
             if translated:
-                # ذخیره در ستون جدید
+                # Save in new column
                 new_col = f"{col}FA" if not col.endswith('EN') else col.replace('EN', 'FA')
                 df.at[idx, new_col] = translated
                 translated_count += 1
