@@ -1060,21 +1060,21 @@ def consolidate_columns(df):
         
         print(f"   🔗 {new_col} ← {existing}")
         
-        # ادغام مقادیر هر سطر
+        # Merge values for each row
         def merge_row(row):
             values = []
             seen = set()
             for col in existing:
                 val = str(row[col]).strip() if col in row else ''
                 if val and val.lower() not in ['nan', 'none', 'nat', '', 'null']:
-                    if val not in seen:  # حذف تکراری
+                    if val not in seen:  # Remove duplicates
                         values.append(val)
                         seen.add(val)
             return ' | '.join(values)
         
         df[new_col] = df.apply(merge_row, axis=1)
         
-        # حذف ستون‌های قدیمی (به جز اگه اسمشون همون new_col باشه)
+        # Remove old columns (unless their name is the same as new_col)
         cols_to_drop = [c for c in existing if c != new_col]
         df.drop(columns=cols_to_drop, inplace=True, errors='ignore')
     
@@ -1110,35 +1110,35 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
             return False, "Excel file is empty", None, 0
         
         print(f"   ✅ {len(df)} rows × {len(df.columns)} columns read")
-        # ========== 📝 اضافه کردن Exhibition Name ==========
+        # =======-------------- add Exhibition Name --------------========
         if exhibition_name:
             print(f"\n📝 Adding Exhibition to Google Sheets: {exhibition_name}")
             if 'Exhibition' not in df.columns:
                 df.insert(0, 'Exhibition', exhibition_name)
         
-        # ========== 👤 اضافه کردن QC Metadata ==========
+        # ==========------------- add QC Metadata ==========
        
         if qc_metadata:
             print(f"\n👤 Adding QC Metadata to Google Sheets...")
             
             qc_columns_order = ['QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp']
             
-            # محاسبه موقعیت شروع (بعد از Exhibition اگه هست)
+            # Calculate starting position (after Exhibition if present)
             start_pos = 1 if 'Exhibition' in df.columns else 0
             
             for idx, col in enumerate(qc_columns_order, start=start_pos):
                 if col in qc_metadata and col not in df.columns:
-                    # ✅ تبدیل به string برای جلوگیری از تبدیل به عدد
+                    # Convert to string to prevent conversion to number
                     value = str(qc_metadata[col])
                     
-                    # ✅ اضافه کردن apostrophe برای تاریخ و ساعت (مثل شماره تلفن)
+                    # Add apostrophe for date and time (like phone number)
                     if col in ['QC_Date', 'QC_Time', 'QC_Timestamp']:
                         value = f"'{value}"
                     
                     df.insert(idx, col, value)
                     print(f"   ✅ {col}: {qc_metadata[col]}")
         
-        # ========== 📋 اضافه کردن Source ==========
+        # ==========------ add Source ------==========
         print(f"\n📋 Detecting Source (Image/PDF/Excel/Web)...")
         
         if 'file_name' in df.columns and 'Source' not in df.columns:
@@ -1157,7 +1157,7 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
                 else:
                     return 'Unknown'
             
-            # محاسبه موقعیت ستون Source (بعد از QC metadata)
+            # Calculate the Source column position (after QC metadata)
             qc_count = sum(1 for col in ['QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp'] if col in df.columns)
             source_pos = (1 if 'Exhibition' in df.columns else 0) + qc_count
             
@@ -1173,14 +1173,14 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
 
 
 
-        # ========== 🕐 تبدیل تاریخ و ساعت به Text Format ==========
+        # ==========---------  Convert date and time to Text Format  -------------==========
         print(f"\n🕐 Converting date/time columns to text format...")
         
         date_time_columns = ['QC_Date', 'QC_Time', 'QC_Timestamp']
         
         for col in date_time_columns:
             if col in df.columns:
-                # تبدیل به string با apostrophe در اول (برای Google Sheets)
+                # Convert to string with a leading apostrophe (for Google Sheets)
                 df[col] = df[col].apply(
                     lambda x: f"'{str(x)}" if x and str(x).strip() not in ['', 'nan', 'None'] else ""
                 )
@@ -1191,14 +1191,14 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         print(f"\n   📊 Final DataFrame: {len(df)} rows × {len(df.columns)} columns")
 
         
-        # ✅ اضافه کن: اگه CompanyID نداشت، اضافه کن
+        # Add: if there's no CompanyID, add it
         if 'CompanyID' not in df.columns:
             print(f"   ⚠️ CompanyID not found, generating...")
             df = add_company_id_to_dataframe(df, log_details=False)
         else:
             print(f"   ✅ CompanyID column exists")
         
-        # ✅ مطمئن شو CompanyID ستون اول است
+        #  Make sure CompanyID is the first column
         if 'CompanyID' in df.columns:
             cols = ['CompanyID'] + [col for col in df.columns if col != 'CompanyID']
             df = df[cols]
@@ -1206,41 +1206,41 @@ def append_excel_data_to_sheets(excel_path, folder_id=None, exhibition_name=None
         
         
 
-        # ✅ Clean DataFrame from NaN and None values
+        #  Clean DataFrame from NaN and None values
         import numpy as np
 
-        # جایگزینی مقادیر خالی
+        # Replace empty values
         df = df.replace({np.nan: "", None: "", 'nan': "", 'None': "", 'NaT': ""})
-       # ========== 🔀 ادغام ستون‌های مشابه ==========
+       # ========== Merge similar columns ==========
         df = consolidate_columns(df)
 
         
-        # ========== 🧹 حذف ستون‌های اضافی ==========
+        # ========== Remove unnecessary columns==========
         print(f"\n🧹 Removing unnecessary columns...")
 
         columns_to_remove = []
 
-        # 1. حذف data_source و source_type
+        #  1. Remove data_source and source_type
         for col in ['data_source', 'source_type', 'Data_Source', 'Source_Type']:
             if col in df.columns:
                 columns_to_remove.append(col)
                 print(f"   ❌ Removing: {col}")
 
-        # 2. حذف Logo
+        # 2.Remove Logo
         if 'Logo' in df.columns:
             columns_to_remove.append('Logo')
             print(f"   ❌ Removing: Logo")
 
-        # حذف ستون‌ها
+        # Remove columns
         if columns_to_remove:
             df.drop(columns=columns_to_remove, inplace=True)
             print(f"   ✅ Removed {len(columns_to_remove)} columns")
 
-        # ========== 👤 استخراج Person/Position ==========
+        # ========== Extract Person/Position ==========
         print(f"\n👤 Extracting Person & Position from PersonX columns...")
 
         
-        genai.configure(api_key="AIzaSyDMUEVEqDCQpahoyIeXLN0UJ4IKNNPzB70")
+        genai.configure(api_key="AIza**************70")
         model = genai.GenerativeModel('gemini-2.5-flash-lite')
 
         def translate_to_persian(text):
