@@ -2185,7 +2185,7 @@ def add_country_city_columns(excel_path):
 
 def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metadata=None):
     """
-    اضافه کردن متادیتای کامل به Excel:
+       Add complete metadata to Excel:
     - Exhibition Name
     - Source (Image/PDF/Excel)
     - QC Supervisor
@@ -2200,13 +2200,13 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
         df = pd.read_excel(excel_path)
         print(f"   ✅ Loaded: {len(df)} rows × {len(df.columns)} columns")
 
-        # ========== اضافه کردن Exhibition ==========
+        # ========== Add Exhibition ==========
         df.insert(0, 'Exhibition', exhibition_name)
         print(f"   📋 Exhibition: '{exhibition_name}'")
         
-        # ========== اضافه کردن QC Metadata ==========
+        # ========== Add QC Metadata ==========
         if qc_metadata:
-            # اضافه کردن ستون‌های QC در ابتدای DataFrame
+            # Add QC columns at the start of the DataFrame
             qc_columns = ['QC_Supervisor', 'QC_Role', 'QC_Date', 'QC_Time', 'QC_Timestamp']
             
             for idx, col in enumerate(qc_columns, start=1):
@@ -2218,8 +2218,8 @@ def add_exhibition_and_source(excel_path, exhibition_name, session_dir, qc_metad
             print(f"   📅 QC Date: {qc_metadata.get('QC_Date', 'N/A')}")
             print(f"   🕐 QC Time: {qc_metadata.get('QC_Time', 'N/A')}")
         
-        # ========== تشخیص Source ==========
-        # ✅ خواندن نوع فایل‌های آپلود شده
+        # ========== Detect Source==========
+        # Read the type of uploaded files
         file_types_path = Path(session_dir) / "uploaded_file_types.json"
         
         if file_types_path.exists():
