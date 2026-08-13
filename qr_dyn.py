@@ -17,15 +17,16 @@ import warnings, ctypes, os
 warnings.filterwarnings("ignore")
 os.environ["ZBAR_LOG_LEVEL"] = "0"
 
-
-# dynamic session paths
+# =========================================================
+# Dynamic session paths
+# =========================================================
 SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
 
-# inputs: if uploads is empty, use SESSION_DIR itself
+# inputs: if uploads is empty, fall back to SESSION_DIR itself
 IMAGES_FOLDER = SESSION_DIR / "uploads"
 if not IMAGES_FOLDER.exists() or not any(IMAGES_FOLDER.glob("*")):
     IMAGES_FOLDER = SESSION_DIR
-print(f"using IMAGES_FOLDER {IMAGES_FOLDER}")
+print(f"Using IMAGES_FOLDER {IMAGES_FOLDER}")
 
 # outputs (dynamic)
 OUTPUT_JSON_RAW = Path(os.getenv("QR_RAW_JSON", SESSION_DIR / "final_superqr_v6_raw.json"))
@@ -34,20 +35,21 @@ DEBUG_DIR = SESSION_DIR / "_debug"
 os.makedirs(IMAGES_FOLDER, exist_ok=True)
 os.makedirs(DEBUG_DIR, exist_ok=True)
 
-# dpi for pdf
+# DPI for PDF
 PDF_IMG_DPI = int(os.getenv("PDF_IMG_DPI", "200"))
 
-# poppler path (for windows)
+# Poppler path (for Windows)
 POPPLER_PATH = os.getenv("POPPLER_PATH", r"C:\poppler\Library\bin").strip()
 if POPPLER_PATH and os.path.exists(POPPLER_PATH):
     os.environ["PATH"] += os.pathsep + POPPLER_PATH
 
 # debug mode
 DEBUG_MODE = os.getenv("DEBUG_MODE", "0") == "1"
-print("superqr v6.1 (clean urls + vcard support) ready\n")
+print("SuperQR v6.1 (Clean URLs + vCard Support) ready\n")
 
-
-# qr fallbacks
+# ----------------------------------------------------------
+# QR fallbacks
+# ----------------------------------------------------------
 '''
 try:
     from pyzbar import pyzbar
@@ -68,53 +70,53 @@ except ImportError:
     HAS_ZXING = False
     print("pyzxing not available")
 
-
+# ----------------------------------------------------------
 def clean_url(url):
-    """clean url and remove extra parts"""
+    """Clean a URL and remove extra parts"""
     if not url or not isinstance(url, str):
         return None
     
     url = url.strip()
     
-    # if url contains encoded characters, decode them
+    # if the URL contains encoded characters, decode it
     try:
-        # keep only main domain and path
+        # keep only the domain and main path
         parsed = urlparse(url)
         
-        # if has path and is encoded, clean it
+        # if it has a path and it's encoded, clean it
         if parsed.path and '%' in parsed.path:
             # return only domain + /
             clean = f"{parsed.scheme}://{parsed.netloc}"
             if DEBUG_MODE:
-                print(f"       cleaned: {url} -> {clean}")
+                print(f"       Cleaned: {url} -> {clean}")
             return clean
         
-        # if has query string, remove it
+        # if it has a query string, remove it
         if parsed.query:
             clean = f"{parsed.scheme}://{parsed.netloc}{parsed.path}"
             if DEBUG_MODE:
-                print(f"       cleaned: {url} -> {clean}")
+                print(f"       Cleaned: {url} -> {clean}")
             return clean
         
         return url
     except Exception as e:
         if DEBUG_MODE:
-            print(f"       url cleaning error: {e}")
+            print(f"       URL cleaning error: {e}")
         return url
 
 def extract_url_from_vcard(data):
-    #extract url from vcard
+    """Extract URL from a vCard"""
     if not data or not isinstance(data, str):
         return None
     
-    # check if it's a vcard
+    # check whether this is a vCard
     if not (data.upper().startswith("BEGIN:VCARD") or "VCARD" in data.upper()):
         return None
     
     if DEBUG_MODE:
-        print(f"       detected vcard format")
+        print(f"       Detected vCard format")
     
-    # search for url in vcard
+    # search for URL inside the vCard
     url_patterns = [
         r"URL[;:]([^\r\n]+)",
         r"URL;[^:]+:([^\r\n]+)",
@@ -129,50 +131,51 @@ def extract_url_from_vcard(data):
                 url = match.strip()
                 if url.lower().startswith("http"):
                     if DEBUG_MODE:
-                        print(f"      found url in vcard: {url}")
+                        print(f"      Found URL in vCard: {url}")
                     return clean_url(url)
     
     return None
 
 def is_low_contrast(img, sharp_thresh=85, contrast_thresh=25):
-    #check for low contrast image
+    """Check whether the image has low contrast"""
     g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     sharpness = cv2.Laplacian(g, cv2.CV_64F).var()
     contrast = g.std()
     if DEBUG_MODE:
-        print(f"   sharpness: {sharpness:.1f}, contrast: {contrast:.1f}")
+        print(f"   Sharpness: {sharpness:.1f}, Contrast: {contrast:.1f}")
     return sharpness < sharp_thresh or contrast < contrast_thresh
 
 def enhance_image_aggressive(img):
-    #aggressive preprocessing to improve qr readability
-    # 1. denoise
+    """Aggressive preprocessing to improve QR readability"""
+    # 1. Denoise
     denoised = cv2.fastNlMeansDenoisingColored(img, None, 10, 10, 7, 21)
     
-    # 2. convert to lab for better processing
+    # 2. Convert to LAB for better processing
     lab = cv2.cvtColor(denoised, cv2.COLOR_BGR2LAB)
     l, a, b = cv2.split(lab)
     
-    # 3. strong clahe for contrast boost
+    # 3. strong CLAHE to boost contrast
     clahe = cv2.createCLAHE(clipLimit=5.0, tileGridSize=(8, 8))
     l = clahe.apply(l)
     
-    # 4. merge back
+    # 4. Merge back
     enhanced = cv2.merge([l, a, b])
     enhanced = cv2.cvtColor(enhanced, cv2.COLOR_LAB2BGR)
     
-    # 5. unsharp masking for more clarity
+    # 5. Unsharp masking for extra sharpness
     gaussian = cv2.GaussianBlur(enhanced, (0, 0), 3.0)
     enhanced = cv2.addWeighted(enhanced, 2.0, gaussian, -1.0, 0)
     
-    # 6. contrast boost
+    # 6. Contrast boost
     enhanced = cv2.convertScaleAbs(enhanced, alpha=1.3, beta=15)
     
     return enhanced
 
-
-# qr detection - advanced version
+# ----------------------------------------------------------
+# QR Detection - advanced version
+# ----------------------------------------------------------
 def detect_qr_payloads_enhanced(img, img_name="image"):
-    #detect qr with multiple different methods
+    """Detect QR codes using several different methods"""
     detector = cv2.QRCodeDetector()
     payloads = []
     methods_tried = 0
@@ -185,16 +188,16 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
             val, pts, _ = detector.detectAndDecode(frame)
             if val and val.strip():
                 if DEBUG_MODE:
-                    print(f"       found with {method_name}")
+                    print(f"       Found with {method_name}")
                 payloads.append(val.strip())
                 return True
             
-            # if couldn't decode but detected, retry
+            # if it couldn't decode but did detect, try again
             if pts is not None and len(pts) > 0:
                 val, _ = detector.decode(frame, pts)
                 if val and val.strip():
                     if DEBUG_MODE:
-                        print(f"       found with {method_name} (2nd attempt)")
+                        print(f"       Found with {method_name} (2nd attempt)")
                     payloads.append(val.strip())
                     return True
         except Exception as e:
@@ -203,56 +206,56 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
         return False
 
     if DEBUG_MODE:
-        print(f"    trying multiple detection methods...")
+        print(f"    Trying multiple detection methods...")
 
     # 1. original image
-    try_decode(img, "original")
+    try_decode(img, "Original")
     
-    # 2. grayscale
+    # 2. Grayscale
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    try_decode(cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR), "grayscale")
+    try_decode(cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR), "Grayscale")
     
-    # 3. adaptive threshold
+    # 3. Adaptive Threshold
     thresh_adapt = cv2.adaptiveThreshold(
         gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, 
         cv2.THRESH_BINARY, 51, 10
     )
-    try_decode(cv2.cvtColor(thresh_adapt, cv2.COLOR_GRAY2BGR), "adaptive threshold")
+    try_decode(cv2.cvtColor(thresh_adapt, cv2.COLOR_GRAY2BGR), "Adaptive Threshold")
     
-    # 4. otsu threshold
+    # 4. Otsu Threshold
     _, thresh_otsu = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-    try_decode(cv2.cvtColor(thresh_otsu, cv2.COLOR_GRAY2BGR), "otsu threshold")
+    try_decode(cv2.cvtColor(thresh_otsu, cv2.COLOR_GRAY2BGR), "Otsu Threshold")
     
     # 5. inverted image
-    try_decode(cv2.bitwise_not(img), "inverted")
+    try_decode(cv2.bitwise_not(img), "Inverted")
     
-    # 6. clahe enhancement
+    # 6. CLAHE enhancement
     lab = cv2.cvtColor(img, cv2.COLOR_BGR2LAB)
     l, a, b = cv2.split(lab)
     clahe = cv2.createCLAHE(clipLimit=4.0, tileGridSize=(8, 8))
     l2 = clahe.apply(l)
     enhanced = cv2.cvtColor(cv2.merge((l2, a, b)), cv2.COLOR_LAB2BGR)
-    try_decode(enhanced, "clahe")
+    try_decode(enhanced, "CLAHE")
     
     # 7. strong sharpening
     kernel_sharp = np.array([[-1, -1, -1], [-1, 9, -1], [-1, -1, -1]])
     sharp = cv2.filter2D(img, -1, kernel_sharp)
-    try_decode(sharp, "sharpened")
+    try_decode(sharp, "Sharpened")
     
-    # 8. morphological operations
+    # 8. Morphological operations
     kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (3, 3))
     morph = cv2.morphologyEx(gray, cv2.MORPH_CLOSE, kernel)
-    try_decode(cv2.cvtColor(morph, cv2.COLOR_GRAY2BGR), "morphological")
+    try_decode(cv2.cvtColor(morph, cv2.COLOR_GRAY2BGR), "Morphological")
     
-    # 9. multi-scale (different scales)
+    # 9. Multi-scale (different scales)
     for scale in [0.5, 0.75, 1.5, 2.0]:
         w = int(img.shape[1] * scale)
         h = int(img.shape[0] * scale)
         if w > 50 and h > 50:
             resized = cv2.resize(img, (w, h), interpolation=cv2.INTER_CUBIC)
-            try_decode(resized, f"scale {scale}x")
+            try_decode(resized, f"Scale {scale}x")
     
-    # 10. rotation
+    # 10. Rotation
     rotation_map = {
         90: cv2.ROTATE_90_CLOCKWISE,
         180: cv2.ROTATE_180,
@@ -260,15 +263,15 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
     }
     for angle, rotate_code in rotation_map.items():
         rotated = cv2.rotate(img, rotate_code)
-        try_decode(rotated, f"rotated {angle}")
+        try_decode(rotated, f"Rotated {angle}")
     
     '''
     # 11. use pyzbar
     if HAS_PYZBAR:
         for method_img, method_name in [
-            (gray, "pyzbar-gray"),
-            (thresh_adapt, "pyzbar-adaptive"),
-            (thresh_otsu, "pyzbar-otsu")
+            (gray, "Pyzbar-Gray"),
+            (thresh_adapt, "Pyzbar-Adaptive"),
+            (thresh_otsu, "Pyzbar-Otsu")
         ]:
             try:
                 barcodes = pyzbar.decode(method_img)
@@ -276,7 +279,7 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
                     data = barcode.data.decode("utf-8", errors="ignore").strip()
                     if data:
                         if DEBUG_MODE:
-                            print(f"       found with {method_name}")
+                            print(f"       Found with {method_name}")
                         payloads.append(data)
             except Exception as e:
                 if DEBUG_MODE:
@@ -295,49 +298,49 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
                         txt = res.get("parsed", "") or res.get("raw", "")
                         if txt:
                             if DEBUG_MODE:
-                                print(f"       found with zxing")
+                                print(f"       Found with ZXing")
                             payloads.append(txt.strip())
                 elif isinstance(results, dict):
                     txt = results.get("parsed", "") or results.get("raw", "")
                     if txt:
                         if DEBUG_MODE:
-                            print(f"       found with zxing")
+                            print(f"       Found with ZXing")
                         payloads.append(txt.strip())
             
             temp_path.unlink(missing_ok=True)
         except Exception as e:
             if DEBUG_MODE:
-                print(f"       zxing failed: {e}")
+                print(f"       ZXing failed: {e}")
     
     # remove duplicates
     payloads = list(dict.fromkeys(p for p in payloads if p and isinstance(p, str)))
     
     if DEBUG_MODE:
-        print(f"   tried {methods_tried} methods, found {len(payloads)} unique payload(s)")
+        print(f"   Tried {methods_tried} methods, found {len(payloads)} unique payload(s)")
     
-    # process and extract url
+    # process and extract URLs
     out = []
     for p in payloads:
-        # check if it's vcard
+        # check whether it's a vCard
         vcard_url = extract_url_from_vcard(p)
         if vcard_url:
             out.append(vcard_url)
             continue
         
-        # search for direct url
+        # search for a direct URL
         p = p.strip()
         urls = re.findall(r"(https?://[^\s\"'<>\[\]]+|www\.[^\s\"'<>\[\]]+)", p, re.IGNORECASE)
         
         if urls:
             for url in urls:
                 url = url.strip()
-                # remove extra characters from end
+                # remove trailing extra characters
                 url = re.sub(r'[,;.!?\)\]]+$', '', url)
                 
                 if not url.lower().startswith("http"):
                     url = "https://" + url.lower()
                 
-                # clean url
+                # clean the URL
                 cleaned = clean_url(url)
                 if cleaned:
                     out.append(cleaned)
@@ -348,51 +351,51 @@ def detect_qr_payloads_enhanced(img, img_name="image"):
             if cleaned:
                 out.append(cleaned)
     
-    # remove duplicate urls
+    # remove duplicate URLs
     out = list(dict.fromkeys(out))
     
     return out if out else None
 
-
+# ----------------------------------------------------------
 def process_image_for_qr(image_path: Path) -> Union[List[str], None]:
-    """process image for qr detection"""
+    """Process an image for QR detection"""
     if DEBUG_MODE:
-        print(f"\n     loading: {image_path.name}")
+        print(f"\n     Loading: {image_path.name}")
     
     img = cv2.imread(str(image_path))
     if img is None:
-        print(f"    cannot read {image_path.name}")
+        print(f"    Cannot read {image_path.name}")
         return None
     
     if DEBUG_MODE:
-        print(f"    size: {img.shape[1]}x{img.shape[0]}")
+        print(f"    Size: {img.shape[1]}x{img.shape[0]}")
         cv2.imwrite(str(DEBUG_DIR / f"{image_path.stem}_01_original.jpg"), img)
     
     # check contrast
     low = is_low_contrast(img)
     
-    # enhancement
+    # Enhancement
     enhanced = enhance_image_aggressive(img)
     
     if DEBUG_MODE:
         cv2.imwrite(str(DEBUG_DIR / f"{image_path.stem}_02_enhanced.jpg"), enhanced)
     
-    # qr detection
+    # detect QR
     result = detect_qr_payloads_enhanced(enhanced, image_path.stem)
     
     if result:
-        print(f"    found {len(result)} clean url(s)")
+        print(f"    Found {len(result)} clean URL(s)")
         for i, qr in enumerate(result, 1):
             print(f"      {i}. {qr}")
     else:
-        print(f"     no qr code detected")
+        print(f"     No QR code detected")
     
     return result
 
-
+# ----------------------------------------------------------
 def process_pdf_for_qr(pdf_path: Path) -> Dict[str, Any]:
-    """process pdf and convert to image"""
-    print(f"\n processing pdf: {pdf_path.name}")
+    """Process a PDF and convert it to images"""
+    print(f"\n Processing PDF: {pdf_path.name}")
     temp_dir = SESSION_DIR / "_pdf_pages"
     os.makedirs(temp_dir, exist_ok=True)
     
@@ -403,9 +406,9 @@ def process_pdf_for_qr(pdf_path: Path) -> Dict[str, Any]:
     try:
         images = convert_from_path(pdf_path, dpi=PDF_IMG_DPI, **kwargs)
     except Exception as e:
-        print(f"    pdf conversion failed: {e}")
+        print(f"    PDF conversion failed: {e}")
         if "poppler" in str(e).lower():
-            print(f"    hint: install poppler and set poppler_path environment variable")
+            print(f"    Hint: Install Poppler and set POPPLER_PATH environment variable")
         return {
             "file_id": pdf_path.stem,
             "file_name": pdf_path.name,
@@ -414,13 +417,13 @@ def process_pdf_for_qr(pdf_path: Path) -> Dict[str, Any]:
         }
     
     total_pages = len(images)
-    print(f"    total pages: {total_pages}")
+    print(f"    Total pages: {total_pages}")
     results = []
 
     for i, img in enumerate(images, start=1):
         page_image_path = temp_dir / f"{pdf_path.stem}_page_{i:03d}.jpg"
         img.save(page_image_path, "JPEG", quality=95)
-        print(f"\n    page {i}/{total_pages}")
+        print(f"\n    Page {i}/{total_pages}")
 
         qr_links = process_image_for_qr(page_image_path)
         page_result = {"page": i, "qr_link": qr_links[0] if qr_links else None}
@@ -428,10 +431,9 @@ def process_pdf_for_qr(pdf_path: Path) -> Dict[str, Any]:
 
     return {"file_id": pdf_path.stem, "file_name": pdf_path.name, "result": results}
 
-
-
+# ----------------------------------------------------------
 def process_image_file(image_path: Path) -> Dict[str, Any]:
-    """process image file"""
+    """Process an image file"""
     qr_links = process_image_for_qr(image_path)
     return {
         "file_id": image_path.stem,
@@ -439,19 +441,17 @@ def process_image_file(image_path: Path) -> Dict[str, Any]:
         "result": [{"page": 1, "qr_link": qr_links[0] if qr_links else None}]
     }
 
-
-
+# ----------------------------------------------------------
 def save_json(path, data):
-    """save json with proper encoding"""
+    """Save JSON with the proper encoding"""
     Path(path).write_text(
         json.dumps(data, indent=4, ensure_ascii=False), 
         encoding="utf-8"
     )
 
-
-
+# ----------------------------------------------------------
 def extract_urls(entry):
-    """extract urls from results"""
+    """Extract URLs from the results"""
     urls = []
     for item in entry.get("result", []):
         link = item.get("qr_link")
@@ -460,7 +460,7 @@ def extract_urls(entry):
     return list(dict.fromkeys(urls))
 
 def is_domain_alive(url, timeout=5):
-    """check if domain is alive"""
+    """Check whether a domain is alive"""
     try:
         host = re.sub(r"^https?://(www\.)?", "", url).split("/")[0]
         socket.setdefaulttimeout(timeout)
@@ -469,14 +469,12 @@ def is_domain_alive(url, timeout=5):
     except Exception:
         return False
 
-
-
 def clean_qr_json(input_file, output_file):
-    """clean and validate urls"""
-    print("\ncleaning and validating extracted qr urls...")
+    """Clean up and validate URLs"""
+    print("\nCleaning and validating extracted QR URLs...")
     
     if not Path(input_file).exists():
-        print(f"    input file not found: {input_file}")
+        print(f"    Input file not found: {input_file}")
         return
     
     data = json.loads(Path(input_file).read_text(encoding="utf-8"))
@@ -491,7 +489,7 @@ def clean_qr_json(input_file, output_file):
         valid_urls = []
         
         if urls:
-            print(f"    validating {len(urls)} url(s) from {entry.get('file_name')}...")
+            print(f"    Validating {len(urls)} URL(s) from {entry.get('file_name')}...")
             with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
                 futures = {executor.submit(is_domain_alive, u): u for u in urls}
                 for f in concurrent.futures.as_completed(futures):
@@ -522,13 +520,13 @@ def clean_qr_json(input_file, output_file):
         })
     
     save_json(output_file, final_results)
-    print(f"\n cleaned results saved -> {output_file}")
+    print(f"\n Cleaned results saved -> {output_file}")
 
-
+# ----------------------------------------------------------
 def main():
-    """main function"""
+    """Main function"""
     print("=" * 60)
-    print("starting superqr v6.1 processing")
+    print("Starting SuperQR v6.1 Processing")
     print("=" * 60)
     
     results = []
@@ -540,15 +538,15 @@ def main():
     ])
     
     if not files:
-        print(f"\n  no image/pdf files found in {IMAGES_FOLDER}")
-        print("   supported formats: .jpg, .jpeg, .png, .pdf")
+        print(f"\n  No image/PDF files found in {IMAGES_FOLDER}")
+        print("   Supported formats: .jpg, .jpeg, .png, .pdf")
         return
     
-    print(f"\n found {len(files)} file(s) to process\n")
+    print(f"\n Found {len(files)} file(s) to process\n")
 
     for idx, f in enumerate(files, 1):
         print("=" * 60)
-        print(f" [{idx}/{len(files)}] processing: {f.name}")
+        print(f" [{idx}/{len(files)}] Processing: {f.name}")
         print("=" * 60)
         start_time = time.time()
         
@@ -560,10 +558,10 @@ def main():
             
             results.append(res)
             elapsed = time.time() - start_time
-            print(f"\n completed {f.name} in {elapsed:.1f}s")
+            print(f"\n Completed {f.name} in {elapsed:.1f}s")
             
         except Exception as e:
-            print(f"\n error processing {f.name}: {e}")
+            print(f"\n Error processing {f.name}: {e}")
             import traceback
             if DEBUG_MODE:
                 traceback.print_exc()
@@ -577,27 +575,27 @@ def main():
     # save raw results
     print("\n" + "=" * 60)
     save_json(OUTPUT_JSON_RAW, results)
-    print(f" raw results saved {OUTPUT_JSON_RAW}")
+    print(f" Raw results saved {OUTPUT_JSON_RAW}")
     
-    # clean and validate
+    # clean up and validate
     clean_qr_json(OUTPUT_JSON_RAW, OUTPUT_JSON_CLEAN)
     
     print("\n" + "=" * 60)
-    print(f" processing completed!")
-    print(f" final output {OUTPUT_JSON_CLEAN}")
+    print(f" Processing completed!")
+    print(f" Final output {OUTPUT_JSON_CLEAN}")
     print("=" * 60)
     
-    # results summary
+    # summary of results
     total_qr = sum(
         1 for entry in results 
         for item in entry.get("result", []) 
         if item.get("qr_link")
     )
-    print(f"\n summary: found {total_qr} qr code(s) in {len(files)} file(s)")
+    print(f"\n Summary: Found {total_qr} QR code(s) in {len(files)} file(s)")
     
     if DEBUG_MODE:
-        print(f" debug images saved in: {DEBUG_DIR}")
+        print(f" Debug images saved in: {DEBUG_DIR}")
 
-
+# ----------------------------------------------------------
 if __name__ == "__main__":
     main()
