@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-complete json + excel merger - always merge both sources
-smart json and excel merge - both sources are always merged
+Complete JSON + Excel Merger - Always Merge Both Sources
+Smart merging of JSON and Excel - both sources are always merged
 """
 
 from pathlib import Path
@@ -9,8 +9,9 @@ import os, json, re, pandas as pd
 from collections import defaultdict
 import time
 
-
-# dynamic paths
+# =========================================================
+# Dynamic paths
+# =========================================================
 SESSION_DIR = Path(os.getenv("SESSION_DIR", Path.cwd()))
 INPUT_JSON = Path(os.getenv("INPUT_JSON", SESSION_DIR / "mix_ocr_qr.json"))
 INPUT_EXCEL = Path(os.getenv("INPUT_EXCEL", SESSION_DIR / "web_analysis.xlsx"))
@@ -18,16 +19,17 @@ timestamp = pd.Timestamp.now().strftime("%Y%m%d_%H%M%S")
 OUTPUT_EXCEL = Path(os.getenv("OUTPUT_EXCEL", SESSION_DIR / f"merged_final_{timestamp}.xlsx"))
 
 print("\n" + "="*70)
-print("json + excel merger - flexible mode")
+print("JSON + Excel Merger - Flexible Mode")
 print("="*70)
-print(f"session: {SESSION_DIR}")
-print(f"json: {INPUT_JSON}")
-print(f"excel: {INPUT_EXCEL}")
-print(f"output: {OUTPUT_EXCEL}")
+print(f"Session: {SESSION_DIR}")
+print(f"JSON: {INPUT_JSON}")
+print(f"Excel: {INPUT_EXCEL}")
+print(f"Output: {OUTPUT_EXCEL}")
 print("="*70 + "\n")
 
-
-# json to excel field mapping
+# =========================================================
+# Mapping of JSON fields to Excel
+# =========================================================
 FIELD_MAPPING = {
     'addresses': 'Address',
     'phones': 'Phone1',
@@ -43,15 +45,16 @@ FIELD_MAPPING = {
     'notes': 'Notes',
 }
 
-
-# helper functions
+# =========================================================
+# Helper functions
+# =========================================================
 def is_persian(text):
     if not text or pd.isna(text):
         return False
     return bool(re.search(r"[\u0600-\u06FF]", str(text)))
 
 def merge_url_columns(df):
-    """merge url, urls, website into one website column"""
+    """Merge url, urls, Website into a single Website column"""
     if df.empty:
         return df
     
@@ -109,7 +112,7 @@ def are_values_same(val1, val2):
     return normalize_value(val1) == normalize_value(val2)
 
 def extract_key_identifier(record):
-    """extract unique identifier for comparing records"""
+    """Extract a unique identifier to compare records"""
     website = normalize_website(record.get("Website") or record.get("url", ""))
     if website:
         return ("website", website)
@@ -131,14 +134,15 @@ def extract_key_identifier(record):
     
     return ("unique", str(id(record)))
 
-
-# convert json to dataframe
+# =========================================================
+# Convert JSON to DataFrame
+# =========================================================
 def json_to_dataframe_smart(json_path):
-    """convert json to dataframe - all fields"""
-    print("\nconverting json to dataframe...")
+    """Convert JSON to DataFrame - all fields"""
+    print("\nConverting JSON to DataFrame...")
     
     if not json_path.exists():
-        print(f"    json not found: {json_path}")
+        print(f"    JSON not found: {json_path}")
         return pd.DataFrame()
     
     try:
@@ -154,10 +158,10 @@ def json_to_dataframe_smart(json_path):
                 
                 result_data = file_item.get("result")
                 
-                # structure 1: result directly dictionary
+                # structure 1: result is directly a dict
                 if isinstance(result_data, dict):
                     page_results = [result_data]
-                # structure 2: result array of pages
+                # structure 2: result is an array of pages
                 elif isinstance(result_data, list):
                     page_results = []
                     for page_data in result_data:
@@ -252,49 +256,50 @@ def json_to_dataframe_smart(json_path):
                         records.append(record)
         
         if not records:
-            print("    no records in json")
+            print("    No records in JSON")
             return pd.DataFrame()
         
         df = pd.DataFrame(records)
         df = merge_url_columns(df)
         
-        print(f"    json: {len(df)} rows x {len(df.columns)} columns")
+        print(f"    JSON: {len(df)} rows x {len(df.columns)} columns")
         return df
         
     except Exception as e:
-        print(f"    error: {e}")
+        print(f"    Error: {e}")
         import traceback
         traceback.print_exc()
         return pd.DataFrame()
 
-
-# load excel
+# =========================================================
+# Load Excel
+# =========================================================
 def load_excel_dataframe(excel_path):
-    """load excel as dataframe"""
-    print("\nloading excel...")
+    """Load Excel as a DataFrame"""
+    print("\nLoading Excel...")
     
     if not excel_path.exists():
-        print(f"    not found: {excel_path}")
+        print(f"    Not found: {excel_path}")
         return pd.DataFrame()
     
     try:
         df = pd.read_excel(excel_path)
-        print(f"    size: {df.shape[0]} rows x {df.shape[1]} columns")
+        print(f"    Size: {df.shape[0]} rows x {df.shape[1]} columns")
         
         if df.empty:
-            print(f"    excel is empty")
+            print(f"    Excel is empty")
             return pd.DataFrame()
         
         # check success
         if 'status' in df.columns:
             success = df[df['status'] == 'SUCCESS']
-            print(f"    success: {len(success)}, failed: {len(df) - len(success)}")
+            print(f"    Success: {len(success)}, Failed: {len(df) - len(success)}")
             
             if len(success) == 0:
-                print(f"    no successful scraping")
+                print(f"    No successful scraping")
                 return pd.DataFrame()
             
-            # keep only successful ones
+            # keep only the successful ones
             df = success.copy()
         
         # cleanup
@@ -310,17 +315,18 @@ def load_excel_dataframe(excel_path):
             if col in df.columns:
                 df = df.drop(columns=[col])
         
-        print(f"    excel: {len(df)} clean records")
+        print(f"    Excel: {len(df)} clean records")
         return df
         
     except Exception as e:
-        print(f"    error: {e}")
+        print(f"    Error: {e}")
         return pd.DataFrame()
 
-
-# merge two records
+# =========================================================
+# Merge two records
+# =========================================================
 def merge_two_records(r1, r2):
-    """merge two records - r1 has priority"""
+    """Merge two records - r1 takes priority"""
     merged = {}
     for key in set(r1.keys()) | set(r2.keys()):
         v1, v2 = r1.get(key), r2.get(key)
@@ -346,23 +352,24 @@ def merge_two_records(r1, r2):
     
     return merged
 
-
-# smart dataframe merge
+# =========================================================
+# Smart merge of DataFrames
+# =========================================================
 def smart_merge_dataframes(json_df, excel_df):
-    """smart merge of two dataframes"""
-    print("\nsmart merging json + excel...")
+    """Smart merge of two DataFrames"""
+    print("\nSmart merging JSON + Excel...")
     
     # if one is empty
     if json_df.empty and excel_df.empty:
-        print("    both empty!")
+        print("    Both empty!")
         return pd.DataFrame()
     
     if json_df.empty:
-        print("    using excel only")
+        print("    Using Excel only")
         return excel_df
     
     if excel_df.empty:
-        print("    using json only")
+        print("    Using JSON only")
         return json_df
     
     # convert to records
@@ -382,15 +389,15 @@ def smart_merge_dataframes(json_df, excel_df):
         kt, kv = extract_key_identifier(rec)
         groups[f"{kt}:{kv}"].append(rec)
     
-    # stats
+    # statistics
     json_only = sum(1 for g in groups.values() if len(g)==1 and g[0]['_source']=='JSON')
     excel_only = sum(1 for g in groups.values() if len(g)==1 and g[0]['_source']=='Excel')
     merged = sum(1 for g in groups.values() if len(g)>1)
     
-    print(f"    groups: {len(groups)}")
-    print(f"       json only: {json_only}")
-    print(f"       excel only: {excel_only}")
-    print(f"       merged: {merged}")
+    print(f"    Groups: {len(groups)}")
+    print(f"       JSON only: {json_only}")
+    print(f"       Excel only: {excel_only}")
+    print(f"       Merged: {merged}")
     
     # merge
     final_records = []
@@ -400,16 +407,16 @@ def smart_merge_dataframes(json_df, excel_df):
             rec.pop('_source', None)
             final_records.append(rec)
         else:
-            # multi-merge - excel has priority
+            # merge multiple - Excel takes priority
             excel_recs = [r for r in grecs if r.get('_source') == 'Excel']
             json_recs = [r for r in grecs if r.get('_source') == 'JSON']
             
-            # if we have excel, start from it
+            # if we have Excel, start from it
             if excel_recs:
                 base = excel_recs[0].copy()
                 base.pop('_source', None)
                 
-                # merge json records
+                # merge the JSON ones in
                 for jr in json_recs:
                     jc = jr.copy()
                     jc.pop('_source', None)
@@ -417,7 +424,7 @@ def smart_merge_dataframes(json_df, excel_df):
                 
                 final_records.append(base)
             else:
-                # only json
+                # JSON only
                 base = json_recs[0].copy()
                 base.pop('_source', None)
                 final_records.append(base)
@@ -425,20 +432,21 @@ def smart_merge_dataframes(json_df, excel_df):
     result_df = pd.DataFrame(final_records)
     result_df = merge_url_columns(result_df)
     
-    print(f"    final: {len(result_df)} rows x {len(result_df.columns)} columns")
+    print(f"    Final: {len(result_df)} rows x {len(result_df.columns)} columns")
     
     return result_df
 
-
-# remove junk columns
+# =========================================================
+# Clean up extra columns
+# =========================================================
 def remove_junk_columns(df):
-    """remove extra and dirty columns"""
-    print("\nremoving junk columns...")
+    """Remove extra/junk columns"""
+    print("\nRemoving junk columns...")
     
     if df.empty:
         return df
     
-    # columns to remove
+    # columns that should be removed
     junk_patterns = [
         r'^Phone\d{2,}$',
         r'^Services\d+$',
@@ -466,31 +474,32 @@ def remove_junk_columns(df):
     
     if cols_to_drop:
         df = df.drop(columns=cols_to_drop, errors='ignore')
-        print(f"   removed {len(cols_to_drop)} junk columns: {', '.join(cols_to_drop[:5])}...")
+        print(f"   Removed {len(cols_to_drop)} junk columns: {', '.join(cols_to_drop[:5])}...")
     else:
-        print(f"   no junk columns found")
+        print(f"   No junk columns found")
     
     return df
 
-
-# save
+# =========================================================
+# Save
+# =========================================================
 def save_excel(df, path):
-    """save dataframe to excel with cleanup"""
+    """Save DataFrame to Excel with cleanup"""
     if df.empty:
-        print("\nno data to save!")
+        print("\nNo data to save!")
         return False
     
     try:
-        print("\nsaving excel...")
+        print("\nSaving Excel...")
         
         # extra cleanup
         def clean_dataframe_before_excel(df):
-            """remove formulas and errors"""
+            """Remove formulas and errors"""
             import numpy as np
             
             for col in df.columns:
                 if df[col].dtype == 'object':
-                    # 1. remove excel formulas
+                    # 1. remove Excel formulas
                     df[col] = df[col].apply(
                         lambda x: str(x)[1:] if isinstance(x, str) and str(x).startswith('=') else x
                     )
@@ -500,7 +509,7 @@ def save_excel(df, path):
                         lambda x: "" if isinstance(x, str) and str(x).startswith('#') else x
                     )
                     
-                    # 3. convert persian digits
+                    # 3. convert Persian digits
                     persian_digits = '۰۱۲۳۴۵۶۷۸۹'
                     english_digits = '0123456789'
                     trans_table = str.maketrans(persian_digits, english_digits)
@@ -511,102 +520,103 @@ def save_excel(df, path):
             return df
         
         df = clean_dataframe_before_excel(df)
-        print(f"   cleaned {len(df.columns)} columns")
+        print(f"   Cleaned {len(df.columns)} columns")
         
         df = df.fillna("")
         df.to_excel(path, index=False, engine='openpyxl')
-        print(f"    saved: {path}")
+        print(f"    Saved: {path}")
         print(f"    {len(df)} rows x {len(df.columns)} columns")
         return True
         
     except Exception as e:
-        print(f"    error: {e}")
+        print(f"    Error: {e}")
         return False
 
-
-# main 
+# =========================================================
+# Main - flexible mode
+# =========================================================
 def main():
     start = time.time()
     
-    # check file existence
+    # check whether the files exist
     json_exists = INPUT_JSON.exists()
     excel_exists = INPUT_EXCEL.exists()
     
-    print(f"json exists: {json_exists}")
-    print(f"excel exists: {excel_exists}\n")
+    print(f"JSON exists: {json_exists}")
+    print(f"Excel exists: {excel_exists}\n")
     
     # mode 1: neither exists
     if not json_exists and not excel_exists:
-        print("error: neither json nor excel found!")
+        print("ERROR: Neither JSON nor Excel found!")
         return 1
     
-    # mode 2: only json exists
+    # mode 2: only JSON exists
     if json_exists and not excel_exists:
-        print("excel not found - converting json to excel...")
+        print("Excel not found - Converting JSON to Excel...")
         
-        # convert json to dataframe
+        # convert JSON to DataFrame
         json_df = json_to_dataframe_smart(INPUT_JSON)
         
         if json_df.empty:
-            print("error: json is empty!")
+            print("ERROR: JSON is empty!")
             return 1
         
-        print(f"json loaded: {len(json_df)} rows x {len(json_df.columns)} columns")
+        print(f"JSON loaded: {len(json_df)} rows x {len(json_df.columns)} columns")
         
-        # remove junk columns
+        # clean up extra columns
         final_df = remove_junk_columns(json_df)
         
         # save directly
         if save_excel(final_df, OUTPUT_EXCEL):
             print(f"\n{'='*70}")
-            print("success - json only mode")
+            print("SUCCESS - JSON ONLY MODE")
             print(f"{'='*70}")
-            print(f"input: {len(json_df)} rows from json")
-            print(f"output: {len(final_df)} rows x {len(final_df.columns)} columns")
-            print(f"saved: {OUTPUT_EXCEL}")
-            print(f"time: {time.time()-start:.2f}s")
+            print(f"Input: {len(json_df)} rows from JSON")
+            print(f"Output: {len(final_df)} rows x {len(final_df.columns)} columns")
+            print(f"Saved: {OUTPUT_EXCEL}")
+            print(f"Time: {time.time()-start:.2f}s")
             print(f"{'='*70}")
             return 0
         else:
-            print("error: failed to save excel!")
+            print("ERROR: Failed to save Excel!")
             return 1
     
-    # mode 3: only excel exists
+    # mode 3: only Excel exists
     if not json_exists and excel_exists:
-        print("json not found - using excel only...")
+        print("JSON not found - Using Excel only...")
         
         excel_df = load_excel_dataframe(INPUT_EXCEL)
         
         if excel_df.empty:
-            print("error: excel is empty!")
+            print("ERROR: Excel is empty!")
             return 1
         
-        print(f"excel loaded: {len(excel_df)} rows x {len(excel_df.columns)} columns")
+        print(f"Excel loaded: {len(excel_df)} rows x {len(excel_df.columns)} columns")
         
         final_df = remove_junk_columns(excel_df)
         
         if save_excel(final_df, OUTPUT_EXCEL):
             print(f"\n{'='*70}")
-            print("success - excel only mode")
+            print("SUCCESS - EXCEL ONLY MODE")
             print(f"{'='*70}")
-            print(f"input: {len(excel_df)} rows from excel")
-            print(f"output: {len(final_df)} rows x {len(final_df.columns)} columns")
-            print(f"saved: {OUTPUT_EXCEL}")
-            print(f"time: {time.time()-start:.2f}s")
+            print(f"Input: {len(excel_df)} rows from Excel")
+            print(f"Output: {len(final_df)} rows x {len(final_df.columns)} columns")
+            print(f"Saved: {OUTPUT_EXCEL}")
+            print(f"Time: {time.time()-start:.2f}s")
             print(f"{'='*70}")
             return 0
         else:
-            print("error: failed to save excel!")
+            print("ERROR: Failed to save Excel!")
             return 1
     
     # mode 4: both exist (merge)
-    print("both json and excel found - merging...")
+    print("Both JSON and Excel found - Merging...")
     
     json_df = json_to_dataframe_smart(INPUT_JSON)
     excel_df = load_excel_dataframe(INPUT_EXCEL)
     
     if json_df.empty and excel_df.empty:
-        print("error: both sources are empty!")
+        print("ERROR: Both sources are empty!")
         return 1
     
     # smart merge
@@ -619,18 +629,18 @@ def main():
     if not final_df.empty:
         if save_excel(final_df, OUTPUT_EXCEL):
             print(f"\n{'='*70}")
-            print("success - merged mode")
+            print("SUCCESS - MERGED MODE")
             print(f"{'='*70}")
-            print(f"input: {len(json_df)} json + {len(excel_df)} excel")
-            print(f"output: {len(final_df)} merged records")
-            print(f"time: {time.time()-start:.2f}s")
+            print(f"Input: {len(json_df)} JSON + {len(excel_df)} Excel")
+            print(f"Output: {len(final_df)} merged records")
+            print(f"Time: {time.time()-start:.2f}s")
             print(f"{'='*70}")
             return 0
         else:
-            print("error: failed to save excel!")
+            print("ERROR: Failed to save Excel!")
             return 1
     else:
-        print("error: no data to save!")
+        print("ERROR: No data to save!")
         return 1
 
 if __name__ == "__main__":
